@@ -296,10 +296,17 @@ class Detection_UI:
 
 
 
-        # 设置侧边栏的摄像头配置部分
-        st.sidebar.header("摄像头识别设置")
-        # 选择摄像头的下拉菜单
-        self.selected_camera = st.sidebar.selectbox("选择摄像头序号", self.available_cameras)
+        # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
+        st.sidebar.header("摄像头和流媒体识别设置")
+        # 选择输入源类型：摄像头或 RTSP/RTMP 流
+        self.input_source = st.sidebar.radio("选择输入源", ["摄像头", "RTSP/RTMP流"])
+
+        if self.input_source == "摄像头":
+            # 选择摄像头的下拉菜单
+            self.selected_camera = st.sidebar.selectbox("选择摄像头序号", self.available_cameras)
+        elif self.input_source == "RTSP/RTMP流":
+            # 输入 RTSP/RTMP 地址
+            self.rtsp_rtmp_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
 
         # 设置侧边栏的识别项目设置部分
         st.sidebar.header("图片视频识别设置")
@@ -317,6 +324,8 @@ class Detection_UI:
                 st.sidebar.write("请选择图片并点击'开始运行'按钮，进行图片检测！")
             if self.file_type == "视频文件":
                 st.sidebar.write("请选择视频并点击'开始运行'按钮，进行视频检测！")
+            if self.file_type == "RTSP/RTMP流":
+                st.sidebar.write("输入流地址并点击'开始运行'按钮，进行实时流检测！")
         else:
             st.sidebar.write("请点击'开始检测'按钮，启动摄像头检测！")
 
@@ -328,23 +337,40 @@ class Detection_UI:
 
     def process_camera_or_file(self):
         """
-        处理摄像头或文件输入。
+        处理摄像头、RTSP/RTMP流或文件输入。
 
-        根据用户选择的输入源（摄像头、图片文件或视频文件），处理并显示检测结果。
+        根据用户选择的输入源（摄像头、图片文件、视频文件或RTSP/RTMP流），处理并显示检测结果。
         """
+        # TODO:
         # 如果选择了摄像头输入
-        if self.selected_camera != "摄像头检测关闭":
+        if self.input_source == "摄像头" and self.selected_camera != "摄像头检测关闭" or self.input_source == "RTSP/RTMP流":
+            if self.input_source == "摄像头":
+                savepath = './tempDir/camera'
+                input_type = "camera"
+                # 使用 OpenCV 捕获摄像头画面
+                if str(self.selected_camera) == '0':
+                    input_source = 0
+                else:
+                    if len(self.selected_camera) < 8:
+                        input_source = int(self.selected_camera)
+                    else:
+                        input_source = self.selected_camera
+            elif self.input_source == "RTSP/RTMP流":
+                savepath = './tempDir/stream'
+                input_type = "stream"
+                if not self.rtsp_rtmp_url:
+                    st.warning("请输入有效的RTSP/RTMP地址！")
+                    return
+                input_source = self.rtsp_rtmp_url
             self.logTable.clear_frames()  # 清除之前的帧记录
             # 创建一个结束按钮
             self.close_flag = self.close_placeholder.button(label="停止")
 
-            # 使用 OpenCV 捕获摄像头画面
-            if str(self.selected_camera) == '0':
-                camera_id = 0
-            else:
-                camera_id = self.selected_camera
+            cap = cv2.VideoCapture(input_source)
 
-            cap = cv2.VideoCapture(camera_id)
+            if not cap.isOpened():
+                st.error(f"无法打开{self.input_source}，请检查地址或设备连接！")
+                return
 
             self.uploaded_video = None
 
@@ -358,12 +384,8 @@ class Detection_UI:
             self.progress_bar.progress(0)  # 初始化进度条
 
             try:
-                if len(self.selected_camera) < 8:
-                    camera_id = int(self.selected_camera)
-                else:
-                    camera_id = self.selected_camera
 
-                cap = cv2.VideoCapture(camera_id)
+                cap = cv2.VideoCapture(input_source)
 
                 # 获取和帧率
                 fps = cap.get(cv2.CAP_PROP_FPS)
@@ -373,9 +395,8 @@ class Detection_UI:
                 self.progress_bar.progress(0)
 
                 # 创建保存文件的信息
-                camera_savepath = './tempDir/camera'
-                if not os.path.exists(camera_savepath):
-                    os.makedirs(camera_savepath)
+                if not os.path.exists(savepath):
+                    os.makedirs(savepath)
                 # ret, frame = cap.read()
                 # height, width, layers = frame.shape
                 # size = (width, height)
@@ -395,11 +416,11 @@ class Detection_UI:
 
 
                         framecopy = frame.copy()
-                        image, detInfo, _ = self.frame_process(frame, 'camera')
+                        image, detInfo, _ = self.frame_process(frame, input_type)
 
                         # 保存目标结果图片
                         if detInfo:
-                            file_name = abs_path(camera_savepath + '/' + str(current_frame + 1) + '.jpg', path_type="current")
+                            file_name = abs_path(savepath + '/' + str(current_frame + 1) + '.jpg', path_type="current")
                             save_chinese_image(file_name, image)
                         #
                         # # 保存目标结果视频
@@ -438,7 +459,7 @@ class Detection_UI:
 
 
             finally:
-
+                cap.release()
                 if self.uploaded_video is None:
                     name_in = None
                 else:
