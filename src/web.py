@@ -811,7 +811,7 @@ class Detection_UI:
         """ 运行检测系统。 """
         # st.title(self.title) # 显示系统标题
         st.write("--------")
-        st.write("Automatic EL and Thermal Detection System")
+        st.write("YoloV11 Object Detection for DJI Cloud API")
         st.write("--------")
         # 插入一条分割线
 
