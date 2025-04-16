@@ -308,6 +308,20 @@ class Detection_UI:
             # 输入 RTSP/RTMP 地址
             self.rtsp_rtmp_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
 
+        # 添加视频输出和 RTSP 输出的启用复选框
+        st.sidebar.header("输出设置")
+        self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
+
+        st.sidebar.write("选择输出文件路径：")
+        self.output_path = st.sidebar.text_input("输出文件路径", value="./output", placeholder="例如：./output 或 D:/videos")
+
+        self.enable_rtsp_output = st.sidebar.checkbox("启用RTSP/RTMP输出", value=False)
+
+        # RTSP/RTMP输出地址输入
+        if self.enable_rtsp_output:
+            st.sidebar.write("设置RTSP/RTMP输出地址：")
+            self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
+
         # 设置侧边栏的识别项目设置部分
         st.sidebar.header("图片视频识别设置")
         # 选择文件类型的下拉菜单
@@ -319,13 +333,11 @@ class Detection_UI:
             self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4"])
 
         # 提供相关提示信息，根据所选摄像头和文件类型的不同情况
-        if self.selected_camera == "摄像头检测关闭":
+        if self.selected_camera == "摄像头检测关闭" or self.rtsp_rtmp_url == "":
             if self.file_type == "图片文件":
                 st.sidebar.write("请选择图片并点击'开始运行'按钮，进行图片检测！")
             if self.file_type == "视频文件":
                 st.sidebar.write("请选择视频并点击'开始运行'按钮，进行视频检测！")
-            if self.file_type == "RTSP/RTMP流":
-                st.sidebar.write("输入流地址并点击'开始运行'按钮，进行实时流检测！")
         else:
             st.sidebar.write("请点击'开始检测'按钮，启动摄像头检测！")
 
@@ -341,11 +353,9 @@ class Detection_UI:
 
         根据用户选择的输入源（摄像头、图片文件、视频文件或RTSP/RTMP流），处理并显示检测结果。
         """
-        # TODO:
         # 如果选择了摄像头输入
         if self.input_source == "摄像头" and self.selected_camera != "摄像头检测关闭" or self.input_source == "RTSP/RTMP流":
             if self.input_source == "摄像头":
-                savepath = './tempDir/camera'
                 input_type = "camera"
                 # 使用 OpenCV 捕获摄像头画面
                 if str(self.selected_camera) == '0':
@@ -356,7 +366,6 @@ class Detection_UI:
                     else:
                         input_source = self.selected_camera
             elif self.input_source == "RTSP/RTMP流":
-                savepath = './tempDir/stream'
                 input_type = "stream"
                 if not self.rtsp_rtmp_url:
                     st.warning("请输入有效的RTSP/RTMP地址！")
@@ -387,7 +396,7 @@ class Detection_UI:
 
                 cap = cv2.VideoCapture(input_source)
 
-                # 获取和帧率
+                # 获取视频属性
                 fps = cap.get(cv2.CAP_PROP_FPS)
                 self.FPS = fps
 
@@ -395,14 +404,30 @@ class Detection_UI:
                 self.progress_bar.progress(0)
 
                 # 创建保存文件的信息
-                if not os.path.exists(savepath):
-                    os.makedirs(savepath)
-                # ret, frame = cap.read()
-                # height, width, layers = frame.shape
-                # size = (width, height)
-                #
-                # file_name = abs_path('tempDir/camera.avi', path_type="current")
-                # out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+                if not os.path.exists(self.output_path):
+                    os.makedirs(self.output_path)
+
+                if self.enable_video_output:
+                    ret, frame = cap.read()
+                    height, width, layers = frame.shape
+                    size = (width, height)
+                    
+                    # 设置视频保存路径，使用当前时间作为文件名后缀
+                    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    file_name = os.path.join(self.output_path, "/video/", f"{input_type}_{current_time}.avi")
+                    video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+
+                    if not video_out.isOpened():
+                        st.error("无法打开视频输出流，请检查路径或文件权限！")
+                        return
+
+                if self.enable_rtsp_output:
+                    # 设置RTSP/RTMP输出流
+                    stream_out = cv2.VideoWriter(self.rtsp_output_url, cv2.VideoWriter_fourcc(*'H264'), fps, size)
+
+                    if not stream_out.isOpened():
+                        st.error("无法打开RTSP/RTMP输出流，请检查服务器配置！")
+                        return
 
                 while cap.isOpened() and not self.close_flag:
                     ret, frame = cap.read()
@@ -420,11 +445,16 @@ class Detection_UI:
 
                         # 保存目标结果图片
                         if detInfo:
-                            file_name = abs_path(savepath + '/' + str(current_frame + 1) + '.jpg', path_type="current")
+                            file_name = abs_path(self.output_path + '/image/' + str(current_frame + 1) + '.jpg', path_type="current")
                             save_chinese_image(file_name, image)
-                        #
-                        # # 保存目标结果视频
-                        # out.write(image)
+
+                        if self.enable_video_output:
+                            # 保存目标结果视频
+                            video_out.write(image)
+
+                        if self.enable_rtsp_output:
+                            # 保存RTSP/RTMP输出流
+                            stream_out.write(image)
 
                         # 设置新的尺寸
                         new_width = 1080
@@ -450,16 +480,26 @@ class Detection_UI:
                     self.logTable.save_to_csv()
                     self.logTable.update_table(self.log_table_placeholder)
                     cap.release()
-                    # out.release()
+                    if self.enable_video_output:
+                        video_out.release()
+                    if self.enable_rtsp_output:
+                        stream_out.release()
 
                 self.logTable.save_to_csv()
                 self.logTable.update_table(self.log_table_placeholder)
                 cap.release()
-                # out.release()
+                if self.enable_video_output:
+                    video_out.release()
+                if self.enable_rtsp_output:
+                    stream_out.release()
 
 
             finally:
                 cap.release()
+                if self.enable_video_output:
+                    video_out.release()
+                if self.enable_rtsp_output:
+                    stream_out.release()
                 if self.uploaded_video is None:
                     name_in = None
                 else:
@@ -474,6 +514,8 @@ class Detection_UI:
         else:
             # 如果上传了图片文件
             if self.uploaded_file is not None:
+                # output/image/xxx.avi
+
                 self.logTable.clear_frames()
                 self.progress_bar.progress(0)
                 # 显示上传的图片
@@ -482,7 +524,7 @@ class Detection_UI:
                 image_ini = cv2.imdecode(file_bytes, 1)
                 framecopy = image_ini.copy()
                 image, detInfo, select_info = self.frame_process(image_ini, self.uploaded_file.name)
-                save_chinese_image('./tempDir/' + self.uploaded_file.name, image)
+                save_chinese_image(self.output_path + '/image/' + self.uploaded_file.name, image)
                 # self.selectbox_placeholder = st.empty()
                 # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
@@ -506,6 +548,9 @@ class Detection_UI:
 
             # 如果上传了视频文件
             elif self.uploaded_video is not None:
+                # output/video_name/video/xxx.avi
+                # output/video_name/image/xxx.jpg
+
                 # 处理上传的视频
                 self.logTable.clear_frames()
                 self.close_flag = self.close_placeholder.button(label="停止")
@@ -533,14 +578,16 @@ class Detection_UI:
                     current_frame = 0
 
                     # 创建保存文件的信息
-                    video_savepath = './tempDir/' + self.uploaded_video.name
+                    video_savepath = self.output_path + '/' + self.uploaded_video.name
                     if not os.path.exists(video_savepath):
                         os.makedirs(video_savepath)
-                    # ret, frame = cap.read()
-                    # height, width, layers = frame.shape
-                    # size = (width, height)
-                    # file_name = abs_path('tempDir/' + self.uploaded_video.name + '.avi', path_type="current")
-                    # out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+
+                    if self.enable_video_output:
+                        ret, frame = cap.read()
+                        height, width, layers = frame.shape
+                        size = (width, height)
+                        file_name = abs_path(video_savepath + '/video/' + self.uploaded_video.name + '.avi', path_type="current")
+                        video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
 
                     while cap.isOpened() and not self.close_flag:
                         ret, frame = cap.read()
@@ -559,12 +606,13 @@ class Detection_UI:
 
                                     # 将 datetime 对象格式化为所需的字符串格式
                                     formatted_time = time_obj.strftime("%H_%M_%S")
-                                    file_name = abs_path(video_savepath + '/' + formatted_time  + '_' + str(current_frame) + '.jpg',
+                                    file_name = abs_path(video_savepath + '/image/' + formatted_time  + '_' + str(current_frame) + '.jpg',
                                                          path_type="current")
                                     save_chinese_image(file_name, image)
 
-                                # # 保存目标结果视频
-                                # out.write(image)
+                                if self.enable_video_output:
+                                    # 保存目标结果视频
+                                    video_out.write(image)
 
                                 # 设置新的尺寸
                                 new_width = 1080
@@ -595,14 +643,19 @@ class Detection_UI:
                         self.logTable.save_to_csv()
                         self.logTable.update_table(self.log_table_placeholder)
                         cap.release()
-                        # out.release()
+                        if self.enable_video_output:
+                            video_out.release()
 
                     self.logTable.save_to_csv()
                     self.logTable.update_table(self.log_table_placeholder)
                     cap.release()
-                    # out.release()
+                    if self.enable_video_output:
+                        video_out.release()
 
                 finally:
+                    cap.release()
+                    if self.enable_video_output:
+                        video_out.release()
 
                     if self.uploaded_video is None:
                         name_in = None
