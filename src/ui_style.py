@@ -10,7 +10,7 @@ def get_base64_of_bin_file(bin_file):
     return base64.b64encode(data).decode()
 
 
-def def_css_hitml():
+def def_css_html():
     st.markdown("""
         <style>
         /* 全局样式 */

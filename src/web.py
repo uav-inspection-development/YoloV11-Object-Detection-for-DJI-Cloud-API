@@ -11,7 +11,7 @@ from QtFusion.utils import drawRectBox
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import Label_list
-from ui_style import def_css_hitml
+from ui_style import def_css_html
 from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names
 import tempfile
 from PIL import ImageFont, ImageDraw, Image
@@ -170,7 +170,7 @@ class Detection_UI:
 
     def __init__(self):
         """
-        初始化行人跌倒检测系统的参数。
+        初始化智慧图像检测系统的参数。
         """
         # 初始化类别标签列表和为每个类别随机分配颜色
         self.cls_name = Label_list
@@ -180,12 +180,16 @@ class Detection_UI:
         # 设置页面标题
         self.title = "智慧图像识别系统"
         self.setup_page()  # 初始化页面布局
-        def_css_hitml()  # 应用 CSS 样式
+        def_css_html()  # 应用 CSS 样式
 
         # 初始化检测相关的配置参数
         self.model_type = None
         self.conf_threshold = 0.15  # 默认置信度阈值
         self.iou_threshold = 0.5  # 默认IOU阈值
+
+        # 初始化检测类别相关的配置参数
+        self.available_classes = None  # 可用的检测类别
+        self.selected_classes = None  # 选定的检测类别
 
         # 初始化相机和文件相关的变量
         self.selected_camera = None
@@ -294,7 +298,14 @@ class Detection_UI:
             self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in
                            range(len(self.model.names))]
 
-
+        # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
+        st.sidebar.header("目标类别选择")
+        self.available_classes = list(Label_list)  # Load available classes from Label_list
+        self.selected_classes = st.sidebar.multiselect(
+            "选择需要检测的目标类别",
+            options=self.available_classes,
+            default=self.available_classes  # Default to all classes
+        )
 
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("摄像头和流媒体识别设置")
@@ -771,20 +782,21 @@ class Detection_UI:
                 for info in det_info:
                     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
 
-                    # 绘制检测框、标签和面积信息
-                    image,aim_frame_area = draw_detections(image, info, alpha=0.5)
-                    # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
+                    if name in self.selected_classes:
+                        # 绘制检测框、标签和面积信息
+                        image,aim_frame_area = draw_detections(image, info, alpha=0.5)
+                        # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
-                    res = disp_res.concat_results(name, bbox, str(int(aim_frame_area)),
-                                                  video_time if video_time is not None else str(round(use_time, 2)))
+                        res = disp_res.concat_results(name, bbox, str(int(aim_frame_area)),
+                                                    video_time if video_time is not None else str(round(use_time, 2)))
 
-                    # 添加日志条目
-                    self.logTable.add_log_entry(file_name, name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
-                    # 记录检测信息
-                    detInfo.append([name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
-                    # 添加到选择信息列表
-                    select_info.append(name + "-" + str(cnt))
-                    cnt += 1
+                        # 添加日志条目
+                        self.logTable.add_log_entry(file_name, name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
+                        # 记录检测信息
+                        detInfo.append([name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
+                        # 添加到选择信息列表
+                        select_info.append(name + "-" + str(cnt))
+                        cnt += 1
 
                 # 在表格中显示检测结果
                 self.table_placeholder.table(res)
