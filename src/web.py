@@ -10,7 +10,7 @@ from QtFusion.utils import drawRectBox
 
 from log import ResultLogger, LogTable
 from model import Web_Detector
-from chinese_name_list import Label_list
+from chinese_name_list import Chinese_name, Label_list, Class_colors
 from ui_style import def_css_html
 from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names
 import tempfile
@@ -22,12 +22,16 @@ import cv2
 from hashlib import md5
 
 def calculate_polygon_area(points):
-    # 计算多边形面积的函数
+    """
+    计算多边形面积的函数
+    """
     return cv2.contourArea(points.astype(np.float32))
 
 def draw_with_chinese(img, text, position, font_size):
-    # 假设这是一个自定义函数，用于在图像上绘制中文文本
-    # 具体实现需要根据你的需求进行调整
+    """
+    假设这是一个自定义函数，用于在图像上绘制中文文本
+    具体实现需要根据你的需求进行调整
+    """
     font = cv2.FONT_HERSHEY_SIMPLEX
     color = (255, 255, 255)
     thickness = 2
@@ -35,7 +39,9 @@ def draw_with_chinese(img, text, position, font_size):
     return img
 
 def generate_color_based_on_name(name):
-    # 使用哈希函数生成稳定的颜色
+    """
+    使用哈希函数生成稳定的颜色
+    """
     hash_object = md5(name.encode())
     hex_color = hash_object.hexdigest()[:6]  # 取前6位16进制数
     r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
@@ -55,14 +61,19 @@ def draw_with_chinese(image, text, position, font_size=20, color=(255, 0, 0)):
     return cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
 
 def adjust_parameter(image_size, base_size=1000):
-    # 计算自适应参数，基于图片的最大尺寸
+    """
+    计算自适应参数，基于图片的最大尺寸
+    """
     max_size = max(image_size)
     return max_size / base_size
 
-def adjust_parameter(image_size, base_size=1000):
-    max_size = max(image_size)
-    return max_size / base_size
-
+def get_class_color(class_name, selected_classes):
+    """
+    获取指定类别的颜色，如果类别不在选定列表中，则返回默认颜色。
+    """
+    if class_name in selected_classes:
+        return Class_colors.get(class_name, (0, 255, 0))  # Default to green if not in Class_colors
+    return (0, 255, 0)  # Green for unselected classes
 
 def draw_detections(image, info, alpha=0.2):
     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
@@ -124,6 +135,9 @@ def calculate_polygon_area(points):
     return cv2.contourArea(points)
 
 def format_time(seconds):
+    """
+    将秒数转换为时:分:秒格式的字符串
+    """
     # 计算小时、分钟和秒
     hrs, rem = divmod(seconds, 3600)
     mins, secs = divmod(rem, 60)
@@ -248,6 +262,9 @@ class Detection_UI:
         self.setup_sidebar()  # 初始化侧边栏布局
 
     def setup_page(self):
+        """
+        设置 Streamlit 页面标题和布局。
+        """
         # 设置页面布局
         # st.set_page_config(
         #     page_title=self.title,
@@ -274,8 +291,13 @@ class Detection_UI:
         # 设置侧边栏的模型设置部分
         st.sidebar.header("模型设置")
         # 选择模型类型的下拉菜单
-        self.model_type = st.sidebar.selectbox("选择任务类型", ["检测任务","分割任务"])
+        self.model_type = st.sidebar.selectbox("选择任务类型", ["检测任务", "分割任务"])
 
+        # 添加提示信息
+        if self.model_type == "检测任务":
+            st.sidebar.caption("提示: 检测任务将检测异常的光伏板组件，目标类别按实际需要选择。")
+        elif self.model_type == "分割任务":
+            st.sidebar.caption("提示: 分割任务将对所有的光伏板轮廓进行分割，目标类别选择【太阳能板】即可。")
 
         # 选择模型文件类型，可以是默认的或者自定义的
         model_file_option = st.sidebar.radio("模型设置", ["默认", "指定权重文件"])
@@ -300,12 +322,22 @@ class Detection_UI:
 
         # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
         st.sidebar.header("目标类别选择")
-        self.available_classes = list(Label_list)  # Load available classes from Label_list
-        self.selected_classes = st.sidebar.multiselect(
+        reverse_chinese_name = {v: k for k, v in Chinese_name.items()}
+        self.available_classes = list(Chinese_name.values())
+        selected_chinese_classes = st.sidebar.multiselect(
             "选择需要检测的目标类别",
             options=self.available_classes,
-            default=self.available_classes  # Default to all classes
+            default=self.available_classes  # 默认选择所有类别
         )
+
+        # 映射中文名称到英文名称
+        self.selected_classes = [reverse_chinese_name[chinese_name] for chinese_name in selected_chinese_classes]
+
+        # 添加提示信息
+        if len(self.selected_classes) == 0:
+            st.sidebar.caption("提示: 未选择任何类别，模型将不会检测任何目标。")
+        else:
+            st.sidebar.caption(f"提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
 
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("摄像头和流媒体识别设置")
@@ -609,7 +641,7 @@ class Detection_UI:
                             if current_time < total_length:
                                 current_frame += 1
                                 current_time_str = format_time(current_time)
-                                image, detInfo, _ = self.frame_process(frame, self.uploaded_video.name,video_time=current_time_str)
+                                image, detInfo, _ = self.frame_process(frame, self.uploaded_video.name, video_time=current_time_str)
                                 # 保存目标结果图片
                                 if detInfo:
                                     # 将字符串转换为 datetime 对象
@@ -804,6 +836,13 @@ class Detection_UI:
         return image, detInfo, select_info
 
     def frame_table_process(self, frame, caption):
+        """
+        处理并显示视频帧的检测结果。
+
+        Args:
+            frame (numpy.ndarray): 输入的视频帧。
+            caption (str): 显示的标题或说明。
+        """
         # 显示画面并更新结果
         self.image_placeholder.image(frame, channels="BGR", caption=caption)
 
@@ -820,7 +859,9 @@ class Detection_UI:
         cv2.waitKey(1)
 
     def setupMainWindow(self):
-        """ 运行检测系统。 """
+        """
+        运行检测系统。
+        """
         # st.title(self.title) # 显示系统标题
         st.write("--------")
         st.write("YoloV11 Object Detection for DJI Cloud API")

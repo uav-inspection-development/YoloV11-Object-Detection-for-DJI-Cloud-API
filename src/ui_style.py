@@ -3,14 +3,19 @@ import base64
 import streamlit as st
 
 
-# 读取图片并转换为 Base64
 def get_base64_of_bin_file(bin_file):
+    """
+    读取图片并转换为 Base64 编码格式
+    """
     with open(bin_file, 'rb') as file:
         data = file.read()
     return base64.b64encode(data).decode()
 
 
 def def_css_html():
+    """
+    定义 CSS 和 HTML 样式
+    """
     st.markdown("""
         <style>
         /* 全局样式 */
