@@ -2,7 +2,7 @@
 import cv2  # 导入OpenCV库，用于处理图像和视频
 import torch
 from QtFusion.models import Detector, HeatmapGenerator  # 从QtFusion库中导入Detector抽象基类
-from chinese_name_list import Chinese_name  # 从datasets库中导入Chinese_name字典，用于获取类别的中文名称
+# from chinese_name_list import Chinese_name  # 从datasets库中导入Chinese_name字典，用于获取类别的中文名称
 from ultralytics import YOLO  # 从ultralytics库中导入YOLO类，用于加载YOLO模型
 from ultralytics.utils.torch_utils import select_device  # 从ultralytics库中导入select_device函数，用于选择设备
 import os
@@ -41,10 +41,10 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
         super().__init__(params)  # 调用父类的构造函数
         self.model = None
         self.img = None  # 初始化图像为None
-        self.names = list(Chinese_name.values())  # 获取所有类别的中文名称
+        self.names = []  # 初始化类别的中文名称为空
         self.params = params if params else ini_params  # 如果提供了参数则使用提供的参数，否则使用默认参数
 
-    def load_model(self, model_path):  # 定义加载模型的方法
+    def load_model(self, model_path, detect_type=[]):  # 定义加载模型的方法
         self.device = select_device(self.params['device'])  # 选择设备
         # print(os.path.basename(model_path)[:3])
         if os.path.basename(model_path)[:3] == 'seg':
@@ -53,7 +53,12 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
             task = 'segment'
         self.model = YOLO(model_path, task=task)
         names_dict = self.model.names  # 获取类别名称字典
-        self.names = [Chinese_name[v] if v in Chinese_name else v for v in names_dict.values()]  # 将类别名称转换为中文
+
+        if len(detect_type):
+            self.names = detect_type
+        else:
+            self.names = [names_dict[i] for i in range(len(names_dict))]  # 默认使用所有类别名称
+
         self.model(torch.zeros(1, 3, *[self.imgsz] * 2).to(self.device).
                    type_as(next(self.model.model.parameters())))  # 预热
         

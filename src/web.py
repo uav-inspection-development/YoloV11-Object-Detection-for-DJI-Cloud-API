@@ -10,7 +10,7 @@ from QtFusion.utils import drawRectBox
 
 from log import ResultLogger, LogTable
 from model import Web_Detector
-from chinese_name_list import Chinese_name, Label_list, Class_colors
+from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors
 from ui_style import def_css_html
 from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names
 import tempfile
@@ -187,9 +187,9 @@ class Detection_UI:
         初始化智慧图像检测系统的参数。
         """
         # 初始化类别标签列表和为每个类别随机分配颜色
-        self.cls_name = Label_list
-        self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in
-                       range(len(self.cls_name))]
+        self.cls_name = Visible_type
+        self.detect_class_color = Visible_class_colors
+        self.colors = [self.detect_class_color.get(class_name, (0, 255, 0)) for class_name in self.cls_name.values()]
 
         # 设置页面标题
         self.title = "智慧图像识别系统"
@@ -200,6 +200,7 @@ class Detection_UI:
         self.model_type = None
         self.conf_threshold = 0.15  # 默认置信度阈值
         self.iou_threshold = 0.5  # 默认IOU阈值
+        self.image_type = "可见光"  # 图像类型
 
         # 初始化检测类别相关的配置参数
         self.available_classes = None  # 可用的检测类别
@@ -255,10 +256,12 @@ class Detection_UI:
 
         self.model = st.session_state['model']
         # 加载训练的模型权重
-        self.model.load_model(model_path=abs_path("../weights/yolov8s.pt", path_type="current"))
-        # 为模型中的类别重新分配颜色
-        self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in
-                       range(len(self.model.names))]
+        self.model.load_model(model_path=abs_path("../weights/yolov8s.pt", path_type="current"), detect_type=self.cls_name)
+        # 为模型中的类别重新分配颜色，如果没有指定颜色，则随机生成
+        self.colors = [
+            self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
+            for class_name in self.model.names
+        ]
         self.setup_sidebar()  # 初始化侧边栏布局
 
     def setup_page(self):
@@ -299,6 +302,46 @@ class Detection_UI:
         elif self.model_type == "分割任务":
             st.sidebar.caption("提示: 分割任务将对所有的光伏板轮廓进行分割，目标类别选择【太阳能板】即可。")
 
+        # 添加图像类型选择
+        st.sidebar.header("图像类型选择")
+        self.image_type = st.sidebar.radio(
+            "选择图像类型",
+            options=["红外", "EL隐裂", "可见光"],
+            index=0  # 默认选择第一个选项
+        )
+
+        if self.model_type == "检测任务":
+            if self.image_type == "红外":
+                self.cls_name = Thermo_type
+                self.detect_class_color = Thermo_class_colors
+            elif self.image_type == "EL隐裂":
+                self.cls_name = EL_type
+                self.detect_class_color = EL_class_colors
+            elif self.image_type == "可见光":
+                self.cls_name = Visible_type
+                self.detect_class_color = Visible_class_colors
+        elif self.model_type == "分割任务":
+            self.cls_name = Segmentation_type
+            self.detect_class_color = Segmentation_class_colors
+
+        # 提示用户选择的图像类型
+        st.sidebar.caption(f"提示: 当前选择的图像类型为: {self.image_type}")
+
+        # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
+        st.sidebar.header("目标类别选择")
+        self.available_classes = list(self.cls_name.values())
+        self.selected_classes = st.sidebar.multiselect(
+            "选择需要检测的目标类别",
+            options=self.available_classes,
+            default=self.available_classes  # 默认选择所有类别
+        )
+
+        # 添加提示信息
+        if len(self.selected_classes) == 0:
+            st.sidebar.caption("提示: 未选择任何类别，模型将不会检测任何目标。")
+        else:
+            st.sidebar.caption(f"提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
+
         # 选择模型文件类型，可以是默认的或者自定义的
         model_file_option = st.sidebar.radio("模型设置", ["默认", "指定权重文件"])
         if model_file_option == "指定权重文件":
@@ -308,36 +351,31 @@ class Detection_UI:
             # 如果上传了模型文件，则保存并加载该模型
             if model_file is not None:
                 self.custom_model_file = save_uploaded_file(model_file)
-                self.model.load_model(model_path=self.custom_model_file)
-                self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in
-                               range(len(self.model.names))]
+                self.model.load_model(model_path=self.custom_model_file, detect_type=self.selected_classes)
+                self.colors = [
+                    self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
+                    for class_name in self.model.names
+                ]
         elif model_file_option == "默认":
             if self.model_type == "检测任务":
-                self.model.load_model(model_path=abs_path("../weights/yolo11s.pt", path_type="current"))
+                if self.image_type == "红外":
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo.pt", path_type="current"), detect_type=self.selected_classes)
+                elif self.image_type == "EL隐裂":
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el.pt", path_type="current"), detect_type=self.selected_classes)
+                elif self.image_type == "可见光":
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current"), detect_type=self.selected_classes)
             elif self.model_type == "分割任务":
-                self.model.load_model(model_path=abs_path("../weights/yolo11s-seg.pt", path_type="current"))
+                if self.image_type == "红外":
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current"), detect_type=self.selected_classes)
+                elif self.image_type == "EL隐裂":
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current"), detect_type=self.selected_classes)
+                elif self.image_type == "可见光":
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"), detect_type=self.selected_classes)
             # 为模型中的类别重新分配颜色
-            self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in
-                           range(len(self.model.names))]
-
-        # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
-        st.sidebar.header("目标类别选择")
-        reverse_chinese_name = {v: k for k, v in Chinese_name.items()}
-        self.available_classes = list(Chinese_name.values())
-        selected_chinese_classes = st.sidebar.multiselect(
-            "选择需要检测的目标类别",
-            options=self.available_classes,
-            default=self.available_classes  # 默认选择所有类别
-        )
-
-        # 映射中文名称到英文名称
-        self.selected_classes = [reverse_chinese_name[chinese_name] for chinese_name in selected_chinese_classes]
-
-        # 添加提示信息
-        if len(self.selected_classes) == 0:
-            st.sidebar.caption("提示: 未选择任何类别，模型将不会检测任何目标。")
-        else:
-            st.sidebar.caption(f"提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
+            self.colors = [
+                self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
+                for class_name in self.model.names
+            ]
 
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("摄像头和流媒体识别设置")
@@ -750,8 +788,10 @@ class Detection_UI:
                     # 如果有保存的初始图像
                     if len(self.logTable.saved_images_ini) > 0:
                         if len(self.colors) < cls_id:
-                            self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in
-                                           range(cls_id+1)]
+                            # 拓展颜色列表以适应当前类别ID
+                            self.colors.extend(
+                                [[random.randint(0, 255) for _ in range(3)] for _ in range(cls_id + 1 - len(self.colors))]
+                            )
                         image = drawRectBox(image, bbox, alpha=0.2, addText=label,
                                             color=self.colors[cls_id])  # 绘制检测框和标签
 
@@ -864,7 +904,7 @@ class Detection_UI:
         """
         # st.title(self.title) # 显示系统标题
         st.write("--------")
-        st.write("YoloV11 Object Detection for DJI Cloud API")
+        st.write("光伏云组件检测系统")
         st.write("--------")
         # 插入一条分割线
 

@@ -4,7 +4,7 @@ import numpy as np
 from PIL import ImageFont, ImageDraw, Image
 from hashlib import md5
 from model import Web_Detector
-from chinese_name_list import Label_list
+from chinese_name_list import Visible_type
 
 def generate_color_based_on_name(name):
     # 使用哈希函数生成稳定的颜色
@@ -95,7 +95,7 @@ def process_frame(model, image):
 
 
 if __name__ == "__main__":
-    cls_name = Label_list
+    cls_name = list(Visible_type.values())
     model = Web_Detector()
     model.load_model("./weights/yolov8s-seg.pt")
 
