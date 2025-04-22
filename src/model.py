@@ -50,7 +50,7 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
         if os.path.basename(model_path)[:3] == 'seg':
             task = 'segment'
         else:
-            task = 'segment'
+            task = 'detect'
         self.model = YOLO(model_path, task=task)
         names_dict = self.model.names  # 获取类别名称字典
 
