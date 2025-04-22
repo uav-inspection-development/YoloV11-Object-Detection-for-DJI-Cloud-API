@@ -67,14 +67,6 @@ def adjust_parameter(image_size, base_size=1000):
     max_size = max(image_size)
     return max_size / base_size
 
-def get_class_color(class_name, selected_classes):
-    """
-    获取指定类别的颜色，如果类别不在选定列表中，则返回默认颜色。
-    """
-    if class_name in selected_classes:
-        return Class_colors.get(class_name, (0, 255, 0))  # Default to green if not in Class_colors
-    return (0, 255, 0)  # Green for unselected classes
-
 def draw_detections(image, info, alpha=0.2):
     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
     adjust_param = adjust_parameter(image.shape[:2])
@@ -341,6 +333,11 @@ class Detection_UI:
             st.sidebar.caption("提示: 未选择任何类别，模型将不会检测任何目标。")
         else:
             st.sidebar.caption(f"提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
+
+        # Map the selected Chinese names back to their English names
+        self.selected_classes = [
+            english_name for english_name, chinese_name in self.cls_name.items() if chinese_name in self.selected_classes
+        ]
 
         # 选择模型文件类型，可以是默认的或者自定义的
         model_file_option = st.sidebar.radio("模型设置", ["默认", "指定权重文件"])

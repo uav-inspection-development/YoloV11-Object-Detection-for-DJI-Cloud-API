@@ -26,12 +26,10 @@ Thermo_type = {
     'dyrb_ycdw': "单一热斑_异常低温",
     'dmjrb_ycdw': "大面积热斑_异常低温",
     'ycdw': "异常低温",
-    'dyrb_zd': "单一热斑_遮挡",
-    'zd_hw': "遮挡_红外",
-    'dmhrb_zd': "大面积热斑_遮挡",
-    'ycdw_zd': "异常低温_遮挡",
+    'dyrb_ejgdl': "单一热斑_二极管短路",
     'ejgdl': "二极管短路",
-    'ygfs_hw': "阳光反射_红外",
+    'ygfs': "阳光反射",
+    'gfb_zc_rcx': "光伏板正常热成像",
     'ejgd_ycdw': "二极管短路_异常低温"
 }
 
@@ -54,54 +52,52 @@ Segmentation_type = {
 }
 
 EL_class_colors = {
-    "线状隐裂": (0, 0, 255),             # Red
-    "十字隐裂": (0, 0, 200),             # Dark Red
-    "片状隐裂": (0, 0, 150),             # Deeper Red
-    "缺角": (0, 255, 255),               # Yellow
-    "碎片": (0, 200, 200),               # Light Yellow
-    "极性反短路": (0, 165, 255),          # Orange
-    "黑心片": (255, 0, 0),               # Blue
-    "黑片": (200, 0, 0),                 # Dark Blue
-    "黑边": (150, 0, 0),                 # Deeper Blue
-    "电池片污染": (255, 255, 0),          # Cyan
-    "电池片原生问题": (200, 200, 0),       # Light Cyan
-    "工艺问题": (128, 0, 128),            # Purple
-    "混档": (0, 128, 255),               # Light Orange
-    "虚焊": (255, 255, 255),             # White
-    "断栅": (200, 200, 200),             # Light Gray
-    "过焊": (150, 150, 150),             # Dark Gray
-    "划伤": (100, 100, 100)              # Deeper Gray
+    "linear_crack": (0, 0, 255),             # Red
+    "cross_crack": (0, 0, 200),             # Dark Red
+    "sheet_crack": (0, 0, 150),             # Deeper Red
+    "missing_corner": (0, 255, 255),               # Yellow
+    "fragment": (0, 200, 200),               # Light Yellow
+    "polarity_short_circuit": (0, 165, 255),          # Orange
+    "black_heart_cell": (255, 0, 0),               # Blue
+    "black_cell": (200, 0, 0),                 # Dark Blue
+    "black_edge": (150, 0, 0),                 # Deeper Blue
+    "cell_pollution": (255, 255, 0),          # Cyan
+    "cell_inherent_issue": (200, 200, 0),       # Light Cyan
+    "process_issue": (128, 0, 128),            # Purple
+    "mixed_grade": (0, 128, 255),               # Light Orange
+    "cold_welding": (255, 255, 255),             # White
+    "broken_grid": (200, 200, 200),             # Light Gray
+    "over_welding": (150, 150, 150),             # Dark Gray
+    "scratch": (100, 100, 100)              # Deeper Gray
 }
 
 Thermo_class_colors = {
-    "单一热斑": (0, 0, 255),               # Red
-    "大面积热斑": (0, 128, 255),           # Orange
-    "单一热斑_异常低温": (0, 255, 255),     # Yellow
-    "大面积热斑_异常低温": (255, 0, 0),      # Blue
-    "异常低温": (128, 0, 128),             # Purple
-    "单一热斑_遮挡": (0, 255, 0),          # Green
-    "遮挡_红外": (255, 255, 0),            # Cyan
-    "大面积热斑_遮挡": (0, 0, 128),         # Dark Red
-    "异常低温_遮挡": (255, 0, 255),         # Magenta
-    "二极管短路": (128, 128, 128),         # Gray
-    "阳光反射_红外": (0, 128, 128),         # Teal
-    "二极管短路_异常低温": (128, 255, 128)  # Light Green
+    "dyrb": (0, 0, 255),               # Red
+    "dmjrb": (0, 128, 255),           # Orange
+    "dyrb_ycdw": (0, 255, 255),     # Yellow
+    "dmjrb_ycdw": (255, 0, 0),      # Blue
+    "ycdw": (128, 0, 128),             # Purple
+    "dyrb_ejgdl": (0, 255, 0),          # Green
+    "ejgdl": (255, 255, 0),            # Cyan
+    "ygfs": (0, 0, 128),         # Dark Red
+    "gfb_zc_rcx": (255, 0, 255),         # Magenta
+    "ejgd_ycdw": (128, 128, 128)         # Gray
 }
 
 Visible_class_colors = {
-    "遮挡": (0, 255, 0),                   # Green
-    "阳光反射": (255, 255, 0),             # Cyan
-    "脏污": (128, 128, 128),               # Gray
-    "遮挡_脏污": (0, 128, 255),            # Orange
-    "鸟粪": (255, 0, 0),                   # Blue
-    "阳光反射_遮挡": (0, 255, 255),        # Yellow
-    "遮挡_鸟粪": (128, 0, 128),            # Purple
-    "脏污_鸟粪": (255, 0, 255),            # Magenta
-    "光伏板组件变形": (0, 0, 255),          # Red
-    "光伏板缺失": (0, 128, 128),           # Teal
-    "面板碎裂": (128, 255, 128)            # Light Green
+    "yyzd": (0, 255, 0),                   # Green
+    "ygfs": (255, 255, 0),             # Cyan
+    "zw": (128, 128, 128),               # Gray
+    "yyzd_zw": (0, 128, 255),            # Orange
+    "ns": (255, 0, 0),                   # Blue
+    "ygfs_yyzd": (0, 255, 255),        # Yellow
+    "yyzd_ns": (128, 0, 128),            # Purple
+    "zw_ns": (255, 0, 255),            # Magenta
+    "gfbzjbx": (0, 0, 255),          # Red
+    "gfbqs": (0, 128, 128),           # Teal
+    "mbsl": (128, 255, 128)            # Light Green
 }
 
 Segmentation_class_colors = {
-    "太阳能板": (0, 255, 0)                # Green for solar panels
+    "solar_panel": (0, 255, 0)                # Green for solar panels
 }
