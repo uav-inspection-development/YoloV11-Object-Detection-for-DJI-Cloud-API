@@ -1,10 +1,11 @@
+import argparse
 import random
 import cv2
 import numpy as np
 from PIL import ImageFont, ImageDraw, Image
 from hashlib import md5
 from model import Web_Detector
-from chinese_name_list import Visible_type
+from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type
 
 def generate_color_based_on_name(name):
     # 使用哈希函数生成稳定的颜色
@@ -95,13 +96,47 @@ def process_frame(model, image):
 
 
 if __name__ == "__main__":
-    cls_name = list(Visible_type.values())
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Process a video feed with a YOLO model.")
+    parser.add_argument("--model_type", type=str, required=True, choices=["detection", "segmentation"], help="Type of model task.", default="detection")
+    parser.add_argument("--video_type", type=str, required=True, choices=["thermo", "el", "visible"], help="Type of video.", default="visible")
+    parser.add_argument("--video_path", type=str, required=True, help="Path to the input video.", default="./videos/sample.mp4")
+    args = parser.parse_args()
+
     model = Web_Detector()
-    model.load_model("./weights/yolov8s-seg.pt")
+
+    # Set class names and colors based on image type
+    if args.model_type == "detection":
+        if args.video_type == "thermo":
+            cls_name = Thermo_type
+            model.load_model("./weights/yolo11s-thermo.pt")
+        elif args.video_type == "el":
+            cls_name = EL_type
+            model.load_model("./weights/yolo11s-el.pt")
+        elif args.video_type == "visible":
+            cls_name = Visible_type
+            model.load_model("./weights/yolo11s-visible.pt")
+        else:
+            raise ValueError("Invalid image type.")
+    elif args.model_type == "segmentation":
+        if args.video_type == "thermo":
+            model.load_model("./weights/yolo11s-thermo-seg.pt")
+        elif args.video_type == "el":
+            model.load_model("./weights/yolo11s-el-seg.pt")
+        elif args.video_type == "visible":
+            model.load_model("./weights/yolo11s-visible-seg.pt")
+        else:
+            raise ValueError("Invalid image type.")
+        cls_name = Segmentation_type
+    else:
+        raise ValueError("Invalid model type.")
 
     # 视频处理
-    video_path = ''  # 输入视频等路径
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(args.video_path)
+    if not cap.isOpened():
+        print("Error: Could not open video.")
+        exit()
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:

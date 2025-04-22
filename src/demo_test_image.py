@@ -1,10 +1,11 @@
+import argparse
 import random
 import cv2
 import numpy as np
 from PIL import ImageFont, ImageDraw, Image
 from hashlib import md5
 from model import Web_Detector
-from chinese_name_list import Visible_type
+from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type
 
 def generate_color_based_on_name(name):
     # 使用哈希函数生成稳定的颜色
@@ -95,13 +96,42 @@ def process_frame(model, image):
 
 
 if __name__ == "__main__":
-    cls_name = list(Visible_type.values())
-    model = Web_Detector()
-    model.load_model("./weights/yolov8s-seg.pt")
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Process an image with a YOLO model.")
+    parser.add_argument("--model_type", type=str, required=True, choices=["detection", "segmentation"], help="Type of model task.", default="detection")
+    parser.add_argument("--image_type", type=str, required=True, choices=["thermo", "el", "visible"], help="Type of image.", default="visible")
+    parser.add_argument("--image_path", type=str, required=True, help="Path to the input image.", default="./icon/OIP.jpg")
+    args = parser.parse_args()
 
-    # 图片处理
-    image_path = './icon/OIP.jpg'
-    image = cv2.imread(image_path)
+    model = Web_Detector()
+
+    # Set class names and colors based on image type
+    if args.model_type == "detection":
+        if args.image_type == "thermo":
+            cls_name = Thermo_type
+            model.load_model("./weights/yolo11s-thermo.pt")
+        elif args.image_type == "el":
+            cls_name = EL_type
+            model.load_model("./weights/yolo11s-el.pt")
+        elif args.image_type == "visible":
+            cls_name = Visible_type
+            model.load_model("./weights/yolo11s-visible.pt")
+        else:
+            raise ValueError("Invalid image type.")
+    elif args.model_type == "segmentation":
+        if args.image_type == "thermo":
+            model.load_model("./weights/yolo11s-thermo-seg.pt")
+        elif args.image_type == "el":
+            model.load_model("./weights/yolo11s-el-seg.pt")
+        elif args.image_type == "visible":
+            model.load_model("./weights/yolo11s-visible-seg.pt")
+        else:
+            raise ValueError("Invalid image type.")
+        cls_name = Segmentation_type
+    else:
+        raise ValueError("Invalid model type.")
+
+    image = cv2.imread(args.image_path)
     if image is not None:
         processed_image = process_frame(model, image)
         cv2.imshow('Processed Image', processed_image)

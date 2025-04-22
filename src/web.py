@@ -331,7 +331,7 @@ class Detection_UI:
         st.sidebar.header("目标类别选择")
         self.available_classes = list(self.cls_name.values())
         self.selected_classes = st.sidebar.multiselect(
-            "选择需要检测的目标类别",
+            "选择需要检测或分割的目标类别",
             options=self.available_classes,
             default=self.available_classes  # 默认选择所有类别
         )
