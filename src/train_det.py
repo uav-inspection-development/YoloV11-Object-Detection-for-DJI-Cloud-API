@@ -9,7 +9,7 @@ device = "0" if torch.cuda.is_available() else "cpu"
 
 if __name__ == '__main__':  # 确保该模块被直接运行时才执行以下代码
     workers = 1
-    batch = 2
+    batch = 8
     data_name = "data"
     data_path = abs_path(f'../datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
     unix_style_path = data_path.replace(os.sep, '/')
@@ -34,7 +34,7 @@ if __name__ == '__main__':  # 确保该模块被直接运行时才执行以下�
             yaml.safe_dump(data, file, sort_keys=False)
 
     # 注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
-    model = YOLO(model='../ultralytics/cfg/models/v11/yolo11.yaml', task='detect').load('../weights/yolo11s.pt')  # 加载预训练的YOLOv11模型
+    model = YOLO(model='../ultralytics/cfg/models/v11/yolo11.yaml', task='detect')
     results2 = model.train(  # 开始训练模型
         data=data_path,  # 指定训练数据的配置文件路径
         device=device,  # 自动选择进行训练
@@ -42,5 +42,5 @@ if __name__ == '__main__':  # 确保该模块被直接运行时才执行以下�
         imgsz=640,  # 指定输入图像的大小为640x640
         epochs=200,  # 指定训练100个epoch
         batch=batch,  # 指定每个批次的大小为8
-        name='train_v8_' + data_name  # 指定训练任务的名称
+        name='train_v11_th_' + data_name  # 指定训练任务的名称
     )

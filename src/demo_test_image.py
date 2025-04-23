@@ -109,7 +109,7 @@ if __name__ == "__main__":
     if args.model_type == "detection":
         if args.image_type == "thermo":
             cls_name = Thermo_type
-            model.load_model("./weights/yolo11s-thermo.pt")
+            model.load_model("../runs/detect/train_v11_th_data/weights/best.pt")
         elif args.image_type == "el":
             cls_name = EL_type
             model.load_model("./weights/yolo11s-el.pt")
@@ -134,6 +134,7 @@ if __name__ == "__main__":
     image = cv2.imread(args.image_path)
     if image is not None:
         processed_image = process_frame(model, image)
+        processed_image = cv2.resize(processed_image,(800,500))
         cv2.imshow('Processed Image', processed_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
