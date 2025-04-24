@@ -116,9 +116,102 @@ def _check_params(required_fields, params):
     return errors
 
 
+@app.route("/api/types", methods=["GET"])
+def get_types():
+    """
+    Retrieve solar panel types and tasks.
+
+    Example Input:
+    None (GET request)
+
+    Example Output:
+    {
+        "检测任务": {
+            "红外": [
+                {"name": "type1", "chinese_name": "类型1"},
+                {"name": "type2", "chinese_name": "类型2"}
+            ],
+            "EL隐裂": [
+                {"name": "type3", "chinese_name": "类型3"}
+            ],
+            "可见光": [
+                {"name": "type4", "chinese_name": "类型4"}
+            ]
+        },
+        "分割任务": {
+            "红外": [
+                {"name": "type5", "chinese_name": "类型5"}
+            ],
+            "EL隐裂": [
+                {"name": "type6", "chinese_name": "类型6"}
+            ],
+            "可见光": [
+                {"name": "type7", "chinese_name": "类型7"}
+            ]
+        }
+    }
+    """
+    try:
+        tasks = {
+            "检测任务": {
+                "红外": Thermo_type,
+                "EL隐裂": EL_type,
+                "可见光": Visible_type
+            },
+            "分割任务": {
+                "红外": Segmentation_type,
+                "EL隐裂": Segmentation_type,
+                "可见光": Segmentation_type
+            }
+        }
+
+        # Format the response
+        response = {
+            "检测任务": {
+                panel_type: [
+                    {"name": name, "chinese_name": chinese_name}
+                    for name, chinese_name in task.items()
+                ]
+                for panel_type, task in tasks["检测任务"].items()
+            },
+            "分割任务": {
+                panel_type: [
+                    {"name": name, "chinese_name": chinese_name}
+                    for name, chinese_name in task.items()
+                ]
+                for panel_type, task in tasks["分割任务"].items()
+            }
+        }
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+
 @app.route("/api/detect/image", methods=["POST"])
 @validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes"])
 def detect_image(validated_params, files):
+    """
+    Detect objects in an uploaded image.
+
+    Example Input:
+    Form-data:
+    - image: (binary file) The image file to be processed.
+    - conf_threshold: 0.5
+    - iou_threshold: 0.4
+    - model_type: "检测任务"
+    - image_type: "可见光"
+    - selected_classes: ["class1", "class2"]
+
+    Example Output:
+    {
+        "detections": [
+            ["class_name", [x1, y1, x2, y2], confidence, "time", class_id],
+            ...
+        ]
+    }
+    """
     try:
         img_file = files.get("image")
         if not img_file:
@@ -138,6 +231,33 @@ def detect_image(validated_params, files):
 @app.route("/api/detect/video", methods=["POST"])
 @validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes"])
 def detect_video(validated_params, files):
+    """
+    Detect objects in an uploaded video.
+
+    Example Input:
+    Form-data:
+    - video: (binary file) The video file to be processed.
+    - conf_threshold: 0.5
+    - iou_threshold: 0.4
+    - model_type: "检测任务"
+    - image_type: "可见光"
+    - selected_classes: ["class1", "class2"]
+
+    Example Output:
+    {
+        "total_frames": 100,
+        "results": [
+            {
+                "frame": 0,
+                "detections": [
+                    ["class_name", [x1, y1, x2, y2], confidence, "time", class_id],
+                    ...
+                ]
+            },
+            ...
+        ]
+    }
+    """
     try:
         video_file = files.get("video")
         if not video_file:
@@ -179,6 +299,32 @@ def detect_video(validated_params, files):
 @socketio.on('start_stream')
 @validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes"])
 def handle_stream(params, stream_source):
+    """
+    Handle real-time video stream detection.
+
+    Example Input:
+    WebSocket message:
+    {
+        "params": {
+            "conf_threshold": 0.5,
+            "iou_threshold": 0.4,
+            "model_type": "检测任务",
+            "image_type": "可见光",
+            "selected_classes": ["class1", "class2"]
+        },
+        "stream_source": "0"  # Camera index or RTSP/RTMP URL
+    }
+
+    Example Output:
+    WebSocket message:
+    {
+        "detections": [
+            ["class_name", [x1, y1, x2, y2], confidence, "time", class_id],
+            ...
+        ],
+        "image": "<base64_encoded_image>"
+    }
+    """
     try:
         if isinstance(stream_source, str) and stream_source.isdigit():
             stream_source = int(stream_source)
