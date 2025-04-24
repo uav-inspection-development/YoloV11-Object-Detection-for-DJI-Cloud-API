@@ -19,5 +19,8 @@ COPY datasets/ ./datasets
 COPY weights/ ./weights
 COPY tempDir/ ./tempDir
 
-# Command to run the application
-CMD ["python3", "src/ui.py"]
+# Set the default environment variable for RUN_MODE
+ENV RUN_MODE=streamlit
+
+# Command to run the application with the RUN_MODE parameter
+CMD ["sh", "-c", "python3 src/ui.py $RUN_MODE"]

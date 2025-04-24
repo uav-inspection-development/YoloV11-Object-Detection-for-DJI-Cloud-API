@@ -12,150 +12,10 @@ from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors
 from ui_style import def_css_html
-from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names
+from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time
 import tempfile
-from PIL import ImageFont, ImageDraw, Image
 from datetime import datetime
 
-import numpy as np
-import cv2
-from hashlib import md5
-
-def calculate_polygon_area(points):
-    """
-    计算多边形面积的函数
-    """
-    return cv2.contourArea(points.astype(np.float32))
-
-def draw_with_chinese(img, text, position, font_size):
-    """
-    假设这是一个自定义函数，用于在图像上绘制中文文本
-    具体实现需要根据你的需求进行调整
-    """
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    color = (255, 255, 255)
-    thickness = 2
-    cv2.putText(img, text, position, font, font_size, color, thickness, cv2.LINE_AA)
-    return img
-
-def generate_color_based_on_name(name):
-    """
-    使用哈希函数生成稳定的颜色
-    """
-    hash_object = md5(name.encode())
-    hex_color = hash_object.hexdigest()[:6]  # 取前6位16进制数
-    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-    return (b, g, r)  # OpenCV 使用BGR格式
-
-def draw_with_chinese(image, text, position, font_size=20, color=(255, 0, 0)):
-    """
-    在OpenCV图像上绘制中文文字
-    """
-    # 将图像从 OpenCV 格式（BGR）转换为 PIL 格式（RGB）
-    image_pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    draw = ImageDraw.Draw(image_pil)
-    # 使用指定的字体
-    font = ImageFont.truetype("simsun.ttc", font_size, encoding="unic")
-    draw.text(position, text, font=font, fill=color)
-    # 将图像从 PIL 格式（RGB）转换回 OpenCV 格式（BGR）
-    return cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
-
-def adjust_parameter(image_size, base_size=1000):
-    """
-    计算自适应参数，基于图片的最大尺寸
-    """
-    max_size = max(image_size)
-    return max_size / base_size
-
-def draw_detections(image, info, alpha=0.2):
-    name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
-    adjust_param = adjust_parameter(image.shape[:2])
-    spacing = int(20 * adjust_param)
-
-    if mask is None:
-        x1, y1, x2, y2 = bbox
-        aim_frame_area = (x2 - x1) * (y2 - y1)
-        cv2.rectangle(image, (x1, y1), (x2, y2), color=(0, 0, 255), thickness=int(5 * adjust_param))
-        image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param))
-        y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
-    else:
-        mask_points = np.concatenate(mask)
-        aim_frame_area = calculate_polygon_area(mask_points)
-        mask_color = generate_color_based_on_name(name)
-        try:
-            overlay = image.copy()
-            cv2.fillPoly(overlay, [mask_points.astype(np.int32)], mask_color)
-            image = cv2.addWeighted(overlay, 0.3, image, 0.7, 0)
-            cv2.drawContours(image, [mask_points.astype(np.int32)], -1, (0, 0, 255), thickness=int(8 * adjust_param))
-
-            # 计算面积、周长、圆度
-            area = cv2.contourArea(mask_points.astype(np.int32))
-            perimeter = cv2.arcLength(mask_points.astype(np.int32), True)
-            circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
-
-            # 计算色彩
-            mask = np.zeros(image.shape[:2], dtype=np.uint8)
-            cv2.drawContours(mask, [mask_points.astype(np.int32)], -1, 255, -1)
-            color_points = cv2.findNonZero(mask)
-            selected_points = color_points[np.random.choice(color_points.shape[0], 5, replace=False)]
-            colors = np.mean([image[y, x] for x, y in selected_points[:, 0]], axis=0)
-            color_str = f"({colors[0]:.1f}, {colors[1]:.1f}, {colors[2]:.1f})"
-
-            # 绘制类别名称
-            x, y = np.min(mask_points, axis=0).astype(int)
-            image = draw_with_chinese(image, name, (x, y - int(30 * adjust_param)), font_size=int(35 * adjust_param))
-            y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
-
-            # 绘制面积、周长、圆度和色彩值
-            # metrics = [("Area", area), ("Perimeter", perimeter), ("Circularity", circularity), ("Color", color_str)]
-            # for idx, (metric_name, metric_value) in enumerate(metrics):
-            #     text = f"{metric_name}: {metric_value}"
-            #     image = draw_with_chinese(image, text, (x, y - y_offset - spacing * (idx + 1)),
-            #                               font_size=int(35 * adjust_param))
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-    return image, aim_frame_area
-
-def calculate_polygon_area(points):
-    """
-    计算多边形的面积，输入应为一个 Nx2 的numpy数组，表示多边形的顶点坐标
-    """
-    if len(points) < 3:  # 多边形至少需要3个顶点
-        return 0
-    return cv2.contourArea(points)
-
-def format_time(seconds):
-    """
-    将秒数转换为时:分:秒格式的字符串
-    """
-    # 计算小时、分钟和秒
-    hrs, rem = divmod(seconds, 3600)
-    mins, secs = divmod(rem, 60)
-    # 格式化为字符串
-    return "{:02}:{:02}:{:02}".format(int(hrs), int(mins), int(secs))
-
-
-
-def save_chinese_image(file_path, image_array):
-    """
-    保存带有中文路径的图片文件
-
-    参数：
-    file_path (str): 图片的保存路径，应包含中文字符, 例如 '示例路径/含有中文的文件名.png'
-    image_array (numpy.ndarray): 要保存的 OpenCV 图像（即 numpy 数组）
-    """
-    try:
-        # 将 OpenCV 图片转换为 Pillow Image 对象
-        image = Image.fromarray(cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB))
-
-        # 使用 Pillow 保存图片文件
-        image.save(file_path)
-
-        print(f"成功保存图像到: {file_path}")
-    except Exception as e:
-        print(f"保存图像失败: {str(e)}")
 
 class Detection_UI:
     """
@@ -174,10 +34,13 @@ class Detection_UI:
         detection_time (str): 检测用时。
     """
 
-    def __init__(self):
+    def __init__(self, from_streamlit=False, api_params=None):
         """
         初始化智慧图像检测系统的参数。
         """
+        self.from_streamlit = from_streamlit
+        self.api_params = api_params or {}
+
         # 初始化类别标签列表和为每个类别随机分配颜色
         self.cls_name = Visible_type
         self.detect_class_color = Visible_class_colors
@@ -185,18 +48,19 @@ class Detection_UI:
 
         # 设置页面标题
         self.title = "智慧图像识别系统"
-        self.setup_page()  # 初始化页面布局
-        def_css_html()  # 应用 CSS 样式
+        if self.from_streamlit:
+            self.setup_page()  # 初始化页面布局
+            def_css_html()  # 应用 CSS 样式
 
         # 初始化检测相关的配置参数
-        self.model_type = None
+        self.model_type = "检测任务"
         self.conf_threshold = 0.15  # 默认置信度阈值
         self.iou_threshold = 0.5  # 默认IOU阈值
         self.image_type = "可见光"  # 图像类型
 
         # 初始化检测类别相关的配置参数
         self.available_classes = None  # 可用的检测类别
-        self.selected_classes = None  # 选定的检测类别
+        self.selected_classes = list(self.cls_name.keys())  # 选定的检测类别
 
         # 初始化相机和文件相关的变量
         self.selected_camera = None
@@ -211,7 +75,7 @@ class Detection_UI:
         self.detection_confidence = None
         self.detection_time = None
 
-        # 初始化UI显示相关的变量
+        # 初始化UI显示相关的变量（仅Streamlit）
         self.display_mode = None  # 设置显示模式
         self.close_flag = None  # 控制图像显示结束的标志
         self.close_placeholder = None  # 关闭按钮区域
@@ -230,23 +94,29 @@ class Detection_UI:
         # 初始化日志数据保存路径
         self.saved_log_data = abs_path("../tempDir/log_table_data.csv", path_type="current")
 
-        # 如果在 session state 中不存在logTable，创建一个新的LogTable实例
-        if 'logTable' not in st.session_state:
-            st.session_state['logTable'] = LogTable(self.saved_log_data)
+        # 处理 Flask / Streamlit 的差异初始化
+        
+        if self.from_streamlit:
+            # Streamlit模式初始化 session state
+            if 'logTable' not in st.session_state:
+                # 如果在 session state 中不存在logTable，创建一个新的LogTable实例
+                st.session_state['logTable'] = LogTable(self.saved_log_data)
+            if 'available_cameras' not in st.session_state:
+                # 获取或更新可用摄像头列表
+                st.session_state['available_cameras'] = get_camera_names()
+            if 'model' not in st.session_state:
+                # 加载或创建模型实例
+                st.session_state['model'] = Web_Detector()
 
-        # 获取或更新可用摄像头列表
-        if 'available_cameras' not in st.session_state:
-            st.session_state['available_cameras'] = get_camera_names()
-        self.available_cameras = st.session_state['available_cameras']
+            self.available_cameras = st.session_state['available_cameras']
+            # 初始化或获取识别结果的表格
+            self.logTable = st.session_state['logTable']
+            self.model = st.session_state['model']
+        else:
+            self.available_cameras = get_camera_names()
+            self.logTable = LogTable(self.saved_log_data)
+            self.model = Web_Detector()
 
-        # 初始化或获取识别结果的表格
-        self.logTable = st.session_state['logTable']
-
-        # 加载或创建模型实例
-        if 'model' not in st.session_state:
-            st.session_state['model'] = Web_Detector()  # 创建Detector模型实例
-
-        self.model = st.session_state['model']
         # 加载训练的模型权重
         self.model.load_model(model_path=abs_path("../weights/yolov8s.pt", path_type="current"), detect_type=self.cls_name)
         # 为模型中的类别重新分配颜色，如果没有指定颜色，则随机生成
@@ -254,7 +124,54 @@ class Detection_UI:
             self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
             for class_name in self.model.names
         ]
-        self.setup_sidebar()  # 初始化侧边栏布局
+
+        if self.from_streamlit:
+            self.setup_sidebar()  # 初始化侧边栏布局
+        else:
+            self.load_api_params()  # 加载API参数
+
+    def load_api_params(self):
+        """
+        用于 Flask 模式，根据 API 提供的参数设置实例变量。
+        """
+        self.conf_threshold = float(self.api_params.get("conf_threshold", 0.15))
+        self.iou_threshold = float(self.api_params.get("iou_threshold", 0.25))
+        self.model_type = self.api_params.get("model_type", "检测任务")
+        self.image_type = self.api_params.get("image_type", "可见光")
+        self.selected_classes = self.api_params.get("selected_classes", list(Visible_type.keys()))
+
+        # 设置类别标签
+        if self.model_type == "分割任务":
+            self.cls_name = Segmentation_type
+            self.detect_class_color = Segmentation_class_colors
+        else:
+            if self.image_type == "红外":
+                self.cls_name = Thermo_type
+                self.detect_class_color = Thermo_class_colors
+            elif self.image_type == "EL隐裂":
+                self.cls_name = EL_type
+                self.detect_class_color = EL_class_colors
+            else:
+                self.cls_name = Visible_type
+                self.detect_class_color = Visible_class_colors
+
+        # 重新加载模型
+        if self.model_type == "检测任务":
+            if self.image_type == "红外":
+                model_path = abs_path("../weights/yolo11s-thermo.pt", path_type="current")
+            elif self.image_type == "EL隐裂":
+                model_path = abs_path("../weights/yolo11s-el.pt", path_type="current")
+            else:
+                model_path = abs_path("../weights/yolo11s-visible.pt", path_type="current")
+        else:
+            if self.image_type == "红外":
+                model_path = abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current")
+            elif self.image_type == "EL隐裂":
+                model_path = abs_path("../weights/yolo11s-el-seg.pt", path_type="current")
+            else:
+                model_path = abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
+
+        self.model.load_model(model_path=model_path, detect_type=self.selected_classes)
 
     def setup_page(self):
         """
@@ -853,7 +770,7 @@ class Detection_UI:
 
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
-                        image,aim_frame_area = draw_detections(image, info, alpha=0.5)
+                        image, aim_frame_area = draw_detections(image, info, alpha=0.5)
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
                         res = disp_res.concat_results(name, bbox, str(int(aim_frame_area)),
@@ -990,5 +907,5 @@ class Detection_UI:
 
 # 实例化并运行应用
 if __name__ == "__main__":
-    app = Detection_UI()
+    app = Detection_UI(from_streamlit=True)
     app.setupMainWindow()

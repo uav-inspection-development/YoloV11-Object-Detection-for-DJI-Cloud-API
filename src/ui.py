@@ -8,9 +8,12 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from QtFusion.path import abs_path
 
 
-def run_script(script_path):
+# Get the RUN_MODE from the command-line argument
+RUN_MODE = sys.argv[1] if len(sys.argv) > 1 else "streamlit"  # Default to "streamlit"
+
+def run_streamlit(script_path):
     """
-    使用当前 Python 环境运行指定的脚本。
+    使用当前 Python 环境运行 Streamlit 脚本。
 
     Args:
         script_path (str): 要运行的脚本路径
@@ -27,13 +30,21 @@ def run_script(script_path):
     # 执行命令
     result = subprocess.run(command, shell=True)
     if result.returncode != 0:
-        print("脚本运行出错。")
+        print("Streamlit 脚本运行出错。")
 
 
-# 实例化并运行应用
 if __name__ == "__main__":
-    # 指定您的脚本路径
-    script_path = abs_path("web.py")
+    if RUN_MODE == "streamlit":
+        # 指定 Streamlit 脚本路径
+        script_path = abs_path("web.py")
 
-    # 运行脚本
-    run_script(script_path)
+        # 运行 Streamlit 脚本
+        run_streamlit(script_path)
+
+    elif RUN_MODE == "api":
+        # 运行 Flask API
+        from api_server import socketio, app
+        socketio.run(app, host="0.0.0.0", port=5000)
+
+    else:
+        print(f"Invalid RUN_MODE: {RUN_MODE}. Please use 'streamlit' or 'api'.")

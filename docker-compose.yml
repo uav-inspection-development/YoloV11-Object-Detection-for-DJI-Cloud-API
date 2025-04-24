@@ -15,7 +15,8 @@ services:
       - "5000:5000"
     environment:
       - ENV=development
-    command: python3 src/ui.py
+      - RUN_MODE=streamlit
+    command: python3 src/ui.py $RUN_MODE
 
 networks:
   default:
