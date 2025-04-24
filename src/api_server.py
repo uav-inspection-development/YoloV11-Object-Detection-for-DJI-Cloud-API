@@ -220,7 +220,7 @@ def detect_image(validated_params, files):
         img_data = np.frombuffer(img_file.read(), np.uint8)
         image = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
 
-        detector = Detection_UI(flask_mode=True, api_params=validated_params)
+        detector = Detection_UI(from_streamlit=False, api_params=validated_params)
         _, det_info, _ = detector.frame_process(image, "api_image.jpg")
         return jsonify({"detections": det_info})
 
@@ -268,7 +268,7 @@ def detect_video(validated_params, files):
         tfile.close()
 
         cap = cv2.VideoCapture(tfile.name)
-        detector = Detection_UI(flask_mode=True, api_params=validated_params)
+        detector = Detection_UI(from_streamlit=False, api_params=validated_params)
         frame_results = []
         frame_id = 0
 
@@ -334,7 +334,7 @@ def handle_stream(params, stream_source):
             emit("stream_error", {"error": f"Unable to open stream: {stream_source}"})
             return
 
-        detector = Detection_UI(flask_mode=True, api_params=params)
+        detector = Detection_UI(from_streamlit=False, api_params=params)
 
         def stream_loop():
             while cap.isOpened():

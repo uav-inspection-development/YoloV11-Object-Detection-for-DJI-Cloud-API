@@ -34,11 +34,11 @@ class Detection_UI:
         detection_time (str): 检测用时。
     """
 
-    def __init__(self, flask_mode=False, api_params=None):
+    def __init__(self, from_streamlit=False, api_params=None):
         """
         初始化智慧图像检测系统的参数。
         """
-        self.flask_mode = flask_mode
+        self.from_streamlit = from_streamlit
         self.api_params = api_params or {}
 
         # 初始化类别标签列表和为每个类别随机分配颜色
@@ -48,7 +48,7 @@ class Detection_UI:
 
         # 设置页面标题
         self.title = "智慧图像识别系统"
-        if not self.flask_mode:
+        if self.from_streamlit:
             self.setup_page()  # 初始化页面布局
             def_css_html()  # 应用 CSS 样式
 
@@ -95,11 +95,8 @@ class Detection_UI:
         self.saved_log_data = abs_path("../tempDir/log_table_data.csv", path_type="current")
 
         # 处理 Flask / Streamlit 的差异初始化
-        if self.flask_mode:
-            self.available_cameras = get_camera_names()
-            self.logTable = LogTable(self.saved_log_data)
-            self.model = Web_Detector()
-        else:
+        
+        if self.from_streamlit:
             # Streamlit模式初始化 session state
             if 'logTable' not in st.session_state:
                 # 如果在 session state 中不存在logTable，创建一个新的LogTable实例
@@ -115,6 +112,10 @@ class Detection_UI:
             # 初始化或获取识别结果的表格
             self.logTable = st.session_state['logTable']
             self.model = st.session_state['model']
+        else:
+            self.available_cameras = get_camera_names()
+            self.logTable = LogTable(self.saved_log_data)
+            self.model = Web_Detector()
 
         # 加载训练的模型权重
         self.model.load_model(model_path=abs_path("../weights/yolov8s.pt", path_type="current"), detect_type=self.cls_name)
@@ -124,7 +125,7 @@ class Detection_UI:
             for class_name in self.model.names
         ]
 
-        if not self.flask_mode:
+        if self.from_streamlit:
             self.setup_sidebar()  # 初始化侧边栏布局
         else:
             self.load_api_params()  # 加载API参数
@@ -906,5 +907,5 @@ class Detection_UI:
 
 # 实例化并运行应用
 if __name__ == "__main__":
-    app = Detection_UI()
+    app = Detection_UI(from_streamlit=True)
     app.setupMainWindow()
