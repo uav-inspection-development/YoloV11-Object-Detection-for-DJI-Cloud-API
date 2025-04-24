@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify, has_request_context
 from flask_socketio import SocketIO, emit
-import numpy as np, cv2, tempfile, os, base64
+import numpy as np
+import cv2
+import tempfile
+import os
+import base64
 from web import Detection_UI
 import threading
 import json
