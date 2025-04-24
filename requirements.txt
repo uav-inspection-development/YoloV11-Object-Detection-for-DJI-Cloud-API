@@ -79,7 +79,7 @@ tensorboard-plugin-wit
 thop
 toml
 toolz
-torch==1.13.1
+torch==2.2.0
 torchaudio==0.13.1
 torchvision==0.14.1
 tornado
