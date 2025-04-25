@@ -14,9 +14,12 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - ENV=development
-      - RUN_MODE=streamlit
-    command: python3 src/ui.py $RUN_MODE
+      - RUN_MODE=${RUN_MODE:-streamlit}
+      - OAUTH2_INTROSPECT_URL=${OAUTH2_INTROSPECT_URL:-https://your-auth-server.com/oauth2/introspect}
+      - OAUTH2_TOKEN_URL=${OAUTH2_TOKEN_URL:-https://your-auth-server.com/oauth2/token}
+      - CLIENT_ID=${CLIENT_ID:-your-client-id}
+      - CLIENT_SECRET=${CLIENT_SECRET:-your-client-secret}
+    command: sh -c "python3 src/ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --oauth2-token-url $OAUTH2_TOKEN_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
 
 networks:
   default:

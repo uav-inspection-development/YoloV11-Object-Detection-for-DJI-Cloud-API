@@ -15,6 +15,7 @@ from ui_style import def_css_html
 from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time
 import tempfile
 from datetime import datetime
+from api_server import verify_token, get_access_token
 
 
 class Detection_UI:
@@ -34,10 +35,32 @@ class Detection_UI:
         detection_time (str): 检测用时。
     """
 
-    def __init__(self, from_streamlit=False, api_params=None):
+    def __init__(self, from_streamlit=False, api_params=None, oauth_token=None):
         """
         初始化智慧图像检测系统的参数。
         """
+        if from_streamlit and os.getenv("ENABLE_OAUTH") == "TRUE":
+            CLIENT_ID = os.getenv("CLIENT_ID")
+            CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+            OAUTH2_TOKEN_URL = os.getenv("OAUTH2_TOKEN_URL")
+
+            # 验证环境变量是否存在
+            if not OAUTH2_TOKEN_URL or not CLIENT_ID or not CLIENT_SECRET:
+                st.error(
+                    "Error: Missing required environment variables.\n"
+                    "Please set the following variables:\n"
+                    "  - OAUTH2_TOKEN_URL\n"
+                    "  - CLIENT_ID\n"
+                    "  - CLIENT_SECRET\n"
+                )
+                st.stop()
+
+            # 获取 OAuth2 令牌
+            access_token = get_access_token(OAUTH2_TOKEN_URL, CLIENT_ID, CLIENT_SECRET)
+            if not access_token:
+                st.error("Failed to retrieve ACCESS_TOKEN. Please check your credentials and token endpoint.")
+                st.stop()
+
         self.from_streamlit = from_streamlit
         self.api_params = api_params or {}
 
@@ -47,7 +70,7 @@ class Detection_UI:
         self.colors = [self.detect_class_color.get(class_name, (0, 255, 0)) for class_name in self.cls_name.values()]
 
         # 设置页面标题
-        self.title = "智慧图像识别系统"
+        self.title = "光伏云组件检测系统"
         if self.from_streamlit:
             self.setup_page()  # 初始化页面布局
             def_css_html()  # 应用 CSS 样式
@@ -841,7 +864,7 @@ class Detection_UI:
         """
         # st.title(self.title) # 显示系统标题
         st.write("--------")
-        st.write("光伏云组件检测系统")
+        st.write("本系统可以检测光伏面板可见光故障、红外热故障以及EL隐裂故障")
         st.write("--------")
         # 插入一条分割线
 
@@ -930,5 +953,12 @@ class Detection_UI:
 
 # 实例化并运行应用
 if __name__ == "__main__":
-    app = Detection_UI(from_streamlit=True)
+    # Retrieve the OAuth token from environment variables
+    oauth_token = os.getenv("ACCESS_TOKEN")  # Use ACCESS_TOKEN as the actual OAuth token
+
+    if not oauth_token:
+        st.error("Missing ACCESS_TOKEN environment variable. Please set it before running the application.")
+        st.stop()
+
+    app = Detection_UI(from_streamlit=True, oauth_token=oauth_token)
     app.setupMainWindow()
