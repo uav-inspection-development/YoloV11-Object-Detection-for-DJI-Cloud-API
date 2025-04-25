@@ -572,10 +572,10 @@ class Detection_UI:
                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
                     resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
                     if self.display_mode == "叠加显示":
-                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"图片显示: {selected_name}")
+                        self.image_placeholder.image(resized_image, channels="BGR", caption="图片显示")
                     else:
-                        self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {selected_name}")
-                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {selected_name}")
+                        self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
 
                     self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)))
                     # 更新进度条
