@@ -222,7 +222,7 @@ class Detection_UI:
         st.sidebar.header("日志保存路径设置")
         self.csv_output_path = st.sidebar.text_input(
             "输入CSV保存路径",
-            value=abs_path(f"../tempDir", path_type="current"),  # 默认路径
+            value=abs_path(f"../output/logs", path_type="current"),  # 默认路径
             placeholder="例如：D:/output/logs"
         )
 
@@ -370,7 +370,7 @@ class Detection_UI:
             self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
 
         st.sidebar.write("选择输出文件路径：")
-        self.output_path = st.sidebar.text_input("输出文件路径", value="./output", placeholder="例如：./output 或 D:/videos")
+        self.output_path = st.sidebar.text_input("输出文件路径", value="../output", placeholder="例如：../output 或 D:/videos")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             st.sidebar.header("RTSP/RTMP输出设置")
@@ -539,7 +539,7 @@ class Detection_UI:
             else:
                 name_in = self.uploaded_video.name
 
-            res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
+            res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
             st.write("识别结果文件已经保存：" + self.saved_log_data)
             if res:
                 st.write(f"结果的目标文件已经保存：{res}")
@@ -720,7 +720,7 @@ class Detection_UI:
                         else:
                             name_in = self.uploaded_video.name
 
-                        res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
+                        res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
                         st.write("识别结果文件已经保存：" + self.saved_log_data)
                         if res:
                             st.write(f"结果的目标文件已经保存：{res}")
@@ -834,7 +834,7 @@ class Detection_UI:
                     else:
                         name_in = self.uploaded_video.name
 
-                    res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
+                    res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
                     st.write("识别结果文件已经保存：" + self.saved_log_data)
                     if res:
                         st.write(f"结果的目标文件已经保存：{res}")
@@ -1062,7 +1062,7 @@ class Detection_UI:
                     name_in = None
                 else:
                     name_in = self.uploaded_video.name
-                res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
+                res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
                 st.write("识别结果文件已经保存：" + self.saved_log_data)
                 if res:
                     st.write(f"结果的目标文件已经保存：{res}")

@@ -18,6 +18,7 @@ COPY ultralytics/ ./ultralytics
 COPY datasets/ ./datasets
 COPY weights/ ./weights
 COPY tempDir/ ./tempDir
+COPY output/ ./output
 
 # Set default environment variables
 ENV RUN_MODE=streamlit

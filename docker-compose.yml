@@ -11,6 +11,7 @@ services:
       - ./datasets:/app/datasets
       - ./weights:/app/weights
       - ./tempDir:/app/tempDir
+      - ./output:/app/output
     ports:
       - "5000:5000"
     environment:

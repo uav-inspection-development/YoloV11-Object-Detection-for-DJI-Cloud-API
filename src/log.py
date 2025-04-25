@@ -120,7 +120,7 @@ class LogTable:
         self.saved_results = []
         self.saved_target_images = []
 
-    def save_frames_file(self, fps=30, video_name='save', video_time=None, output_path='tempDir/output/'):
+    def save_frames_file(self, fps=30, video_name='save', video_time=None, output_path='tempDir/frame/'):
         """
         保存检测到的图像和视频文件。
 
