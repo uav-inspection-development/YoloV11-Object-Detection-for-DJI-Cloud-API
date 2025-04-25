@@ -27,7 +27,6 @@ class Detection_UI:
         conf_threshold (float): 置信度阈值。
         iou_threshold (float): IOU阈值。
         selected_camera (str): 选定的摄像头。
-        file_type (str): 文件类型。
         uploaded_file (FileUploader): 上传的文件。
         detection_result (str): 检测结果。
         detection_location (str): 检测位置。
@@ -87,7 +86,6 @@ class Detection_UI:
 
         # 初始化相机和文件相关的变量
         self.selected_camera = None
-        self.file_type = None
         self.uploaded_file = None
         self.uploaded_video = None
         self.custom_model_file = None  # 自定义的模型文件
@@ -109,6 +107,9 @@ class Detection_UI:
         self.selectbox_placeholder = None  # 下拉框显示区域
         self.selectbox_target = None  # 下拉框选中项
         self.progress_bar = None  # 用于显示的进度条
+
+        self.new_width = 1080
+        self.new_height = int(self.new_width * (9 / 16))
 
         # 初始化FPS和视频时间指针
         self.FPS = 30
@@ -211,6 +212,11 @@ class Detection_UI:
 
         在侧边栏中配置模型设置、摄像头选择以及识别项目设置等选项。
         """
+        # 添加显示设置
+        st.sidebar.header("显示设置")
+        self.new_width = st.sidebar.number_input("输入显示宽度 (默认: 1080)", min_value=100, max_value=3840, value=1080, step=10)
+        self.new_height = st.sidebar.number_input("输入显示高度 (默认: 自动计算 16:9)", min_value=100, max_value=2160, value=int(self.new_width * (9 / 16)), step=10)
+
         # 添加 CSV 输出路径设置
         st.sidebar.header("日志保存路径设置")
         self.csv_output_path = st.sidebar.text_input(
@@ -297,7 +303,7 @@ class Detection_UI:
         else:
             st.sidebar.caption(f"提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
 
-        # Map the selected Chinese names back to their English names
+        # 映射中文名称到英文名称
         self.selected_classes = [
             english_name for english_name, chinese_name in self.cls_name.items() if chinese_name in self.selected_classes
         ]
@@ -338,49 +344,41 @@ class Detection_UI:
             ]
 
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
-        st.sidebar.header("摄像头和流媒体识别设置")
-        # 选择输入源类型：摄像头或 RTSP/RTMP 流
-        self.input_source = st.sidebar.radio("选择输入源", ["摄像头", "RTSP/RTMP流"])
+        st.sidebar.header("输入源识别设置")
+        # 选择输入源类型：无输入，摄像头或 RTSP/RTMP 流
+        self.input_source = st.sidebar.radio("选择输入源", ["图片文件", "视频文件", "摄像头", "RTSP/RTMP流"])
 
         if self.input_source == "摄像头":
             # 选择摄像头的下拉菜单
             self.selected_camera = st.sidebar.selectbox("选择摄像头序号", self.available_cameras)
+            st.sidebar.write("请点击'开始检测'按钮，启动摄像头检测！")
         elif self.input_source == "RTSP/RTMP流":
             # 输入 RTSP/RTMP 地址
             self.rtsp_rtmp_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
+            st.sidebar.write("请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
+        elif self.input_source == "图片文件":
+            self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            st.sidebar.write("请选择图片并点击'开始运行'按钮，进行图片检测！")
+        elif self.input_source == "视频文件":
+            self.uploaded_file = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi"], accept_multiple_files=True)
+            st.sidebar.write("请选择视频并点击'开始运行'按钮，进行视频检测！")
 
-        # 添加视频输出和 RTSP 输出的启用复选框
-        st.sidebar.header("输出设置")
-        self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
+        if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
+            # 添加视频输出和 RTSP 输出的启用复选框
+            st.sidebar.header("视频输出设置")
+            self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
 
         st.sidebar.write("选择输出文件路径：")
         self.output_path = st.sidebar.text_input("输出文件路径", value="./output", placeholder="例如：./output 或 D:/videos")
 
-        self.enable_rtsp_output = st.sidebar.checkbox("启用RTSP/RTMP输出", value=False)
+        if self.input_source in ["摄像头", "RTSP/RTMP流"]:
+            st.sidebar.header("RTSP/RTMP输出设置")
+            self.enable_rtsp_output = st.sidebar.checkbox("启用RTSP/RTMP输出", value=False)
 
-        # RTSP/RTMP输出地址输入
-        if self.enable_rtsp_output:
-            st.sidebar.write("设置RTSP/RTMP输出地址：")
-            self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
-
-        # 设置侧边栏的识别项目设置部分
-        st.sidebar.header("图片视频识别设置")
-        # 选择文件类型的下拉菜单
-        self.file_type = st.sidebar.selectbox("选择文件类型", ["图片文件", "视频文件"])
-        # 根据所选的文件类型，提供对应的文件上传器
-        if self.file_type == "图片文件":
-            self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"])
-        elif self.file_type == "视频文件":
-            self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4"])
-
-        # 提供相关提示信息，根据所选摄像头和文件类型的不同情况
-        if self.selected_camera == "摄像头检测关闭" or self.rtsp_rtmp_url == "":
-            if self.file_type == "图片文件":
-                st.sidebar.write("请选择图片并点击'开始运行'按钮，进行图片检测！")
-            if self.file_type == "视频文件":
-                st.sidebar.write("请选择视频并点击'开始运行'按钮，进行视频检测！")
-        else:
-            st.sidebar.write("请点击'开始检测'按钮，启动摄像头检测！")
+            # RTSP/RTMP输出地址输入
+            if self.enable_rtsp_output:
+                st.sidebar.write("设置RTSP/RTMP输出地址：")
+                self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
 
     def load_model_file(self):
         if self.custom_model_file:
@@ -390,142 +388,136 @@ class Detection_UI:
 
     def process_camera_or_file(self):
         """
-        处理摄像头、RTSP/RTMP流或文件输入。
-
         根据用户选择的输入源（摄像头、图片文件、视频文件或RTSP/RTMP流），处理并显示检测结果。
         """
-        # 如果选择了摄像头输入
-        if self.input_source == "摄像头" and self.selected_camera != "摄像头检测关闭" or self.input_source == "RTSP/RTMP流":
-            if self.input_source == "摄像头":
-                input_type = "camera"
-                # 使用 OpenCV 捕获摄像头画面
-                if str(self.selected_camera) == '0':
-                    input_source = 0
+        if self.input_source in ["摄像头", "RTSP/RTMP流"]:
+            self._process_stream()
+        elif self.input_source == "图片文件":
+            self._process_image_input()
+        elif self.input_source == "视频文件":
+            self._process_video_input()
+        else:
+            st.warning("请选择有效的输入源！")
+
+    def _process_stream(self):
+        """
+        处理摄像头或 RTSP/RTMP 流。
+        """
+        if self.input_source == "摄像头":
+            input_type = "camera"
+            # 使用 OpenCV 捕获摄像头画面
+            if str(self.selected_camera) == '0':
+                input_source = 0
+            else:
+                if len(self.selected_camera) < 8:
+                    input_source = int(self.selected_camera)
                 else:
-                    if len(self.selected_camera) < 8:
-                        input_source = int(self.selected_camera)
-                    else:
-                        input_source = self.selected_camera
-            elif self.input_source == "RTSP/RTMP流":
-                input_type = "stream"
-                if not self.rtsp_rtmp_url:
-                    st.warning("请输入有效的RTSP/RTMP地址！")
-                    return
-                input_source = self.rtsp_rtmp_url
-            self.logTable.clear_frames()  # 清除之前的帧记录
-            # 创建一个结束按钮
-            self.close_flag = self.close_placeholder.button(label="停止")
+                    input_source = self.selected_camera
+        elif self.input_source == "RTSP/RTMP流":
+            input_type = "stream"
+            if not self.rtsp_rtmp_url:
+                st.warning("请输入有效的RTSP/RTMP地址！")
+                return
+            input_source = self.rtsp_rtmp_url
+        self.logTable.clear_frames()  # 清除之前的帧记录
+        # 创建一个结束按钮
+        self.close_flag = self.close_placeholder.button(label="停止")
+
+        cap = cv2.VideoCapture(input_source)
+
+        if not cap.isOpened():
+            st.error(f"无法打开{self.input_source}，请检查地址或设备连接！")
+            return
+
+        self.uploaded_video = None
+
+        fps = cap.get(cv2.CAP_PROP_FPS)
+
+        self.FPS = fps
+
+        # 设置总帧数为1000
+        total_frames = 1000
+        current_frame = 0
+        self.progress_bar.progress(0)  # 初始化进度条
+
+        try:
 
             cap = cv2.VideoCapture(input_source)
 
-            if not cap.isOpened():
-                st.error(f"无法打开{self.input_source}，请检查地址或设备连接！")
-                return
-
-            self.uploaded_video = None
-
+            # 获取视频属性
             fps = cap.get(cv2.CAP_PROP_FPS)
-
             self.FPS = fps
 
-            # 设置总帧数为1000
-            total_frames = 1000
-            current_frame = 0
-            self.progress_bar.progress(0)  # 初始化进度条
+            # 创建进度条
+            self.progress_bar.progress(0)
 
-            try:
+            # 创建保存文件的信息
+            if not os.path.exists(self.output_path):
+                os.makedirs(self.output_path)
 
-                cap = cv2.VideoCapture(input_source)
+            if self.enable_video_output:
+                ret, frame = cap.read()
+                height, width, layers = frame.shape
+                size = (width, height)
+                
+                # 设置视频保存路径，使用当前时间作为文件名后缀
+                current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                file_name = os.path.join(self.output_path, "/video/", f"{input_type}_{current_time}.avi")
+                video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
 
-                # 获取视频属性
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                self.FPS = fps
+                if not video_out.isOpened():
+                    st.error("无法打开视频输出流，请检查路径或文件权限！")
+                    return
 
-                # 创建进度条
-                self.progress_bar.progress(0)
+            if self.enable_rtsp_output:
+                # 设置RTSP/RTMP输出流
+                stream_out = cv2.VideoWriter(self.rtsp_output_url, cv2.VideoWriter_fourcc(*'H264'), fps, size)
 
-                # 创建保存文件的信息
-                if not os.path.exists(self.output_path):
-                    os.makedirs(self.output_path)
+                if not stream_out.isOpened():
+                    st.error("无法打开RTSP/RTMP输出流，请检查服务器配置！")
+                    return
 
-                if self.enable_video_output:
-                    ret, frame = cap.read()
-                    height, width, layers = frame.shape
-                    size = (width, height)
-                    
-                    # 设置视频保存路径，使用当前时间作为文件名后缀
-                    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    file_name = os.path.join(self.output_path, "/video/", f"{input_type}_{current_time}.avi")
-                    video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+            while cap.isOpened() and not self.close_flag:
+                ret, frame = cap.read()
+                if ret:
+                    # 调节摄像头的分辨率
+                    # 调整图像尺寸
+                    frame = cv2.resize(frame, (self.new_width, self.new_height))
 
-                    if not video_out.isOpened():
-                        st.error("无法打开视频输出流，请检查路径或文件权限！")
-                        return
+                    framecopy = frame.copy()
+                    image, detInfo, _ = self.frame_process(frame, input_type)
 
-                if self.enable_rtsp_output:
-                    # 设置RTSP/RTMP输出流
-                    stream_out = cv2.VideoWriter(self.rtsp_output_url, cv2.VideoWriter_fourcc(*'H264'), fps, size)
+                    # 保存目标结果图片
+                    if detInfo:
+                        file_name = abs_path(self.output_path + '/image/' + str(current_frame + 1) + '.jpg', path_type="current")
+                        save_chinese_image(file_name, image)
 
-                    if not stream_out.isOpened():
-                        st.error("无法打开RTSP/RTMP输出流，请检查服务器配置！")
-                        return
-
-                while cap.isOpened() and not self.close_flag:
-                    ret, frame = cap.read()
-                    if ret:
-                        # 调节摄像头的分辨率
-                        # 设置新的尺寸
-                        new_width = 1080
-                        new_height = int(new_width * (9 / 16))
-                        # 调整图像尺寸
-                        frame = cv2.resize(frame, (new_width, new_height))
-
-
-                        framecopy = frame.copy()
-                        image, detInfo, _ = self.frame_process(frame, input_type)
-
-                        # 保存目标结果图片
-                        if detInfo:
-                            file_name = abs_path(self.output_path + '/image/' + str(current_frame + 1) + '.jpg', path_type="current")
-                            save_chinese_image(file_name, image)
-
-                        if self.enable_video_output:
-                            # 保存目标结果视频
-                            video_out.write(image)
-
-                        if self.enable_rtsp_output:
-                            # 保存RTSP/RTMP输出流
-                            stream_out.write(image)
-
-                        # 设置新的尺寸
-                        new_width = 1080
-                        new_height = int(new_width * (9 / 16))
-                        # 调整图像尺寸
-                        resized_image = cv2.resize(image, (new_width, new_height))
-                        resized_frame = cv2.resize(framecopy, (new_width, new_height))
-                        if self.display_mode == "叠加显示":
-                            self.image_placeholder.image(resized_image, channels="BGR", caption="视频画面")
-                        else:
-                            self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
-                            self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
-
-                        self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)))
-
-                        # 更新进度条
-                        progress_percentage = int((current_frame / total_frames) * 100)
-                        self.progress_bar.progress(progress_percentage)
-                        current_frame = (current_frame + 1) % total_frames  # 重置进度条
-                    else:
-                        break
-                if self.close_flag:
-                    self.logTable.save_to_csv()
-                    self.logTable.update_table(self.log_table_placeholder)
-                    cap.release()
                     if self.enable_video_output:
-                        video_out.release()
-                    if self.enable_rtsp_output:
-                        stream_out.release()
+                        # 保存目标结果视频
+                        video_out.write(image)
 
+                    if self.enable_rtsp_output:
+                        # 保存RTSP/RTMP输出流
+                        stream_out.write(image)
+
+                    # 调整图像尺寸
+                    resized_image = cv2.resize(image, (self.new_width, self.new_height))
+                    resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                    if self.display_mode == "叠加显示":
+                        self.image_placeholder.image(resized_image, channels="BGR", caption="视频画面")
+                    else:
+                        self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
+
+                    self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)))
+
+                    # 更新进度条
+                    progress_percentage = int((current_frame / total_frames) * 100)
+                    self.progress_bar.progress(progress_percentage)
+                    current_frame = (current_frame + 1) % total_frames  # 重置进度条
+                else:
+                    break
+            if self.close_flag:
                 self.logTable.save_to_csv()
                 self.logTable.update_table(self.log_table_placeholder)
                 cap.release()
@@ -534,32 +526,74 @@ class Detection_UI:
                 if self.enable_rtsp_output:
                     stream_out.release()
 
-
-            finally:
-                cap.release()
-                if self.enable_video_output:
-                    video_out.release()
-                if self.enable_rtsp_output:
-                    stream_out.release()
-                if self.uploaded_video is None:
-                    name_in = None
-                else:
-                    name_in = self.uploaded_video.name
-
-                res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in)
-                st.write("识别结果文件已经保存：" + self.saved_log_data)
-                if res:
-                    st.write(f"结果的目标文件已经保存：{res}")
+            self.logTable.save_to_csv()
+            self.logTable.update_table(self.log_table_placeholder)
+            cap.release()
+            if self.enable_video_output:
+                video_out.release()
+            if self.enable_rtsp_output:
+                stream_out.release()
 
 
-        else:
-            # 如果上传了图片文件
-            if self.uploaded_file is not None:
-                # output/image/xxx.avi
+        finally:
+            cap.release()
+            if self.enable_video_output:
+                video_out.release()
+            if self.enable_rtsp_output:
+                stream_out.release()
+            if self.uploaded_video is None:
+                name_in = None
+            else:
+                name_in = self.uploaded_video.name
 
-                self.logTable.clear_frames()
-                self.progress_bar.progress(0)
-                # 显示上传的图片
+            res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in)
+            st.write("识别结果文件已经保存：" + self.saved_log_data)
+            if res:
+                st.write(f"结果的目标文件已经保存：{res}")
+
+    def _process_image_input(self):
+        """
+        处理上传的图片文件。
+        """
+        # 如果上传了图片文件
+        if self.uploaded_file is not None:
+            # output/image/xxx.jpg
+
+            self.logTable.clear_frames()
+            self.progress_bar.progress(0)
+
+            # 检查是否上传了多个文件
+            if isinstance(self.uploaded_file, list):
+                # 批量处理上传的图片
+                for idx, uploaded_file in enumerate(self.uploaded_file):
+                    # 处理每个上传的图片文件
+                    source_img = uploaded_file.read()
+                    file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
+                    image_ini = cv2.imdecode(file_bytes, 1)
+                    framecopy = image_ini.copy()
+                    image, detInfo, select_info = self.frame_process(image_ini, uploaded_file.name)
+                    save_chinese_image(self.output_path + '/image/' + uploaded_file.name, image)
+                    # self.selectbox_placeholder = st.empty()
+                    # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
+
+                    # 调整图像尺寸
+                    resized_image = cv2.resize(image, (self.new_width, self.new_height))
+                    resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                    if self.display_mode == "叠加显示":
+                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"图片显示: {selected_name}")
+                    else:
+                        self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {selected_name}")
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {selected_name}")
+
+                    self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)))
+                    # 更新进度条
+                    progress_percentage = int(((idx + 1) / len(self.uploaded_file)) * 100)
+                    self.progress_bar.progress(progress_percentage)
+
+                st.success("批量图片检测完成！")
+
+            else:
+                # 单个文件处理
                 source_img = self.uploaded_file.read()
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
@@ -569,15 +603,9 @@ class Detection_UI:
                 # self.selectbox_placeholder = st.empty()
                 # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
-                self.logTable.save_to_csv()
-                self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
-
-                # 设置新的尺寸
-                new_width = 1080
-                new_height = int(new_width * (9 / 16))
                 # 调整图像尺寸
-                resized_image = cv2.resize(image, (new_width, new_height))
-                resized_frame = cv2.resize(framecopy, (new_width, new_height))
+                resized_image = cv2.resize(image, (self.new_width, self.new_height))
+                resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(resized_image, channels="BGR", caption="图片显示")
                 else:
@@ -587,15 +615,134 @@ class Detection_UI:
                 self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)))
                 self.progress_bar.progress(100)
 
-            # 如果上传了视频文件
-            elif self.uploaded_video is not None:
-                # output/video_name/video/xxx.avi
-                # output/video_name/image/xxx.jpg
+                st.success("单张图片检测完成！")
 
-                # 处理上传的视频
-                self.logTable.clear_frames()
-                self.close_flag = self.close_placeholder.button(label="停止")
+            self.logTable.save_to_csv()
+            self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
+        else:
+            st.warning("请上传图片文件！")
 
+    def _process_video_input(self):
+        """
+        处理上传的视频文件。
+        """
+        if self.uploaded_video is not None:
+            # output/video_name/video/xxx.avi
+
+            # 处理上传的视频
+            self.logTable.clear_frames()
+            self.progress_bar.progress(0)
+            self.close_flag = self.close_placeholder.button(label="停止")
+
+            # 检查是否上传了多个视频文件
+            if isinstance(self.uploaded_video, list):
+                for idx, uploaded_video in enumerate(self.uploaded_video):
+                    # 处理每个上传的视频文件
+                    video_file = uploaded_video
+                    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+                    try:
+                        tfile.write(video_file.read())
+                        tfile.flush()
+
+                        tfile.seek(0)  # 确保文件指针回到文件开头
+
+                        cap = cv2.VideoCapture(tfile.name)
+
+                        # 获取视频总帧数和帧率
+                        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                        fps = cap.get(cv2.CAP_PROP_FPS)
+                        self.FPS = fps
+                        total_length = total_frames / fps if fps > 0 else 0
+                        print(f'视频时长：{total_length:.2f}s')
+                        self.progress_bar.progress(0)
+
+                        current_frame = 0
+
+                        # 创建保存文件的信息
+                        video_savepath = self.output_path + '/' + uploaded_video.name
+                        if not os.path.exists(video_savepath):
+                            os.makedirs(video_savepath)
+
+                        if self.enable_video_output:
+                            ret, frame = cap.read()
+                            height, width, layers = frame.shape
+                            size = (width, height)
+                            file_name = abs_path(video_savepath + '/video/' + uploaded_video.name + '.avi', path_type="current")
+                            video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+
+                        while cap.isOpened() and not self.close_flag:
+                            ret, frame = cap.read()
+                            if ret:
+                                framecopy = frame.copy()
+                                current_time = current_frame / fps
+                                if current_time < total_length:
+                                    current_frame += 1
+                                    current_time_str = format_time(current_time)
+                                    image, detInfo, _ = self.frame_process(frame, uploaded_video.name, video_time=current_time_str)
+
+                                    if detInfo:
+                                        time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
+                                        formatted_time = time_obj.strftime("%H_%M_%S")
+                                        file_name = abs_path(video_savepath + '/image/' + formatted_time + '_' + str(current_frame) + '.jpg', path_type="current")
+                                        save_chinese_image(file_name, image)
+
+                                    if self.enable_video_output:
+                                        video_out.write(image)
+
+                                    # 调整图像尺寸
+                                    resized_image = cv2.resize(image, (self.new_width, self.new_height))
+                                    resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                                    if self.display_mode == "叠加显示":
+                                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"视频画面: {uploaded_video.name}")
+                                    else:
+                                        self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {uploaded_video.name}")
+                                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_video.name}")
+
+                                    self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)))
+
+                                    # 更新进度条
+                                    progress_percentage = int(((current_frame + 1) / total_frames) * 100)
+                                    try:
+                                        self.progress_bar.progress(progress_percentage)
+                                    except:
+                                        pass
+
+                                    current_frame += 1
+                            else:
+                                break
+
+                        self.logTable.save_to_csv()
+                        self.logTable.update_table(self.log_table_placeholder)
+                        cap.release()
+                        if self.enable_video_output:
+                            video_out.release()
+
+                    finally:
+                        cap.release()
+                        if self.enable_video_output:
+                            video_out.release()
+
+                        if self.uploaded_video is None:
+                            name_in = None
+                        else:
+                            name_in = self.uploaded_video.name
+
+                        res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in)
+                        st.write("识别结果文件已经保存：" + self.saved_log_data)
+                        if res:
+                            st.write(f"结果的目标文件已经保存：{res}")
+
+                        tfile.close()
+                        # 如果不需要再保留临时文件，可以在处理完后删除
+                        print(f'{tfile.name} 临时文件可以删除')
+                        # os.remove(tfile.name)
+
+                    # 更新进度条
+                    batch_progress = int(((idx + 1) / len(self.uploaded_video)) * 100)
+                    self.progress_bar.progress(batch_progress)
+
+                st.success("批量视频检测完成！")
+            else:
                 video_file = self.uploaded_video
                 tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
                 try:
@@ -648,19 +795,16 @@ class Detection_UI:
                                     # 将 datetime 对象格式化为所需的字符串格式
                                     formatted_time = time_obj.strftime("%H_%M_%S")
                                     file_name = abs_path(video_savepath + '/image/' + formatted_time  + '_' + str(current_frame) + '.jpg',
-                                                         path_type="current")
+                                                        path_type="current")
                                     save_chinese_image(file_name, image)
 
                                 if self.enable_video_output:
                                     # 保存目标结果视频
                                     video_out.write(image)
 
-                                # 设置新的尺寸
-                                new_width = 1080
-                                new_height = int(new_width * (9 / 16))
                                 # 调整图像尺寸
-                                resized_image = cv2.resize(image, (new_width, new_height))
-                                resized_frame = cv2.resize(framecopy, (new_width, new_height))
+                                resized_image = cv2.resize(image, (self.new_width, self.new_height))
+                                resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
                                 if self.display_mode == "叠加显示":
                                     self.image_placeholder.image(resized_image, channels="BGR", caption="视频画面")
                                 else:
@@ -680,12 +824,6 @@ class Detection_UI:
                                 current_frame += 1
                         else:
                             break
-                    if self.close_flag:
-                        self.logTable.save_to_csv()
-                        self.logTable.update_table(self.log_table_placeholder)
-                        cap.release()
-                        if self.enable_video_output:
-                            video_out.release()
 
                     self.logTable.save_to_csv()
                     self.logTable.update_table(self.log_table_placeholder)
@@ -713,8 +851,9 @@ class Detection_UI:
                     print(tfile.name + ' 临时文件可以删除')
                     # os.remove(tfile.name)
 
-            else:
-                st.warning("请选择摄像头或上传文件。")
+                st.success("单个视频检测完成！")
+        else:
+            st.warning("请上传视频文件！")
 
     def toggle_comboBox(self, frame_id):
         """
@@ -755,11 +894,9 @@ class Detection_UI:
                         image = drawRectBox(image, bbox, alpha=0.2, addText=label,
                                             color=self.colors[cls_id])  # 绘制检测框和标签
 
-            # 设置新的尺寸并调整图像尺寸
-            new_width = 1080
-            new_height = int(new_width * (9 / 16))
-            resized_image = cv2.resize(image, (new_width, new_height))
-            resized_frame = cv2.resize(frame, (new_width, new_height))
+            # 调整图像尺寸
+            resized_image = cv2.resize(image, (self.new_width, self.new_height))
+            resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
 
             # 根据显示模式显示处理后的图像或原始图像
             if self.display_mode == "叠加显示":
