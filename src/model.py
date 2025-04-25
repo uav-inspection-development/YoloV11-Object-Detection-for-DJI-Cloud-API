@@ -44,7 +44,7 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
         self.names = []  # 初始化类别的中文名称为空
         self.params = params if params else ini_params  # 如果提供了参数则使用提供的参数，否则使用默认参数
 
-    def load_model(self, model_path, detect_type=[]):  # 定义加载模型的方法
+    def load_model(self, model_path):  # 定义加载模型的方法
         self.device = select_device(self.params['device'])  # 选择设备
         # print(os.path.basename(model_path)[:3])
         if os.path.basename(model_path)[:3] == 'seg':
@@ -54,10 +54,7 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
         self.model = YOLO(model_path, task=task)
         names_dict = self.model.names  # 获取类别名称字典
 
-        if len(detect_type):
-            self.names = detect_type
-        else:
-            self.names = [names_dict[i] for i in range(len(names_dict))]  # 默认使用所有类别名称
+        self.names = [names_dict[i] for i in range(len(names_dict))]  # 默认使用所有类别名称
 
         self.model(torch.zeros(1, 3, *[self.imgsz] * 2).to(self.device).
                    type_as(next(self.model.model.parameters())))  # 预热

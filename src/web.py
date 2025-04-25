@@ -15,7 +15,7 @@ from ui_style import def_css_html
 from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time
 import tempfile
 from datetime import datetime
-from api_server import verify_token, get_access_token
+from auth import verify_token, get_access_token
 
 
 class Detection_UI:
@@ -187,7 +187,7 @@ class Detection_UI:
             else:
                 model_path = abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
 
-        self.model.load_model(model_path=model_path, detect_type=self.selected_classes)
+        self.model.load_model(model_path=model_path)
 
     def setup_page(self):
         """
@@ -317,7 +317,7 @@ class Detection_UI:
             # 如果上传了模型文件，则保存并加载该模型
             if model_file is not None:
                 self.custom_model_file = save_uploaded_file(model_file)
-                self.model.load_model(model_path=self.custom_model_file, detect_type=self.selected_classes)
+                self.model.load_model(model_path=self.custom_model_file)
                 self.colors = [
                     self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
                     for class_name in self.model.names
@@ -325,18 +325,18 @@ class Detection_UI:
         elif model_file_option == "默认":
             if self.model_type == "检测任务":
                 if self.image_type == "红外":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo.pt", path_type="current"), detect_type=self.selected_classes)
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo.pt", path_type="current"))
                 elif self.image_type == "EL隐裂":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el.pt", path_type="current"), detect_type=self.selected_classes)
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el.pt", path_type="current"))
                 elif self.image_type == "可见光":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current"), detect_type=self.selected_classes)
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current"))
             elif self.model_type == "分割任务":
                 if self.image_type == "红外":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current"), detect_type=self.selected_classes)
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current"))
                 elif self.image_type == "EL隐裂":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current"), detect_type=self.selected_classes)
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current"))
                 elif self.image_type == "可见光":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"), detect_type=self.selected_classes)
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
             # 为模型中的类别重新分配颜色
             self.colors = [
                 self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
@@ -517,16 +517,8 @@ class Detection_UI:
                     current_frame = (current_frame + 1) % total_frames  # 重置进度条
                 else:
                     break
-            if self.close_flag:
-                self.logTable.save_to_csv()
-                self.logTable.update_table(self.log_table_placeholder)
-                cap.release()
-                if self.enable_video_output:
-                    video_out.release()
-                if self.enable_rtsp_output:
-                    stream_out.release()
 
-            self.logTable.save_to_csv()
+            self.logTable.save_to_csv(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)
             cap.release()
             if self.enable_video_output:
@@ -617,7 +609,7 @@ class Detection_UI:
 
                 st.success("单张图片检测完成！")
 
-            self.logTable.save_to_csv()
+            self.logTable.save_to_csv(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
         else:
             st.warning("请上传图片文件！")
@@ -711,7 +703,7 @@ class Detection_UI:
                             else:
                                 break
 
-                        self.logTable.save_to_csv()
+                        self.logTable.save_to_csv(self.saved_log_data)
                         self.logTable.update_table(self.log_table_placeholder)
                         cap.release()
                         if self.enable_video_output:
@@ -825,7 +817,7 @@ class Detection_UI:
                         else:
                             break
 
-                    self.logTable.save_to_csv()
+                    self.logTable.save_to_csv(self.saved_log_data)
                     self.logTable.update_table(self.log_table_placeholder)
                     cap.release()
                     if self.enable_video_output:
@@ -877,11 +869,11 @@ class Detection_UI:
                         continue
 
                 if len(detInfo) > 0:
-                    name, bbox, conf, use_time, cls_id = detInfo  # 获取检测信息
+                    name, chinese_name, bbox, conf, use_time, cls_id = detInfo  # 获取检测信息
                     label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
 
                     disp_res = ResultLogger()  # 创建结果记录器
-                    res = disp_res.concat_results(name, bbox, str(round(conf, 2)), str(use_time))  # 合并结果
+                    res = disp_res.concat_results(name, chinese_name,bbox, str(round(conf, 2)), str(use_time))  # 合并结果
                     self.table_placeholder.table(res)  # 在表格中显示结果
 
                     # 如果有保存的初始图像
@@ -956,13 +948,16 @@ class Detection_UI:
                         image, aim_frame_area = draw_detections(image, info, alpha=0.5)
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
-                        res = disp_res.concat_results(name, bbox, str(int(aim_frame_area)),
+                        # 获取中文名
+                        chinese_name = Thermo_type.get(name, "未知类别")
+
+                        res = disp_res.concat_results(name, chinese_name,bbox, str(int(aim_frame_area)),
                                                     video_time if video_time is not None else str(round(use_time, 2)))
 
                         # 添加日志条目
                         self.logTable.add_log_entry(file_name, name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
                         # 记录检测信息
-                        detInfo.append([name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
+                        detInfo.append([name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
                         # 添加到选择信息列表
                         select_info.append(name + "-" + str(cnt))
                         cnt += 1
@@ -999,6 +994,25 @@ class Detection_UI:
         """
         运行检测系统。
         """
+
+
+        # 使用自定义 CSS 样式调整列的宽度
+        st.markdown(
+            """
+            <style>
+                [data-testid="column"]:nth-of-type(1) {
+                    min-width: 800px !important; /* 设置第一列的最小宽度 */
+                }
+                [data-testid="column"]:nth-of-type(2) {
+                    min-width: 300px !important; /* 设置第二列的最小宽度 */
+                }
+                [data-testid="column"]:nth-of-type(3) {
+                    min-width: 600px !important; /* 设置第三列的最小宽度 */
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         # st.title(self.title) # 显示系统标题
         st.write("--------")
         st.write("本系统可以检测光伏面板可见光故障、红外热故障以及EL隐裂故障")
@@ -1006,7 +1020,7 @@ class Detection_UI:
         # 插入一条分割线
 
         # 创建列布局，将表格移到最右侧
-        col1, col2, col3 = st.columns([4, 1, 2])
+        col1, col2 = st.columns([1, 1])
 
         # 在第一列设置显示模式的选择
         with col1:
@@ -1026,18 +1040,22 @@ class Detection_UI:
             # 显示用的进度条
             self.progress_bar = st.progress(0)
 
+
+
         # 创建一个空的结果表格
         res = concat_results("None", "[0, 0, 0, 0]", "0.00", "0.00s")
 
         # 在最右侧列设置识别结果表格的显示
-        with col3:
+        with col2:
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
 
             # 创建一个导出结果的按钮
             st.write("---------------------")
             if st.button("导出结果"):
-                self.logTable.save_to_csv()
+                current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
+                self.logTable.save_to_csv(self.saved_log_data)
                 if self.uploaded_video is None:
                     name_in = None
                 else:
@@ -1052,9 +1070,6 @@ class Detection_UI:
             self.logTable.update_table(self.log_table_placeholder)
 
         # 在第五列设置一个空的停止按钮占位符
-        with col2:
-            st.write("")
-            self.close_placeholder = st.empty()
 
         # 在第二列处理目标过滤
         # with col2:
@@ -1074,8 +1089,7 @@ class Detection_UI:
         # self.toggle_comboBox(i)
         # elif self.selectbox_target == "全部目标":
         # self.toggle_comboBox(-1)
-
-        with col2:
+        with col1:
             st.write("")
             run_button = st.button("开始检测")
             if run_button:
@@ -1090,6 +1104,8 @@ class Detection_UI:
 
 # 实例化并运行应用
 if __name__ == "__main__":
+    # 设置页面布局为宽布局
+    st.set_page_config(page_title="光伏云组件检测系统", layout="wide")
 
     app = Detection_UI(from_streamlit=True)
     app.setupMainWindow()

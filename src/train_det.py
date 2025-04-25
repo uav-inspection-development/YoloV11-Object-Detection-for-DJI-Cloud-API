@@ -48,6 +48,6 @@ if __name__ == '__main__':  # 确保该模块被直接运行时才执行以下�
         imgsz=640,  # 指定输入图像的大小为640x640
         epochs=200,  # 指定训练100个epoch
         batch=batch,  # 指定每个批次的大小为8
-        name='detection_task_{data_name}_{current_time}',  # 指定训练任务的名称
+        name=f'detection_task_{data_name}_{current_time}',  # 指定训练任务的名称
         val=True  # 在每个 epoch 结束时对验证集进行评估
     )

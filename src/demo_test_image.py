@@ -134,6 +134,7 @@ if __name__ == "__main__":
     image = cv2.imread(args.image_path)
     if image is not None:
         processed_image = process_frame(model, image)
+        processed_image = cv2.resize(processed_image, (800, 500))
         cv2.imshow('Processed Image', processed_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
