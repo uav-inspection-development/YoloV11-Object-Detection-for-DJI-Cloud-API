@@ -77,7 +77,7 @@ class LogTable:
         self.saved_images_ini = []
         self.saved_results = []
 
-        columns = ['文件路径', '识别结果', '位置', '面积', '时间']
+        columns = ['文件路径', '识别结果', '类型', '位置', '面积', '时间']
 
         # 尝试从CSV文件加载数据，如果失败则创建一个空的DataFrame
         try:
@@ -90,7 +90,7 @@ class LogTable:
             self.data = pd.DataFrame(columns=columns)
             # self.data = pd.read_csv(csv_file_path, encoding='utf-8')
         except (FileNotFoundError, pd.errors.EmptyDataError):
-            columns = ['文件路径', '识别结果', '位置', '面积', '时间']
+            columns = ['文件路径', '识别结果', '类型', '位置', '面积', '时间']
             self.data = pd.DataFrame(columns=columns)
 
     def add_frames(self, image, detInfo, img_ini):
@@ -188,7 +188,7 @@ class LogTable:
                 return file_name
         return False
 
-    def add_log_entry(self, file_path, recognition_result, position, confidence, time_spent):
+    def add_log_entry(self, file_path, recognition_result, chinese_nam, position, confidence, time_spent):
         """
         向日志中添加一条新记录。
 
@@ -206,8 +206,8 @@ class LogTable:
         recognition_result = str(recognition_result)
         position_str = str(position)
         file_path = str(file_path)
-        new_entry = pd.DataFrame([[file_path, recognition_result, position_str, confidence, time_spent]],
-                                 columns=['文件路径', '识别结果', '位置', '面积', '时间'])
+        new_entry = pd.DataFrame([[file_path, recognition_result, chinese_nam, position_str, confidence, time_spent]],
+                                 columns=['文件路径', '识别结果', '类型', '位置', '面积', '时间'])
 
         # 将新行添加到DataFrame中
         self.data = pd.concat([self.data, new_entry]).reset_index(drop=True)
@@ -218,7 +218,7 @@ class LogTable:
         """
         清空数据表格。
         """
-        columns = ['文件路径', '识别结果', '位置', '面积', '时间']
+        columns = ['文件路径', '识别结果', '类型', '位置', '面积', '时间']
         self.data = pd.DataFrame(columns=columns)
 
     def save_to_csv(self,csv_file_path):

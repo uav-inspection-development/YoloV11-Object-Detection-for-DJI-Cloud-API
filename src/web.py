@@ -956,7 +956,7 @@ class Detection_UI:
                                                     video_time if video_time is not None else str(round(use_time, 2)))
 
                         # 添加日志条目
-                        self.logTable.add_log_entry(file_name, name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
+                        self.logTable.add_log_entry(file_name, name, chinese_name,bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
                         # 记录检测信息
                         detInfo.append([name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
                         # 添加到选择信息列表
@@ -1048,6 +1048,7 @@ class Detection_UI:
 
         # 在最右侧列设置识别结果表格的显示
         with col2:
+            st.write("当前图片检测结果")
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
 
@@ -1066,6 +1067,7 @@ class Detection_UI:
                 if res:
                     st.write(f"结果的目标文件已经保存：{res}")
                 self.logTable.clear_data()
+            st.write("历史日志")
             # 显示所有结果记录的空白表格
             self.log_table_placeholder = st.empty()
             self.logTable.update_table(self.log_table_placeholder)
