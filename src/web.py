@@ -15,7 +15,7 @@ from ui_style import def_css_html
 from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time
 import tempfile
 from datetime import datetime
-from api_server import verify_token, get_access_token
+from auth import verify_token, get_access_token
 
 
 class Detection_UI:
