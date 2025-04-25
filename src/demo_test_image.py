@@ -109,7 +109,7 @@ if __name__ == "__main__":
     if args.model_type == "detection":
         if args.image_type == "thermo":
             cls_name = Thermo_type
-            model.load_model("../runs/detect/train_v11_th_data/weights/best.pt")
+            model.load_model("../runs/detect/train_v11_th_data6/weights/best.pt")
         elif args.image_type == "el":
             cls_name = EL_type
             model.load_model("./weights/yolo11s-el.pt")

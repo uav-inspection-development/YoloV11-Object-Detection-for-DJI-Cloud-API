@@ -95,7 +95,7 @@ class Detection_UI:
         self.saved_log_data = abs_path("../tempDir/log_table_data.csv", path_type="current")
 
         # 处理 Flask / Streamlit 的差异初始化
-        
+
         if self.from_streamlit:
             # Streamlit模式初始化 session state
             if 'logTable' not in st.session_state:
@@ -406,7 +406,7 @@ class Detection_UI:
                     ret, frame = cap.read()
                     height, width, layers = frame.shape
                     size = (width, height)
-                    
+
                     # 设置视频保存路径，使用当前时间作为文件名后缀
                     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
                     file_name = os.path.join(self.output_path, "/video/", f"{input_type}_{current_time}.avi")
@@ -816,6 +816,25 @@ class Detection_UI:
         """
         运行检测系统。
         """
+
+
+        # 使用自定义 CSS 样式调整列的宽度
+        st.markdown(
+            """
+            <style>
+                [data-testid="column"]:nth-of-type(1) {
+                    min-width: 800px !important; /* 设置第一列的最小宽度 */
+                }
+                [data-testid="column"]:nth-of-type(2) {
+                    min-width: 300px !important; /* 设置第二列的最小宽度 */
+                }
+                [data-testid="column"]:nth-of-type(3) {
+                    min-width: 600px !important; /* 设置第三列的最小宽度 */
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         # st.title(self.title) # 显示系统标题
         st.write("--------")
         st.write("光伏云组件检测系统")
@@ -823,7 +842,7 @@ class Detection_UI:
         # 插入一条分割线
 
         # 创建列布局，将表格移到最右侧
-        col1, col2, col3 = st.columns([4, 1, 2])
+        col1, col2 = st.columns([1, 1])
 
         # 在第一列设置显示模式的选择
         with col1:
@@ -843,11 +862,13 @@ class Detection_UI:
             # 显示用的进度条
             self.progress_bar = st.progress(0)
 
+
+
         # 创建一个空的结果表格
         res = concat_results("None", "[0, 0, 0, 0]", "0.00", "0.00s")
 
         # 在最右侧列设置识别结果表格的显示
-        with col3:
+        with col2:
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
 
@@ -869,9 +890,6 @@ class Detection_UI:
             self.logTable.update_table(self.log_table_placeholder)
 
         # 在第五列设置一个空的停止按钮占位符
-        with col2:
-            st.write("")
-            self.close_placeholder = st.empty()
 
         # 在第二列处理目标过滤
         # with col2:
@@ -891,8 +909,7 @@ class Detection_UI:
         # self.toggle_comboBox(i)
         # elif self.selectbox_target == "全部目标":
         # self.toggle_comboBox(-1)
-
-        with col2:
+        with col1:
             st.write("")
             run_button = st.button("开始检测")
             if run_button:
@@ -907,5 +924,8 @@ class Detection_UI:
 
 # 实例化并运行应用
 if __name__ == "__main__":
+    # 设置页面布局为宽布局
+    st.set_page_config(page_title="光伏云组件检测系统", layout="wide")
     app = Detection_UI(from_streamlit=True)
+
     app.setupMainWindow()
