@@ -193,12 +193,13 @@ class Detection_UI:
         """
         设置 Streamlit 页面标题和布局。
         """
-        # 设置页面布局
-        # st.set_page_config(
-        #     page_title=self.title,
-        #     page_icon="REC",
-        #     initial_sidebar_state="expanded"
-        # )
+        # 设置页面布局为宽布局
+        st.set_page_config(
+            page_title=self.title,
+            page_icon="REC",
+            initial_sidebar_state="expanded",
+            layout="wide"
+        )
 
         # 居中显示标题
         st.markdown(
@@ -1104,8 +1105,5 @@ class Detection_UI:
 
 # 实例化并运行应用
 if __name__ == "__main__":
-    # 设置页面布局为宽布局
-    st.set_page_config(page_title="光伏云组件检测系统", layout="wide")
-
     app = Detection_UI(from_streamlit=True)
     app.setupMainWindow()
