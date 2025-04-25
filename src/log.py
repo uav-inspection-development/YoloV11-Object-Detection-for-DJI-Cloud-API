@@ -31,14 +31,15 @@ class ResultLogger:
         """
         初始化ResultLogger类。
         """
-        self.results_df = pd.DataFrame(columns=["识别结果", "位置", "面积", "时间"])
+        self.results_df = pd.DataFrame(columns=["识别结果", "类型","位置", "面积", "时间"])
 
-    def concat_results(self, result, location, confidence, time):
+    def concat_results(self, result, chinese_name,location, confidence, time):
         """
         显示检测结果，并将结果添加到结果DataFrame中。
 
         Args:
             result (str): 检测结果。
+            chinese_nam(str): 中文结果
             location (str): 检测位置。
             confidence (str): 置信度。
             time (str): 检出目标所在时间。
@@ -49,6 +50,7 @@ class ResultLogger:
         # 创建一个包含这些信息的字典
         result_data = {
             "识别结果": [result],
+            "类型": [chinese_name],
             "位置": [location],
             "面积": [confidence],
             "时间": [time]
@@ -182,13 +184,14 @@ class LogTable:
             None
         """
         # 创建新的数据行
+        recognition_result = str(recognition_result)
         position_str = str(position)
         file_path = str(file_path)
         new_entry = pd.DataFrame([[file_path, recognition_result, position_str, confidence, time_spent]],
                                  columns=['文件路径', '识别结果', '位置', '面积', '时间'])
 
         # 将新行添加到DataFrame中
-        self.data = pd.concat([new_entry, self.data]).reset_index(drop=True)
+        self.data = pd.concat([self.data,new_entry]).reset_index(drop=True)
 
         return self.data
 
@@ -196,9 +199,9 @@ class LogTable:
         columns = ['文件路径', '识别结果', '位置', '面积', '时间']
         self.data = pd.DataFrame(columns=columns)
 
-    def save_to_csv(self):
+    def save_to_csv(self,csv_file_path):
         # 将更新后的DataFrame保存到CSV文件
-        self.data.to_csv(self.csv_file_path, index=False, encoding='utf-8', mode='a', header=False)
+        self.data.to_csv(csv_file_path, index=False, encoding='utf-8', mode='a', header=False)
 
     def update_table(self, log_table_placeholder):
         """

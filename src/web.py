@@ -518,7 +518,7 @@ class Detection_UI:
                     else:
                         break
                 if self.close_flag:
-                    self.logTable.save_to_csv()
+                    self.logTable.save_to_csv(self.saved_log_data)
                     self.logTable.update_table(self.log_table_placeholder)
                     cap.release()
                     if self.enable_video_output:
@@ -526,7 +526,7 @@ class Detection_UI:
                     if self.enable_rtsp_output:
                         stream_out.release()
 
-                self.logTable.save_to_csv()
+                self.logTable.save_to_csv(self.saved_log_data)
                 self.logTable.update_table(self.log_table_placeholder)
                 cap.release()
                 if self.enable_video_output:
@@ -569,7 +569,7 @@ class Detection_UI:
                 # self.selectbox_placeholder = st.empty()
                 # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
-                self.logTable.save_to_csv()
+                self.logTable.save_to_csv(self.saved_log_data)
                 self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
 
                 # 设置新的尺寸
@@ -681,13 +681,13 @@ class Detection_UI:
                         else:
                             break
                     if self.close_flag:
-                        self.logTable.save_to_csv()
+                        self.logTable.save_to_csv(self.saved_log_data)
                         self.logTable.update_table(self.log_table_placeholder)
                         cap.release()
                         if self.enable_video_output:
                             video_out.release()
 
-                    self.logTable.save_to_csv()
+                    self.logTable.save_to_csv(self.saved_log_data)
                     self.logTable.update_table(self.log_table_placeholder)
                     cap.release()
                     if self.enable_video_output:
@@ -738,11 +738,11 @@ class Detection_UI:
                         continue
 
                 if len(detInfo) > 0:
-                    name, bbox, conf, use_time, cls_id = detInfo  # 获取检测信息
+                    name, chinese_name, bbox, conf, use_time, cls_id = detInfo  # 获取检测信息
                     label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
 
                     disp_res = ResultLogger()  # 创建结果记录器
-                    res = disp_res.concat_results(name, bbox, str(round(conf, 2)), str(use_time))  # 合并结果
+                    res = disp_res.concat_results(name, chinese_name,bbox, str(round(conf, 2)), str(use_time))  # 合并结果
                     self.table_placeholder.table(res)  # 在表格中显示结果
 
                     # 如果有保存的初始图像
@@ -819,13 +819,16 @@ class Detection_UI:
                         image, aim_frame_area = draw_detections(image, info, alpha=0.5)
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
-                        res = disp_res.concat_results(name, bbox, str(int(aim_frame_area)),
+                        # 获取中文名
+                        chinese_name = Thermo_type.get(name, "未知类别")
+
+                        res = disp_res.concat_results(name, chinese_name,bbox, str(int(aim_frame_area)),
                                                     video_time if video_time is not None else str(round(use_time, 2)))
 
                         # 添加日志条目
                         self.logTable.add_log_entry(file_name, name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
                         # 记录检测信息
-                        detInfo.append([name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
+                        detInfo.append([name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
                         # 添加到选择信息列表
                         select_info.append(name + "-" + str(cnt))
                         cnt += 1
@@ -921,7 +924,9 @@ class Detection_UI:
             # 创建一个导出结果的按钮
             st.write("---------------------")
             if st.button("导出结果"):
-                self.logTable.save_to_csv()
+                current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
+                self.logTable.save_to_csv(self.saved_log_data)
                 if self.uploaded_video is None:
                     name_in = None
                 else:

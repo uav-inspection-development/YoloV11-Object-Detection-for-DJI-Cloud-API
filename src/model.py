@@ -54,10 +54,11 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
         self.model = YOLO(model_path, task=task)
         names_dict = self.model.names  # 获取类别名称字典
 
-        if len(detect_type):
-            self.names = detect_type
-        else:
-            self.names = [names_dict[i] for i in range(len(names_dict))]  # 默认使用所有类别名称
+        # if len(detect_type):
+        #     self.names = detect_type
+        # else:
+        #     self.names = [names_dict[i] for i in range(len(names_dict))]  # 默认使用所有类别名称
+        self.names = [names_dict[i] for i in range(len(names_dict))]  # 默认使用所有类别名称
 
         self.model(torch.zeros(1, 3, *[self.imgsz] * 2).to(self.device).
                    type_as(next(self.model.model.parameters())))  # 预热
