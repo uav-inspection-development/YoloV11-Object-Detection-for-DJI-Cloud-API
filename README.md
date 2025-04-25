@@ -23,25 +23,30 @@ This project provides a comprehensive solution for detecting solar panel anomali
 ## Environment Deployment Steps
 
 1. Create and activate a Python environment:
+
     ```shell
     conda create -n pytorch python=3.10
     conda activate pytorch
     ```
 
 2. Install dependencies:
+
     ```shell
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
     ```
 
 3. Verify the environment:
+
     ```shell
     conda env list
     ```
 
 4. If the following prompt appears:
+
     ```plaintext
     Downloading https://ultralytics.com/assets/Arial.ttf to 'C:\Users\ad\AppData\Roaming\Ultralytics\Arial.ttf'...
     ```
+
     - It means the configuration file is being downloaded automatically.
     - If a timeout occurs, copy the `Arial.ttf` file from the `fonts` folder to the specified path and rerun the code.
 
@@ -67,7 +72,7 @@ This project provides a comprehensive solution for detecting solar panel anomali
 
 ## File Structure
 
-```
+```plaintext
 src/
 ├── train.py              # Script for training the model
 ├── ui.py                 # Main interface for detection
@@ -87,23 +92,47 @@ requirements.txt          # List of dependencies
 
 1. Place the dataset in the project directory.
 2. Run the training script:
+
     ```shell
     python src/train.py
     ```
+
 3. The trained weights (`best.pt`) will be saved in the `runs` folder.
 
 ### Running the Detection Interface
 
 1. Navigate to the src folder:
+
     ```shell
     cd src
     ```
+
 2. Run the detection interface:
+
     ```shell
-    python ui.py
+    python ui.py --run-mode $RUN_MODE --oauth2-token-url $OAUTH2_TOKEN_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
     ```
-3. Load the `best.pt` weight file in the interface.
-4. Select the image type (**Visible**, **EL**, or **Thermo**) and start detection.
+
+    **Explanation of Arguments**:
+    - `--run-mode`: Specifies the mode to run the application. Use option `streamlit` to launch the interactive Streamlit UI for detection.
+    - `--oauth2-token-url`: The URL of the OAuth2 token endpoint used to retrieve access tokens (required if authentication is enabled).
+    - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
+    - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
+
+3. Run the detection API endpoints:
+
+    ```shell
+    python ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
+    ```
+
+    **Explanation of Arguments**:
+    - `--run-mode`: Specifies the mode to run the application. Use option `api` to launch the Flask API for programmatic access.
+    - `--oauth2-introspect-url`: The URL of the OAuth2 introspection endpoint used to validate access tokens.
+    - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
+    - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
+
+4. Load the `best.pt` weight file in the interface.
+5. Select the image type (**Visible**, **EL**, or **Thermo**) and start detection.
 
 ---
 

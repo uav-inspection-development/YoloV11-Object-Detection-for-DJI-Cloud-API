@@ -19,8 +19,12 @@ COPY datasets/ ./datasets
 COPY weights/ ./weights
 COPY tempDir/ ./tempDir
 
-# Set the default environment variable for RUN_MODE
+# Set default environment variables
 ENV RUN_MODE=streamlit
+ENV OAUTH2_INTROSPECT_URL=https://your-auth-server.com/oauth2/introspect
+ENV OAUTH2_TOKEN_URL=https://your-auth-server.com/oauth2/token
+ENV CLIENT_ID=your-client-id
+ENV CLIENT_SECRET=your-client-secret
 
-# Command to run the application with the RUN_MODE parameter
-CMD ["sh", "-c", "python3 src/ui.py $RUN_MODE"]
+# Command to run the application with the arguments
+CMD ["sh", "-c", "python3 src/ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --oauth2-token-url $OAUTH2_TOKEN_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"]
