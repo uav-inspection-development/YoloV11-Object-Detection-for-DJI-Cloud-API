@@ -1,10 +1,13 @@
 import requests
 import os
+
+
 # 获取环境变量
 OAUTH2_INTROSPECT_URL = os.getenv("OAUTH2_INTROSPECT_URL")
 OAUTH2_TOKEN_URL = os.getenv("OAUTH2_TOKEN_URL")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+
 def verify_token(token):
     """
     验证访问令牌的有效性

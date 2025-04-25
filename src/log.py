@@ -94,6 +94,14 @@ class LogTable:
             self.data = pd.DataFrame(columns=columns)
 
     def add_frames(self, image, detInfo, img_ini):
+        """
+        将检测到的图像和检测信息添加到列表中。
+
+        Args:
+            image (numpy.ndarray): 检测到的图像。
+            detInfo (list): 检测信息。
+            img_ini (numpy.ndarray): 初始图像。
+        """
         self.saved_images.append(image)
         self.saved_images_ini.append(img_ini)
         self.saved_results = detInfo
@@ -104,19 +112,30 @@ class LogTable:
         # print('____')
 
     def clear_frames(self):
+        """
+        清空保存的图像和检测信息列表。
+        """
         self.saved_images = []
         self.saved_images_ini = []
         self.saved_results = []
         self.saved_target_images = []
 
-    def save_frames_file(self,fps = 30,video_name = 'save', video_time = None):
+    def save_frames_file(self, fps=30, video_name='save', video_time=None, output_path='tempDir/output/'):
+        """
+        保存检测到的图像和视频文件。
 
+        Args:
+            fps (int): 视频的帧率。
+            video_name (str): 视频文件的名称。
+            video_time (str): 视频时间戳。
+            output_path (str): 输出路径。
+        """
         if self.saved_images:  # 检查列表是否不为空
             # 执行保存操作
             now_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
             if len(self.saved_images) == 1:
                 # 只有一张图像时，保存为图片
-                file_name = abs_path('tempDir/pic_' + str(now_time) + '.png', path_type="current")
+                file_name = abs_path(output_path + '/pic_' + str(now_time) + '.png', path_type="current")
                 cv2.imwrite(file_name, self.saved_images[0])
                 return file_name
             else:
@@ -128,7 +147,7 @@ class LogTable:
                 else:
                     save_name = video_name
 
-                file_name = abs_path('tempDir/' + str(save_name) + '.avi', path_type="current")
+                file_name = abs_path(output_path + str(save_name) + '.avi', path_type="current")
 
                 out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
                 for img in self.saved_images:
@@ -137,7 +156,7 @@ class LogTable:
 
                 # # 保存视频和摄像头目标截图
                 # if video_name is None:
-                #     camera_savepath = './tempDir/camera'
+                #     camera_savepath = output_path + '/camera'
                 #     if not os.path.exists(camera_savepath):
                 #         os.makedirs(camera_savepath)
                 #
@@ -149,7 +168,7 @@ class LogTable:
                 #     except:
                 #         pass
                 # else:
-                #     video_savepath = './tempDir/' + video_name
+                #     video_savepath = output_path + video_name
                 #     if not os.path.exists(video_savepath):
                 #         os.makedirs(video_savepath)
                 #
@@ -191,11 +210,14 @@ class LogTable:
                                  columns=['文件路径', '识别结果', '位置', '面积', '时间'])
 
         # 将新行添加到DataFrame中
-        self.data = pd.concat([self.data,new_entry]).reset_index(drop=True)
+        self.data = pd.concat([self.data, new_entry]).reset_index(drop=True)
 
         return self.data
 
     def clear_data(self):
+        """
+        清空数据表格。
+        """
         columns = ['文件路径', '识别结果', '位置', '面积', '时间']
         self.data = pd.DataFrame(columns=columns)
 

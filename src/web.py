@@ -539,7 +539,7 @@ class Detection_UI:
             else:
                 name_in = self.uploaded_video.name
 
-            res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in)
+            res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
             st.write("识别结果文件已经保存：" + self.saved_log_data)
             if res:
                 st.write(f"结果的目标文件已经保存：{res}")
@@ -720,7 +720,7 @@ class Detection_UI:
                         else:
                             name_in = self.uploaded_video.name
 
-                        res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in)
+                        res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
                         st.write("识别结果文件已经保存：" + self.saved_log_data)
                         if res:
                             st.write(f"结果的目标文件已经保存：{res}")
@@ -834,7 +834,7 @@ class Detection_UI:
                     else:
                         name_in = self.uploaded_video.name
 
-                    res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in)
+                    res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
                     st.write("识别结果文件已经保存：" + self.saved_log_data)
                     if res:
                         st.write(f"结果的目标文件已经保存：{res}")
@@ -1061,7 +1061,7 @@ class Detection_UI:
                     name_in = None
                 else:
                     name_in = self.uploaded_video.name
-                res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in)
+                res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/output/')
                 st.write("识别结果文件已经保存：" + self.saved_log_data)
                 if res:
                     st.write(f"结果的目标文件已经保存：{res}")
