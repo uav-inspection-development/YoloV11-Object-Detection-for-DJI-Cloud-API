@@ -37,7 +37,7 @@ class Detection_UI:
 
     def __init__(self, from_streamlit=False, api_params=None, oauth_token=None):
         """
-        初始化智慧图像检测系统的参数。
+        初始化光伏云组件检测系统的参数。
         """
         if from_streamlit and os.getenv("ENABLE_OAUTH") == "TRUE":
             CLIENT_ID = os.getenv("CLIENT_ID")
@@ -972,14 +972,6 @@ class Detection_UI:
 if __name__ == "__main__":
     # 设置页面布局为宽布局
     st.set_page_config(page_title="光伏云组件检测系统", layout="wide")
+
     app = Detection_UI(from_streamlit=True)
-
-    # Retrieve the OAuth token from environment variables
-    oauth_token = os.getenv("ACCESS_TOKEN")  # Use ACCESS_TOKEN as the actual OAuth token
-
-    if not oauth_token:
-        st.error("Missing ACCESS_TOKEN environment variable. Please set it before running the application.")
-        st.stop()
-
-    app = Detection_UI(from_streamlit=True, oauth_token=oauth_token)
     app.setupMainWindow()

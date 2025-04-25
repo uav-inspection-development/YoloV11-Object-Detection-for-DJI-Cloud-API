@@ -110,14 +110,26 @@ requirements.txt          # List of dependencies
 2. Run the detection interface:
 
     ```shell
-    python ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
+    python ui.py --run-mode $RUN_MODE --oauth2-token-url $OAUTH2_TOKEN_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
     ```
+
+    **Explanation of Arguments**:
+    - `--run-mode`: Specifies the mode to run the application. Use option `streamlit` to launch the interactive Streamlit UI for detection.
+    - `--oauth2-token-url`: The URL of the OAuth2 token endpoint used to retrieve access tokens (required if authentication is enabled).
+    - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
+    - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
 
 3. Run the detection API endpoints:
 
     ```shell
     python ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
     ```
+
+    **Explanation of Arguments**:
+    - `--run-mode`: Specifies the mode to run the application. Use option `api` to launch the Flask API for programmatic access.
+    - `--oauth2-introspect-url`: The URL of the OAuth2 introspection endpoint used to validate access tokens.
+    - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
+    - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
 
 4. Load the `best.pt` weight file in the interface.
 5. Select the image type (**Visible**, **EL**, or **Thermo**) and start detection.
