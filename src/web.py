@@ -91,39 +91,16 @@ class Detection_UI:
         self.FPS = 30
         self.timenow = 0
 
+        self.csv_output_path = abs_path("../tempDir/")
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         # 初始化日志数据保存路径
-        self.saved_log_data = abs_path("../tempDir/log_table_data.csv", path_type="current")
+        self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
 
-        # 处理 Flask / Streamlit 的差异初始化
-        
-        if self.from_streamlit:
-            # Streamlit模式初始化 session state
-            if 'logTable' not in st.session_state:
-                # 如果在 session state 中不存在logTable，创建一个新的LogTable实例
-                st.session_state['logTable'] = LogTable(self.saved_log_data)
-            if 'available_cameras' not in st.session_state:
-                # 获取或更新可用摄像头列表
-                st.session_state['available_cameras'] = get_camera_names()
-            if 'model' not in st.session_state:
-                # 加载或创建模型实例
-                st.session_state['model'] = Web_Detector()
-
-            self.available_cameras = st.session_state['available_cameras']
-            # 初始化或获取识别结果的表格
-            self.logTable = st.session_state['logTable']
-            self.model = st.session_state['model']
-        else:
-            self.available_cameras = get_camera_names()
-            self.logTable = LogTable(self.saved_log_data)
-            self.model = Web_Detector()
-
-        # 加载训练的模型权重
-        self.model.load_model(model_path=abs_path("../weights/yolov8s.pt", path_type="current"), detect_type=self.cls_name)
-        # 为模型中的类别重新分配颜色，如果没有指定颜色，则随机生成
-        self.colors = [
-            self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
-            for class_name in self.model.names
-        ]
+        # 初始化
+        self.available_cameras = get_camera_names()
+        self.logTable = LogTable(self.saved_log_data)
+        self.model = Web_Detector()
+        self.colors = []
 
         if self.from_streamlit:
             self.setup_sidebar()  # 初始化侧边栏布局
@@ -134,6 +111,21 @@ class Detection_UI:
         """
         用于 Flask 模式，根据 API 提供的参数设置实例变量。
         """
+        # 根据 API 提供的参数设置实例变量
+        self.csv_output_path = float(self.api_params.get("csv_output_path", abs_path("../tempDir/")))
+
+        # 确保路径以斜杠结尾
+        if not self.csv_output_path.endswith(os.sep):
+            self.csv_output_path += os.sep
+
+        # 根据用户输入的路径设置日志文件路径
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
+
+        self.available_cameras = get_camera_names()
+        self.logTable = LogTable(self.saved_log_data)
+        self.model = Web_Detector()
+
         self.conf_threshold = float(self.api_params.get("conf_threshold", 0.15))
         self.iou_threshold = float(self.api_params.get("iou_threshold", 0.25))
         self.model_type = self.api_params.get("model_type", "检测任务")
@@ -196,6 +188,37 @@ class Detection_UI:
 
         在侧边栏中配置模型设置、摄像头选择以及识别项目设置等选项。
         """
+        # 添加 CSV 输出路径设置
+        st.sidebar.header("日志保存路径设置")
+        self.csv_output_path = st.sidebar.text_input(
+            "输入CSV保存路径",
+            value=abs_path(f"../tempDir", path_type="current"),  # 默认路径
+            placeholder="例如：D:/output/logs"
+        )
+
+        # 确保路径以斜杠结尾
+        if not self.csv_output_path.endswith(os.sep):
+            self.csv_output_path += os.sep
+
+        # 根据用户输入的路径设置日志文件路径
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
+
+        # Streamlit模式初始化 session state
+        if 'logTable' not in st.session_state:
+            # 如果在 session state 中不存在logTable，创建一个新的LogTable实例
+            st.session_state['logTable'] = LogTable(self.saved_log_data)
+        if 'available_cameras' not in st.session_state:
+            # 获取或更新可用摄像头列表
+            st.session_state['available_cameras'] = get_camera_names()
+        if 'model' not in st.session_state:
+            # 加载或创建模型实例
+            st.session_state['model'] = Web_Detector()
+
+        self.available_cameras = st.session_state['available_cameras']
+        # 初始化或获取识别结果的表格
+        self.logTable = st.session_state['logTable']
+        self.model = st.session_state['model']
         # 置信度阈值的滑动条
         self.conf_threshold = float(st.sidebar.slider("置信度设定", min_value=0.0, max_value=1.0, value=0.15))
         # IOU阈值的滑动条
