@@ -23,25 +23,30 @@ This project provides a comprehensive solution for detecting solar panel anomali
 ## Environment Deployment Steps
 
 1. Create and activate a Python environment:
+
     ```shell
     conda create -n pytorch python=3.10
     conda activate pytorch
     ```
 
 2. Install dependencies:
+
     ```shell
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
     ```
 
 3. Verify the environment:
+
     ```shell
     conda env list
     ```
 
 4. If the following prompt appears:
+
     ```plaintext
     Downloading https://ultralytics.com/assets/Arial.ttf to 'C:\Users\ad\AppData\Roaming\Ultralytics\Arial.ttf'...
     ```
+
     - It means the configuration file is being downloaded automatically.
     - If a timeout occurs, copy the `Arial.ttf` file from the `fonts` folder to the specified path and rerun the code.
 
@@ -67,7 +72,7 @@ This project provides a comprehensive solution for detecting solar panel anomali
 
 ## File Structure
 
-```
+```plaintext
 src/
 ├── train.py              # Script for training the model
 ├── ui.py                 # Main interface for detection
@@ -87,23 +92,35 @@ requirements.txt          # List of dependencies
 
 1. Place the dataset in the project directory.
 2. Run the training script:
+
     ```shell
     python src/train.py
     ```
+
 3. The trained weights (`best.pt`) will be saved in the `runs` folder.
 
 ### Running the Detection Interface
 
 1. Navigate to the src folder:
+
     ```shell
     cd src
     ```
+
 2. Run the detection interface:
+
     ```shell
-    python ui.py
+    python ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
     ```
-3. Load the `best.pt` weight file in the interface.
-4. Select the image type (**Visible**, **EL**, or **Thermo**) and start detection.
+
+3. Run the detection API endpoints:
+
+    ```shell
+    python ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
+    ```
+
+4. Load the `best.pt` weight file in the interface.
+5. Select the image type (**Visible**, **EL**, or **Thermo**) and start detection.
 
 ---
 
