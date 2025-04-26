@@ -96,25 +96,37 @@ def get_camera_names():
 def calculate_polygon_area(points):
     """
     计算多边形面积的函数
+
+    Args:
+        points (numpy.ndarray): 多边形的顶点坐标，形状为 (N, 2)，其中 N 是顶点数量
     """
     return cv2.contourArea(points.astype(np.float32))
 
 
-def draw_with_chinese(img, text, position, font_size):
-    """
-    假设这是一个自定义函数，用于在图像上绘制中文文本
-    具体实现需要根据你的需求进行调整
-    """
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    color = (255, 255, 255)
-    thickness = 2
-    cv2.putText(img, text, position, font, font_size, color, thickness, cv2.LINE_AA)
-    return img
+# def draw_with_chinese(img, text, position, font_size):
+#     """
+#     假设这是一个自定义函数，用于在图像上绘制中文文本
+#     具体实现需要根据你的需求进行调整
+
+#     Args:
+#         img (numpy.ndarray): 输入图像
+#         text (str): 要绘制的文本
+#         position (tuple): 文本位置 (x, y)
+#         font_size (int): 字体大小
+#     """
+#     font = cv2.FONT_HERSHEY_SIMPLEX
+#     color = (255, 255, 255)
+#     thickness = 2
+#     cv2.putText(img, text, position, font, font_size, color, thickness, cv2.LINE_AA)
+#     return img
 
 
 def generate_color_based_on_name(name):
     """
     使用哈希函数生成稳定的颜色
+
+    Args:
+        name (str): 类别名称
     """
     hash_object = md5(name.encode())
     hex_color = hash_object.hexdigest()[:6]  # 取前6位16进制数
@@ -125,6 +137,13 @@ def generate_color_based_on_name(name):
 def draw_with_chinese(image, text, position, font_size=20, color=(255, 0, 0)):
     """
     在OpenCV图像上绘制中文文字
+
+    Args:
+        image (numpy.ndarray): 输入图像
+        text (str): 要绘制的文本
+        position (tuple): 文本位置 (x, y)
+        font_size (int): 字体大小
+        color (tuple): 颜色 (B, G, R)
     """
     # 将图像从 OpenCV 格式（BGR）转换为 PIL 格式（RGB）
     image_pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -139,12 +158,25 @@ def draw_with_chinese(image, text, position, font_size=20, color=(255, 0, 0)):
 def adjust_parameter(image_size, base_size=1000):
     """
     计算自适应参数，基于图片的最大尺寸
+
+    Args:
+        image_size (tuple): 图像的尺寸 (height, width)
+        base_size (int): 基准尺寸，默认为 1000
     """
     max_size = max(image_size)
     return max_size / base_size
 
 
-def draw_detections(image, info, alpha=0.2):
+def draw_detections(image, info, color = (0, 0, 255), alpha=0.2):
+    """
+    在图像上绘制检测结果，包括边界框、类别名称和掩码（如果有）
+
+    Args:
+        image (numpy.ndarray): 输入图像
+        info (dict): 检测信息，包括类别名称、边界框、置信度、类别ID和掩码
+        color (tuple): 边界框颜色，默认为红色 (0, 0, 255)
+        alpha (float): 透明度参数，默认为 0.2
+    """
     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
     adjust_param = adjust_parameter(image.shape[:2])
     spacing = int(20 * adjust_param)
@@ -152,8 +184,8 @@ def draw_detections(image, info, alpha=0.2):
     if mask is None:
         x1, y1, x2, y2 = bbox
         aim_frame_area = (x2 - x1) * (y2 - y1)
-        cv2.rectangle(image, (x1, y1), (x2, y2), color=(0, 0, 255), thickness=int(5 * adjust_param))
-        image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param))
+        cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
+        image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
         y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
     else:
         mask_points = np.concatenate(mask)
@@ -163,7 +195,7 @@ def draw_detections(image, info, alpha=0.2):
             overlay = image.copy()
             cv2.fillPoly(overlay, [mask_points.astype(np.int32)], mask_color)
             image = cv2.addWeighted(overlay, 0.3, image, 0.7, 0)
-            cv2.drawContours(image, [mask_points.astype(np.int32)], -1, (0, 0, 255), thickness=int(8 * adjust_param))
+            cv2.drawContours(image, [mask_points.astype(np.int32)], -1, color=color, thickness=int(8 * adjust_param))
 
             # 计算面积、周长、圆度
             area = cv2.contourArea(mask_points.astype(np.int32))
@@ -180,7 +212,7 @@ def draw_detections(image, info, alpha=0.2):
 
             # 绘制类别名称
             x, y = np.min(mask_points, axis=0).astype(int)
-            image = draw_with_chinese(image, name, (x, y - int(30 * adjust_param)), font_size=int(35 * adjust_param))
+            image = draw_with_chinese(image, name, (x, y - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
             y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
 
             # 绘制面积、周长、圆度和色彩值
@@ -188,7 +220,7 @@ def draw_detections(image, info, alpha=0.2):
             # for idx, (metric_name, metric_value) in enumerate(metrics):
             #     text = f"{metric_name}: {metric_value}"
             #     image = draw_with_chinese(image, text, (x, y - y_offset - spacing * (idx + 1)),
-            #                               font_size=int(35 * adjust_param))
+            #                               font_size=int(35 * adjust_param), color=color)
 
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -198,7 +230,10 @@ def draw_detections(image, info, alpha=0.2):
 
 def calculate_polygon_area(points):
     """
-    计算多边形的面积，输入应为一个 Nx2 的numpy数组，表示多边形的顶点坐标
+    计算多边形的面积
+
+    Args:
+        points (numpy.ndarray): 多边形的顶点坐标，形状为 (N, 2)，其中 N 是顶点数量
     """
     if len(points) < 3:  # 多边形至少需要3个顶点
         return 0
@@ -208,6 +243,9 @@ def calculate_polygon_area(points):
 def format_time(seconds):
     """
     将秒数转换为时:分:秒格式的字符串
+
+    Args:
+        seconds (int): 秒数
     """
     # 计算小时、分钟和秒
     hrs, rem = divmod(seconds, 3600)
