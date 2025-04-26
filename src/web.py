@@ -924,8 +924,6 @@ class Detection_UI:
         t2 = time.time()
         use_time = t2 - t1  # 计算单张图片推理时间
 
-        aim_area = 0 #计算目标面积
-
         det = pred[0]  # 获取预测结果
 
         # 初始化检测信息和选择信息列表
@@ -941,12 +939,12 @@ class Detection_UI:
                 cnt = 0
 
                 # 遍历检测到的对象
-                for info in det_info:
+                for idx, info in enumerate(det_info):
                     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
 
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
-                        image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5)
+                        image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=idx)
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
                         # 获取中文名

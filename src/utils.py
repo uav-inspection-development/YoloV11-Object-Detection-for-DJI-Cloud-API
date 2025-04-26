@@ -167,7 +167,7 @@ def adjust_parameter(image_size, base_size=1000):
     return max_size / base_size
 
 
-def draw_detections(image, info, color = (0, 0, 255), alpha=0.2):
+def draw_detections(image, info, color = (0, 0, 255), alpha=0.2, line_number=None):
     """
     在图像上绘制检测结果，包括边界框、类别名称和掩码（如果有）
 
@@ -176,6 +176,7 @@ def draw_detections(image, info, color = (0, 0, 255), alpha=0.2):
         info (dict): 检测信息，包括类别名称、边界框、置信度、类别ID和掩码
         color (tuple): 边界框颜色，默认为红色 (0, 0, 255)
         alpha (float): 透明度参数，默认为 0.2
+        line_number (int): 行号，用于在检测框中间绘制行号，默认为 None
     """
     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
     adjust_param = adjust_parameter(image.shape[:2])
@@ -224,6 +225,13 @@ def draw_detections(image, info, color = (0, 0, 255), alpha=0.2):
 
         except Exception as e:
             print(f"An error occurred: {e}")
+
+    # 在检测框中间绘制行号
+    if line_number is not None:
+        x1, y1, x2, y2 = bbox
+        center_x = int((x1 + x2) / 2)
+        center_y = int((y1 + y2) / 2)
+        image = draw_with_chinese(image, str(line_number), (center_x, center_y), font_size=int(20 * adjust_param), color=color)
 
     return image, aim_frame_area
 
