@@ -16,8 +16,16 @@ if __name__ == '__main__':  # 确保该模块被直接运行时才执行以下�
     data_path = abs_path(f'../datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
     unix_style_path = data_path.replace(os.sep, '/')
 
+    # 检查数据集配置文件是否存在
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"Dataset configuration file not found: {data_path}. Please ensure the dataset exists.")
+
     # 获取目录路径
     directory_path = os.path.dirname(unix_style_path)
+    # 检查数据集目录是否存在
+    if not os.path.exists(directory_path):
+        raise FileNotFoundError(f"Dataset directory not found: {directory_path}. Please ensure the dataset exists.")
+
     # 读取YAML文件，保持原有顺序
     with open(data_path, 'r') as file:
         data = yaml.load(file, Loader=yaml.FullLoader)
