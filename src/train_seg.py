@@ -1,6 +1,5 @@
 import os
 import datetime
-import torch
 import yaml
 from ultralytics import YOLO  # 导入YOLO模型
 from QtFusion.path import abs_path
@@ -8,50 +7,62 @@ import matplotlib
 matplotlib.use('TkAgg')
 
 
-if __name__ == '__main__':  # 确保该模块被直接运行时才执行以下代码
-    workers = 1
-    batch = 8  # 适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低
-    device = "0" if torch.cuda.is_available() else "cpu"
-    data_name = "data"
-    data_path = abs_path(f'datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
-    unix_style_path = data_path.replace(os.sep, '/')
+def train_seg(workers, batch, device, data_name, epochs, img_size):
+    try:
+        data_path = abs_path(f'datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
+        unix_style_path = data_path.replace(os.sep, '/')
 
-    # 检查数据集配置文件是否存在
-    if not os.path.exists(data_path):
-        raise FileNotFoundError(f"Dataset configuration file not found: {data_path}. Please ensure the dataset exists.")
+        # 检查数据集配置文件是否存在
+        if not os.path.exists(data_path):
+            return f"数据集配置文件未找到: {data_path}. 请确保数据集存在。"
 
-    # 获取目录路径
-    directory_path = os.path.dirname(unix_style_path)
-    # 检查数据集目录是否存在
-    if not os.path.exists(directory_path):
-        raise FileNotFoundError(f"Dataset directory not found: {directory_path}. Please ensure the dataset exists.")
+        # 获取目录路径
+        directory_path = os.path.dirname(unix_style_path)
+        # 检查数据集目录是否存在
+        if not os.path.exists(directory_path):
+            return f"数据集目录未找到: {directory_path}. 请确保数据集存在。"
 
-    # 读取YAML文件，保持原有顺序
-    with open(data_path, 'r') as file:
-        data = yaml.load(file, Loader=yaml.FullLoader)
-    # 修改path项
-    if 'train' in data and 'val' in data and 'test' in data:
-        data['train'] = directory_path + '/train'
-        data['val'] = directory_path + '/val'
-        data['test'] = directory_path + '/test'
+        # 读取YAML文件，保持原有顺序
+        with open(data_path, 'r') as file:
+            data = yaml.load(file, Loader=yaml.FullLoader)
+        # 修改path项
+        if 'train' in data and 'val' in data and 'test' in data:
+            data['train'] = directory_path + '/train'
+            data['val'] = directory_path + '/val'
+            data['test'] = directory_path + '/test'
 
-        # 将修改后的数据写回YAML文件
-        with open(data_path, 'w') as file:
-            yaml.safe_dump(data, file, sort_keys=False)
+            # 将修改后的数据写回YAML文件
+            with open(data_path, 'w') as file:
+                yaml.safe_dump(data, file, sort_keys=False)
 
-    # 注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
-    model = YOLO(model='./ultralytics/cfg/models/v11/yolo11s-seg.yaml', task='segment')  # 初始化YOLO模型（不加载预训练权重）
+        # 注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
+        model = YOLO(model='./ultralytics/cfg/models/v11/yolo11s-seg.yaml', task='segment')  # 初始化YOLO模型（不加载预训练权重）
 
-    # 生成当前时间字符串
-    current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        # 生成当前时间字符串
+        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    results = model.train(  # 开始训练模型
-        data=data_path,  # 指定训练数据的配置文件路径
-        device=device,  # 自动选择进行训练
-        workers=workers,  # 指定使用2个工作进程加载数据
-        imgsz=640,  # 指定输入图像的大小为640x640
-        epochs=200,  # 指定训练100个epoch
-        batch=batch,  # 指定每个批次的大小为8
-        name=f'segmentation_task_{data_name}_{current_time}',  # 指定训练任务的名称
-        val=True  # 在每个 epoch 结束时对验证集进行评估
-    )
+        results = model.train(  # 开始训练模型
+            data=data_path,  # 指定训练数据的配置文件路径
+            device=device,  # 自动选择进行训练
+            workers=workers,  # 指定使用2个工作进程加载数据
+            imgsz=img_size,  # 指定输入图像的大小
+            epochs=epochs,  # 指定训练的epoch轮数
+            batch=batch,  # 指定每个批次的大小
+            name=f'segmentation_task_{data_name}_{current_time}',  # 指定训练任务的名称
+            val=True  # 在每个 epoch 结束时对验证集进行评估
+        )
+
+        # 格式化结果以供 Gradio 输出
+        return (
+            f"分割任务训练成功完成！\n"
+            f"任务名称: segmentation_task_{data_name}_{current_time}\n"
+            f"最佳模型路径: {results.save_dir / 'weights' / 'best.pt'}\n"
+            f"最后模型路径: {results.save_dir / 'weights' / 'last.pt'}\n"
+            f"训练指标:\n"
+            f"  - 最终训练损失: {results.metrics['train_loss']:.4f}\n"
+            f"  - 最终验证损失: {results.metrics['val_loss']:.4f}\n"
+            f"  - mAP@50: {results.metrics['mAP_50']:.4f}\n"
+            f"  - mAP@50-95: {results.metrics['mAP_50_95']:.4f}\n"
+        )
+    except Exception as e:
+        return f"Error during segmentation training: {str(e)}"
