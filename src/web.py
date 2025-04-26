@@ -10,7 +10,7 @@ from QtFusion.utils import drawRectBox
 
 from log import ResultLogger, LogTable
 from model import Web_Detector
-from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors
+from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
 from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time
 import tempfile
@@ -167,9 +167,12 @@ class Detection_UI:
             elif self.image_type == "EL隐裂":
                 self.cls_name = EL_type
                 self.detect_class_color = EL_class_colors
-            else:
+            elif self.image_type == "可见光":
                 self.cls_name = Visible_type
                 self.detect_class_color = Visible_class_colors
+            else:
+                self.cls_name = Other_type
+                self.detect_class_color = Other_class_colors
 
         # 重新加载模型
         if self.model_type == "检测任务":
@@ -177,15 +180,19 @@ class Detection_UI:
                 model_path = abs_path("../weights/yolo11s-thermo.pt", path_type="current")
             elif self.image_type == "EL隐裂":
                 model_path = abs_path("../weights/yolo11s-el.pt", path_type="current")
-            else:
+            elif self.image_type == "可见光":
                 model_path = abs_path("../weights/yolo11s-visible.pt", path_type="current")
+            else:
+                model_path = abs_path("../weights/yolo11s.pt", path_type="current")
         else:
             if self.image_type == "红外":
                 model_path = abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current")
             elif self.image_type == "EL隐裂":
                 model_path = abs_path("../weights/yolo11s-el-seg.pt", path_type="current")
-            else:
+            elif self.image_type == "可见光":
                 model_path = abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
+            else:
+                st.error("Invalid image type for segmentation task.")
 
         self.model.load_model(model_path=model_path)
 
@@ -258,17 +265,20 @@ class Detection_UI:
         # 选择模型类型的下拉菜单
         self.model_type = st.sidebar.selectbox("选择任务类型", ["检测任务", "分割任务"])
 
+        available_options = []
         # 添加提示信息
         if self.model_type == "检测任务":
-            st.sidebar.caption("提示: 检测任务将检测异常的光伏板组件，目标类别按实际需要选择。")
+            st.sidebar.caption("提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。")
+            available_options = ["红外", "EL隐裂", "可见光", "其他"]
         elif self.model_type == "分割任务":
             st.sidebar.caption("提示: 分割任务将对所有的光伏板轮廓进行分割，目标类别选择【太阳能板】即可。")
+            available_options = ["红外", "EL隐裂", "可见光"]
 
         # 添加图像类型选择
         st.sidebar.header("图像类型选择")
         self.image_type = st.sidebar.radio(
             "选择图像类型",
-            options=["红外", "EL隐裂", "可见光"],
+            options=available_options,
             index=0  # 默认选择第一个选项
         )
 
@@ -282,6 +292,9 @@ class Detection_UI:
             elif self.image_type == "可见光":
                 self.cls_name = Visible_type
                 self.detect_class_color = Visible_class_colors
+            else:
+                self.cls_name = Other_type
+                self.detect_class_color = Other_class_colors
         elif self.model_type == "分割任务":
             self.cls_name = Segmentation_type
             self.detect_class_color = Segmentation_class_colors
@@ -331,6 +344,8 @@ class Detection_UI:
                     self.model.load_model(model_path=abs_path("../weights/yolo11s-el.pt", path_type="current"))
                 elif self.image_type == "可见光":
                     self.model.load_model(model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current"))
+                else:
+                    self.model.load_model(model_path=abs_path("../weights/yolo11s.pt", path_type="current"))
             elif self.model_type == "分割任务":
                 if self.image_type == "红外":
                     self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current"))
@@ -338,6 +353,8 @@ class Detection_UI:
                     self.model.load_model(model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current"))
                 elif self.image_type == "可见光":
                     self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
+                else:
+                    st.error("不支持的图像类型！")
             # 为模型中的类别重新分配颜色
             self.colors = [
                 self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
@@ -1014,7 +1031,7 @@ class Detection_UI:
         )
         # st.title(self.title) # 显示系统标题
         st.write("--------")
-        st.write("本系统可以检测光伏面板可见光故障、红外热故障以及EL隐裂故障")
+        st.write("本系统可以检测光伏面板可见光故障、红外热故障、EL隐裂故障以及其他异物入侵等问题。")
         st.write("--------")
         # 插入一条分割线
 

@@ -9,7 +9,7 @@ import base64
 from web import Detection_UI
 import threading
 import json
-from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type
+from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type, Other_type
 from functools import wraps
 import requests
 from auth import verify_token, get_access_token
@@ -136,8 +136,8 @@ def _check_params(required_fields, params):
             errors.append("model_type must be '检测任务' or '分割任务'")
 
     if "image_type" in params:
-        if params["image_type"] not in ["可见光", "红外", "EL隐裂"]:
-            errors.append("image_type must be one of ['可见光', '红外', 'EL隐裂']")
+        if params["image_type"] not in ["可见光", "红外", "EL隐裂", "其他"]:
+            errors.append("image_type must be one of ['可见光', '红外', 'EL隐裂', '其他']")
 
     if "selected_classes" in params and isinstance(params["selected_classes"], list):
         if not all(isinstance(cls, str) for cls in params["selected_classes"]):
@@ -151,8 +151,10 @@ def _check_params(required_fields, params):
             valid_classes = list(Thermo_type.keys())
         elif image_type == "EL隐裂":
             valid_classes = list(EL_type.keys())
-        else:
+        elif image_type == "可见光":
             valid_classes = list(Visible_type.keys())
+        else:
+            valid_classes = list(Other_type.keys())
 
         for cls in params["selected_classes"]:
             if cls not in valid_classes:
@@ -182,17 +184,20 @@ def get_types():
             ],
             "可见光": [
                 {"name": "type4", "chinese_name": "类型4"}
+            ],
+            "其他": [
+                {"name": "type8", "chinese_name": "类型5"}
             ]
         },
         "分割任务": {
             "红外": [
-                {"name": "type5", "chinese_name": "类型5"}
+                {"name": "type5", "chinese_name": "类型6"}
             ],
             "EL隐裂": [
-                {"name": "type6", "chinese_name": "类型6"}
+                {"name": "type6", "chinese_name": "类型7"}
             ],
             "可见光": [
-                {"name": "type7", "chinese_name": "类型7"}
+                {"name": "type7", "chinese_name": "类型8"}
             ]
         }
     }
@@ -202,7 +207,8 @@ def get_types():
             "检测任务": {
                 "红外": Thermo_type,
                 "EL隐裂": EL_type,
-                "可见光": Visible_type
+                "可见光": Visible_type,
+                "其他": Other_type
             },
             "分割任务": {
                 "红外": Segmentation_type,

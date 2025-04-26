@@ -47,6 +47,11 @@ Visible_type = {
     'mbsl': "面板碎裂"
 }
 
+Other_type = {
+    'people': "行人",                # Person
+    'vehicle': "车辆",              # Vehicle
+}
+
 Segmentation_type = {
     'solar_panel': "太阳能板"           # Solar panel
 }
@@ -96,6 +101,11 @@ Visible_class_colors = {
     "gfbzjbx": (0, 0, 255),          # Red
     "gfbqs": (0, 128, 128),           # Teal
     "mbsl": (128, 255, 128)            # Light Green
+}
+
+Other_class_colors = {
+    "people": (255, 0, 0),               # Blue
+    "vehicle": (0, 255, 0)              # Green
 }
 
 Segmentation_class_colors = {
