@@ -1,6 +1,7 @@
 import gradio as gr
 import argparse
 import torch
+import os
 from train_det import train_det
 from train_seg import train_seg
 
@@ -24,7 +25,10 @@ def get_model_options(base_path="../ultralytics/cfg/models/"):
     return model_options
 
 # Gradio 接口
-def train_interface(task, workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config=None):
+def train_interface(task, workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config=None, validate=False):
+    """
+    训练接口函数，根据任务类型选择相应的训练函数。
+    """
     # 根据任务类型设置默认模型配置文件
     if model_config is None:
         if task == "Detection":
@@ -33,9 +37,9 @@ def train_interface(task, workers, batch, device, data_name, epochs, img_size, p
             model_config = "../ultralytics/cfg/models/v11/yolo11s-seg.yaml"
 
     if task == "Detection":
-        return train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config)
+        return train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config, validate)
     elif task == "Segmentation":
-        return train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config)
+        return train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config, validate)
     else:
         return "无效的任务选择。请选择 'Detection' 或 'Segmentation'。"
 
@@ -56,6 +60,7 @@ def launch_gradio():
             gr.Number(label="图像大小", value=640, precision=0, info="训练的图像大小，默认值为640。"),
             gr.Textbox(label="预训练模型路径 (可选)", value="", info="预训练模型的路径。如果为空，则不使用预训练模型。"),
             gr.Dropdown(choices=model_options, label="YOLO 模型配置文件", value="", info="选择 YOLO 模型配置文件。如果为空，将根据任务类型选择默认模型。"),
+            gr.Checkbox(label="验证集评估", value=False, info="是否在每个 epoch 结束时对验证集进行评估。"),
         ],
         outputs="text",
         title="光伏云组件检测系统 YOLO 训练界面",
@@ -75,6 +80,7 @@ if __name__ == '__main__':
     parser.add_argument("--img_size", type=int, default=640, help="训练的图像大小，默认值为640。")
     parser.add_argument("--pretrained_model", type=str, default=None, help="预训练模型的路径。如果为空，则不使用预训练模型。")
     parser.add_argument("--model_config", type=str, default=None, help="YOLO 模型配置文件的路径。如果为空，将根据任务类型选择默认模型。")
+    parser.add_argument("--validate", action="store_true", help="是否在每个 epoch 结束时对验证集进行评估。")
     parser.add_argument("--gradio", action="store_true", help="启动 Gradio 界面。")
 
     args = parser.parse_args()
@@ -93,6 +99,7 @@ if __name__ == '__main__':
             args.epochs,
             args.img_size,
             args.pretrained_model,
-            args.model_config
+            args.model_config,
+            args.validate
         )
         print(result)

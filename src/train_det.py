@@ -7,7 +7,7 @@ from ultralytics import YOLO  # 导入YOLO模型
 from QtFusion.path import abs_path
 
 
-def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config='../ultralytics/cfg/models/v11/yolo11.yaml'):
+def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config='../ultralytics/cfg/models/v11/yolo11.yaml', validate=False):
     """
     训练检测模型的函数。
 
@@ -20,6 +20,7 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
         img_size (int): 训练的图像大小。
         pretrained_model (str, optional): 预训练模型的路径。如果提供，将加载该模型进行训练。默认为 None。
         model_config (str, optional): YOLO 模型配置文件的路径。默认为 '../ultralytics/cfg/models/v11/yolo11.yaml'。
+        validate (bool, optional): 是否在每个 epoch 结束时对验证集进行评估。默认为 None。
     """
     try:
         data_path = abs_path(f'../datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
@@ -72,7 +73,7 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
             epochs=epochs,  # 指定训练的epoch轮数
             batch=batch,  # 指定每个批次的大小
             name=task_name,  # 指定训练任务的名称
-            val=True  # 在每个 epoch 结束时对验证集进行评估
+            val=validate  # 在每个 epoch 结束时对验证集进行评估
         )
 
         # 获取保存目录路径
