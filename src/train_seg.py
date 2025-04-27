@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 
 
-def train_seg(workers, batch, device, data_name, epochs, img_size):
+def train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_model=None):
     """
     训练分割模型的函数。
 
@@ -18,6 +18,7 @@ def train_seg(workers, batch, device, data_name, epochs, img_size):
         data_name (str): 数据集的名称。
         epochs (int): 训练的轮数。
         img_size (int): 训练的图像大小。
+        pretrained_model (str, optional): 预训练模型的路径。如果提供，将加载该模型进行训练。默认为 None。
     """
     try:
         data_path = abs_path(f'datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
@@ -46,8 +47,13 @@ def train_seg(workers, batch, device, data_name, epochs, img_size):
             with open(data_path, 'w') as file:
                 yaml.safe_dump(data, file, sort_keys=False)
 
-        # 注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
-        model = YOLO(model='./ultralytics/cfg/models/v11/yolo11s-seg.yaml', task='segment')  # 初始化YOLO模型（不加载预训练权重）
+        # 初始化 YOLO 模型，注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
+        if pretrained_model:
+            # 如果提供了预训练模型路径，则加载该模型
+            model = YOLO(model='./ultralytics/cfg/models/v11/yolo11s-seg.yaml', task='segment').load(pretrained_model)
+        else:
+            # 否则初始化一个新的模型
+            model = YOLO(model='../ultralytics/cfg/models/v11/yolo11-seg.yaml', task='segment')
 
         # 生成当前时间字符串
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

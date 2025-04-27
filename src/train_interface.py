@@ -6,11 +6,11 @@ from train_seg import train_seg
 
 
 # Gradio 接口
-def train_interface(task, workers, batch, device, data_name, epochs, img_size):
+def train_interface(task, workers, batch, device, data_name, epochs, img_size, pretrained_model=None):
     if task == "Detection":
-        return train_det(workers, batch, device, data_name, epochs, img_size)
+        return train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model)
     elif task == "Segmentation":
-        return train_seg(workers, batch, device, data_name, epochs, img_size)
+        return train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_model)
     else:
         return "无效的任务选择。请选择 'Detection' 或 'Segmentation'。"
 
@@ -26,6 +26,7 @@ def launch_gradio():
             gr.Textbox(label="数据集名称", value="data", info="数据集的名称，例如 'data'。"),
             gr.Number(label="训练轮数", value=200, precision=0, info="训练的轮数，默认值为200。"),
             gr.Number(label="图像大小", value=640, precision=0, info="训练的图像大小，默认值为640。"),
+            gr.Textbox(label="预训练模型路径 (可选)", value="", info="预训练模型的路径。如果为空，则不使用预训练模型。"),
         ],
         outputs="text",
         title="光伏云组件检测系统 YOLO 训练界面",
@@ -43,6 +44,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_name", type=str, default="data", help="数据集的名称，默认值为 'data'。")
     parser.add_argument("--epochs", type=int, default=200, help="训练的轮数，默认值为200。")
     parser.add_argument("--img_size", type=int, default=640, help="训练的图像大小，默认值为640。")
+    parser.add_argument("--pretrained_model", type=str, default=None, help="预训练模型的路径。如果为空，则不使用预训练模型。")
     parser.add_argument("--gradio", action="store_true", help="启动 Gradio 界面。")
 
     args = parser.parse_args()
@@ -52,5 +54,14 @@ if __name__ == '__main__':
         launch_gradio()
     else:
         # 根据命令行参数运行训练
-        result = train_interface(args.task, args.workers, args.batch, args.device, args.data_name, args.epochs, args.img_size)
+        result = train_interface(
+            args.task, 
+            args.workers, 
+            args.batch, 
+            args.device, 
+            args.data_name, 
+            args.epochs, 
+            args.img_size,
+            args.pretrained_model
+        )
         print(result)
