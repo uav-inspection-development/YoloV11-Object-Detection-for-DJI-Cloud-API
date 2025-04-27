@@ -1,5 +1,5 @@
-albumentations==2.0.5
-causal_conv1d==1.5.0.post8
+albumentations==1.3.0
+
 clip==0.2.0
 comet_ml==3.49.8
 coremltools==8.2
@@ -13,7 +13,6 @@ flash_attn==2.7.4.post1
 flatbuffers==25.2.10
 hub_sdk==0.0.20
 ipython==8.12.3
-ipython==8.12.0
 lancedb==0.21.2
 lap==0.5.12
 lm_eval==0.4.8
@@ -35,17 +34,14 @@ packaging==25.0
 paddle==1.0.2
 pafy==0.5.5
 pandas==1.5.3
-Pillow==9.4.0
 Pillow==11.2.1
 psutil==5.9.8
-psutil==5.9.0
 py_cpuinfo==8.0.0
 pycocotools==2.0.8
 pytest==7.4.0
 pytorch_wavelets==1.3.0
 pytubefix==8.12.3
 PyWavelets==1.4.1
-PyYAML==6.0
 PyYAML==6.0.2
 QtFusion==0.6.1
 ray==2.20.0
@@ -75,3 +71,4 @@ wandb==0.19.9
 wheel==0.38.4
 x2paddle==1.6.0
 yt_dlp==2025.3.31
+causal_conv1d==1.4.0
