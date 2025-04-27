@@ -961,7 +961,7 @@ class Detection_UI:
 
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
-                        image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=idx)
+                        image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=cnt)
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
                         # 获取中文名
