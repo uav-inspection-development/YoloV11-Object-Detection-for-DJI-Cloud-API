@@ -7,7 +7,7 @@ from ultralytics import YOLO  # 导入YOLO模型
 from QtFusion.path import abs_path
 
 
-def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model=None):
+def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config='../ultralytics/cfg/models/v11/yolo11.yaml'):
     """
     训练检测模型的函数。
 
@@ -19,6 +19,7 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
         epochs (int): 训练的轮数。
         img_size (int): 训练的图像大小。
         pretrained_model (str, optional): 预训练模型的路径。如果提供，将加载该模型进行训练。默认为 None。
+        model_config (str, optional): YOLO 模型配置文件的路径。默认为 '../ultralytics/cfg/models/v11/yolo11.yaml'。
     """
     try:
         data_path = abs_path(f'../datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
@@ -54,10 +55,10 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
         # 初始化 YOLO 模型，注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
         if pretrained_model:
             # 如果提供了预训练模型路径，则加载该模型
-            model = YOLO(model='../ultralytics/cfg/models/v11/yolo11.yaml', task='detect').load(pretrained_model)
+            model = YOLO(model=model_config, task='detect').load(pretrained_model)
         else:
             # 否则初始化一个新的模型
-            model = YOLO(model='../ultralytics/cfg/models/v11/yolo11.yaml', task='detect')
+            model = YOLO(model=model_config, task='detect')
 
         # 生成当前时间字符串
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

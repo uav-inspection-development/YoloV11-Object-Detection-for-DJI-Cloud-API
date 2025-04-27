@@ -5,17 +5,45 @@ from train_det import train_det
 from train_seg import train_seg
 
 
+def get_model_options(base_path="../ultralytics/cfg/models/"):
+    """
+    获取指定目录下的所有 YAML 文件路径，用于动态生成模型选择列表。
+
+    Args:
+        base_path (str): 模型配置文件的根目录。
+
+    Returns:
+        list: 包含所有可用 YAML 文件的相对路径。
+    """
+    model_options = []
+    for root, _, files in os.walk(base_path):
+        for file in files:
+            if file.endswith(".yaml"):
+                relative_path = os.path.relpath(os.path.join(root, file), base_path)
+                model_options.append(relative_path)
+    return model_options
+
 # Gradio 接口
-def train_interface(task, workers, batch, device, data_name, epochs, img_size, pretrained_model=None):
+def train_interface(task, workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config=None):
+    # 根据任务类型设置默认模型配置文件
+    if model_config is None:
+        if task == "Detection":
+            model_config = "../ultralytics/cfg/models/v11/yolo11.yaml"
+        elif task == "Segmentation":
+            model_config = "../ultralytics/cfg/models/v11/yolo11s-seg.yaml"
+
     if task == "Detection":
-        return train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model)
+        return train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config)
     elif task == "Segmentation":
-        return train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_model)
+        return train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config)
     else:
         return "无效的任务选择。请选择 'Detection' 或 'Segmentation'。"
 
 # Gradio 接口
 def launch_gradio():
+    # 获取可用的模型配置文件选项
+    model_options = get_model_options()
+
     interface = gr.Interface(
         fn=train_interface,
         inputs=[
@@ -27,6 +55,7 @@ def launch_gradio():
             gr.Number(label="训练轮数", value=200, precision=0, info="训练的轮数，默认值为200。"),
             gr.Number(label="图像大小", value=640, precision=0, info="训练的图像大小，默认值为640。"),
             gr.Textbox(label="预训练模型路径 (可选)", value="", info="预训练模型的路径。如果为空，则不使用预训练模型。"),
+            gr.Dropdown(choices=model_options, label="YOLO 模型配置文件", value="", info="选择 YOLO 模型配置文件。如果为空，将根据任务类型选择默认模型。"),
         ],
         outputs="text",
         title="光伏云组件检测系统 YOLO 训练界面",
@@ -45,6 +74,7 @@ if __name__ == '__main__':
     parser.add_argument("--epochs", type=int, default=200, help="训练的轮数，默认值为200。")
     parser.add_argument("--img_size", type=int, default=640, help="训练的图像大小，默认值为640。")
     parser.add_argument("--pretrained_model", type=str, default=None, help="预训练模型的路径。如果为空，则不使用预训练模型。")
+    parser.add_argument("--model_config", type=str, default=None, help="YOLO 模型配置文件的路径。如果为空，将根据任务类型选择默认模型。")
     parser.add_argument("--gradio", action="store_true", help="启动 Gradio 界面。")
 
     args = parser.parse_args()
@@ -55,13 +85,14 @@ if __name__ == '__main__':
     else:
         # 根据命令行参数运行训练
         result = train_interface(
-            args.task, 
-            args.workers, 
-            args.batch, 
-            args.device, 
-            args.data_name, 
-            args.epochs, 
+            args.task,
+            args.workers,
+            args.batch,
+            args.device,
+            args.data_name,
+            args.epochs,
             args.img_size,
-            args.pretrained_model
+            args.pretrained_model,
+            args.model_config
         )
         print(result)
