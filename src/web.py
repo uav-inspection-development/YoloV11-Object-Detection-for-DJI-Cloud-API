@@ -12,11 +12,11 @@ from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
-from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time
+from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
-from PseudoColorizer import PseudoColorizer
+
 
 class Detection_UI:
     """
@@ -89,6 +89,11 @@ class Detection_UI:
         self.uploaded_file = None
         self.uploaded_video = None
         self.custom_model_file = None  # 自定义的模型文件
+
+        # 初始化黑白图片转换为伪彩色相关的变量
+        self.enable_pseudo_color = False
+        self.image_contrast = 1.0
+        self.image_brightness = 0.0
 
         # 初始化检测结果相关的变量
         self.detection_result = None
@@ -385,8 +390,12 @@ class Detection_UI:
             st.sidebar.write("请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
         elif self.input_source == "图片文件":
             self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
-            # colorizer = PseudoColorizer()
-            # self.uploaded_file = colorizer.apply_colormap(self.uploaded_file)
+            # 添加伪彩色转换选项
+            self.enable_pseudo_color = st.sidebar.checkbox("启用伪彩色转换", value=False)
+            # 如果启用伪彩色转换，显示对比度和亮度调整选项
+            if self.enable_pseudo_color:
+                self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
+                self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
             st.sidebar.write("请选择图片并点击'开始运行'按钮，进行图片检测！")
         elif self.input_source == "视频文件":
             self.uploaded_file = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi"], accept_multiple_files=True)
@@ -609,6 +618,16 @@ class Detection_UI:
                     source_img = uploaded_file.read()
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
+
+                    # 如果启用了伪彩色转换，应用转换
+                    if self.enable_pseudo_color:
+                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                        temp_file.write(source_img)
+                        temp_file.close()
+                        pseudo_colored_img = convert_to_pseudo_colorizer(temp_file.name, contrast=self.image_contrast, brightness=self.image_brightness)
+                        if pseudo_colored_img:
+                            image_ini = np.array(pseudo_colored_img)
+
                     framecopy = image_ini.copy()
                     image, detInfo, select_info = self.frame_process(image_ini, uploaded_file.name)
                     save_chinese_image(self.output_path + '/image/' + uploaded_file.name, image)
@@ -641,6 +660,16 @@ class Detection_UI:
                 source_img = self.uploaded_file.read()
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
+
+                # 如果启用了伪彩色转换，应用转换
+                if self.enable_pseudo_color:
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                    temp_file.write(source_img)
+                    temp_file.close()
+                    pseudo_colored_img = convert_to_pseudo_colorizer(temp_file.name, contrast=self.image_contrast, brightness=self.image_brightness)
+                    if pseudo_colored_img:
+                        image_ini = np.array(pseudo_colored_img)
+
                 framecopy = image_ini.copy()
                 image, detInfo, select_info = self.frame_process(image_ini, self.uploaded_file.name)
                 save_chinese_image(self.output_path + '/image/' + self.uploaded_file.name, image)

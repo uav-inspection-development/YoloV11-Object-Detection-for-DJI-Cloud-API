@@ -7,6 +7,7 @@ import streamlit as st
 from PIL import ImageFont, ImageDraw, Image
 from hashlib import md5
 from QtFusion.path import abs_path
+from matplotlib.colors import LinearSegmentedColormap
 
 
 def save_uploaded_file(uploaded_file):
@@ -280,3 +281,49 @@ def save_chinese_image(file_path, image_array):
         print(f"成功保存图像到: {file_path}")
     except Exception as e:
         print(f"保存图像失败: {str(e)}")
+
+
+def convert_to_pseudo_colorizer(image_path, contrast=1.0, brightness=0):
+    """
+    将灰度图像转换为伪彩色图像，使用自定义的颜色映射。
+
+    参数:
+        image_path (str): 输入灰度图像的路径。
+        contrast (float): 对比度调整因子（默认值为1.0）。
+        brightness (int): 亮度调整值（范围为-255到255，默认值为0）。
+
+    返回:
+        PIL.Image.Image: 伪彩色图像，如果输入不是灰度图像则返回 None。
+    """
+    # 定义自定义颜色映射的颜色
+    colors = [
+        (0.0, (128, 128, 128)),  # 最低温度：灰色
+        (0.3, (128, 0, 128)),    # 低温：紫色
+        (0.8, (255, 50, 0)),     # 高温：红色
+        (1.0, (255, 255, 0))     # 最高温度：黄色
+    ]
+
+    # 创建自定义颜色映射
+    colors = sorted([(pos, tuple(np.array(color) / 255)) for pos, color in colors], key=lambda x: x[0])
+    colormap = LinearSegmentedColormap.from_list("custom", [(pos, color) for pos, color in colors])
+
+    # 打开图像
+    image = Image.open(image_path)
+    if image.mode != 'L':  # 检查图像是否为灰度图
+        print("图像不是灰度图，不能应用伪彩色映射")
+        return None
+
+    # 将图像转换为 NumPy 数组
+    img_array = np.array(image)
+
+    # 应用对比度和亮度调整
+    img_array = np.clip(img_array.astype(np.float32) * contrast + brightness, 0, 255).astype(np.uint8)
+
+    # 应用颜色映射
+    colored_array = colormap(img_array / 255.0)[:, :, :3]  # 忽略 alpha 通道
+    colored_array = (colored_array * 255).astype(np.uint8)
+
+    # 将彩色数组转换回 PIL 图像
+    pseudo_colored_img = Image.fromarray(colored_array)
+
+    return pseudo_colored_img
