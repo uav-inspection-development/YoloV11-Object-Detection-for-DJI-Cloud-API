@@ -332,10 +332,14 @@ class Detection_UI:
             if model_file is not None:
                 self.custom_model_file = save_uploaded_file(model_file)
                 self.model.load_model(model_path=self.custom_model_file)
-                self.colors = [
-                    self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
-                    for class_name in self.model.names
-                ]
+                # 检查模型类别是否与选定类别一致
+                if set(self.model.names) != set(self.selected_classes):
+                    st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+                else:
+                    self.colors = [
+                        self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
+                        for class_name in self.model.names
+                    ]
         elif model_file_option == "默认":
             if self.model_type == "检测任务":
                 if self.image_type == "红外":
@@ -355,11 +359,15 @@ class Detection_UI:
                     self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
                 else:
                     st.error("不支持的图像类型！")
-            # 为模型中的类别重新分配颜色
-            self.colors = [
-                self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
-                for class_name in self.model.names
-            ]
+            # 检查模型类别是否与选定类别一致
+            if set(self.model.names) != set(self.selected_classes):
+                st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+            else:
+                # 为模型中的类别重新分配颜色
+                self.colors = [
+                    self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
+                    for class_name in self.model.names
+                ]
 
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("输入源识别设置")
