@@ -470,6 +470,8 @@ class Detection_UI:
         current_frame = 0
         self.progress_bar.progress(0)  # 初始化进度条
 
+        frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
+
         try:
 
             cap = cv2.VideoCapture(input_source)
@@ -516,6 +518,12 @@ class Detection_UI:
 
                     framecopy = frame.copy()
                     image, detInfo, _ = self.frame_process(frame, input_type)
+
+                    # 更新检测结果
+                    frame_count_placeholder.metric("当前帧数", current_frame)
+                    fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
+                    target_count_placeholder.metric("检测目标数量", len(detInfo))
+                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
 
                     # 保存目标结果图片
                     if detInfo:
@@ -589,6 +597,8 @@ class Detection_UI:
             self.logTable.clear_frames()
             self.progress_bar.progress(0)
 
+            frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
+
             # 检查是否上传了多个文件
             if isinstance(self.uploaded_file, list):
                 # 批量处理上传的图片
@@ -602,6 +612,11 @@ class Detection_UI:
                     save_chinese_image(self.output_path + '/image/' + uploaded_file.name, image)
                     # self.selectbox_placeholder = st.empty()
                     # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
+
+                    # 更新检测结果
+                    frame_count_placeholder.metric("当前图片数", idx)
+                    target_count_placeholder.metric("检测目标数量", len(detInfo))
+                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
 
                     # 调整图像尺寸
                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
@@ -629,6 +644,10 @@ class Detection_UI:
                 save_chinese_image(self.output_path + '/image/' + self.uploaded_file.name, image)
                 # self.selectbox_placeholder = st.empty()
                 # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
+
+                # 更新检测结果
+                target_count_placeholder.metric("检测目标数量", len(detInfo))
+                detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
 
                 # 调整图像尺寸
                 resized_image = cv2.resize(image, (self.new_width, self.new_height))
@@ -665,6 +684,8 @@ class Detection_UI:
             self.logTable.clear_frames()
             self.progress_bar.progress(0)
             self.close_flag = self.close_placeholder.button(label="停止")
+
+            frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
 
             # 检查是否上传了多个视频文件
             if isinstance(self.uploaded_video, list):
@@ -711,6 +732,12 @@ class Detection_UI:
                                     current_frame += 1
                                     current_time_str = format_time(current_time)
                                     image, detInfo, _ = self.frame_process(frame, uploaded_video.name, video_time=current_time_str)
+
+                                    # 更新检测结果
+                                    frame_count_placeholder.metric("当前帧数", current_frame)
+                                    fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
+                                    target_count_placeholder.metric("检测目标数量", len(detInfo))
+                                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
 
                                     if detInfo:
                                         time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
@@ -824,6 +851,13 @@ class Detection_UI:
                                 current_frame += 1
                                 current_time_str = format_time(current_time)
                                 image, detInfo, _ = self.frame_process(frame, self.uploaded_video.name, video_time=current_time_str)
+
+                                # 更新检测结果
+                                frame_count_placeholder.metric("当前帧数", current_frame)
+                                fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
+                                target_count_placeholder.metric("检测目标数量", len(detInfo))
+                                detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+
                                 # 保存目标结果图片
                                 if detInfo:
                                     # 将字符串转换为 datetime 对象
@@ -923,7 +957,7 @@ class Detection_UI:
                     label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
 
                     disp_res = ResultLogger()  # 创建结果记录器
-                    res = disp_res.concat_results(name, chinese_name,bbox, str(round(conf, 2)), str(use_time))  # 合并结果
+                    res = disp_res.concat_results(name, chinese_name, bbox, str(round(conf, 2)), str(use_time))  # 合并结果
                     self.table_placeholder.table(res)  # 在表格中显示结果
 
                     # 如果有保存的初始图像
@@ -947,13 +981,14 @@ class Detection_UI:
                 self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
                 self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
 
-    def frame_process(self, image, file_name,video_time = None):
+    def frame_process(self, image, file_name, video_time = None):
         """
         处理并预测单个图像帧的内容。
 
         Args:
             image (numpy.ndarray): 输入的图像。
             file_name (str): 处理的文件名。
+            video_time (str, optional): 视频时间戳，默认为 None。
 
         Returns:
             tuple: 处理后的图像，检测信息，选择信息列表。
@@ -972,6 +1007,7 @@ class Detection_UI:
 
         t2 = time.time()
         use_time = t2 - t1  # 计算单张图片推理时间
+        self.detection_time = use_time  # 更新检测时间
 
         det = pred[0]  # 获取预测结果
 
@@ -1014,6 +1050,18 @@ class Detection_UI:
                 self.table_placeholder.table(res)
 
         return image, detInfo, select_info
+
+    def real_time_dashboard(self):
+        """
+        显示实时监控仪表盘，包括帧数、帧率、目标数量和检测时间等信息。
+        """
+        st.header("实时监控仪表盘")
+        frame_count_placeholder = st.empty()
+        fps_placeholder = st.empty()
+        target_count_placeholder = st.empty()
+        detection_time_placeholder = st.empty()
+
+        return frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder
 
     def frame_table_process(self, frame, caption):
         """
