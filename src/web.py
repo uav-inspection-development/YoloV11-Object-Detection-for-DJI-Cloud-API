@@ -932,7 +932,7 @@ class Detection_UI:
         pre_img = self.model.preprocess(image)  # 对图像进行预处理
 
         # 更新模型参数
-        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold}
+        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold, 'classes': self.selected_classes}
         self.model.set_param(params)
 
         t1 = time.time()

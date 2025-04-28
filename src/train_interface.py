@@ -66,6 +66,9 @@ def train_interface(task, workers, batch, device, data_name, epochs, img_size, p
 
 # Gradio 接口
 def launch_gradio():
+    """
+    启动 Gradio 界面，提供用户友好的训练配置界面。
+    """
     # 获取可用的模型配置文件选项
     model_options = get_model_options()
     # 获取可用的预训练模型选项
