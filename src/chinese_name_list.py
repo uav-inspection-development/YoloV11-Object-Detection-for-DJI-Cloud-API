@@ -1,23 +1,11 @@
 # -*- coding: utf-8 -*-
 
 EL_type = {
-    'linear_crack': "线状隐裂",          # Linear crack
-    'cross_crack': "十字隐裂",           # Cross crack
-    'sheet_crack': "片状隐裂",           # Sheet crack
+    'crack': "隐裂",                    # crack
     'missing_corner': "缺角",           # Missing corner
     'fragment': "碎片",                 # Fragment
-    'polarity_short_circuit': "极性反短路",  # Polarity short circuit
-    'black_heart_cell': "黑心片",       # Black heart cell
-    'black_cell': "黑片",               # Black cell
-    'black_edge': "黑边",               # Black edge
-    'cell_pollution': "电池片污染",      # Cell pollution
-    'cell_inherent_issue': "电池片原生问题", # Cell inherent issue
-    'process_issue': "工艺问题",         # Process issue
-    'mixed_grade': "混档",              # Mixed grade
-    'cold_welding': "虚焊",             # Cold welding
-    'broken_grid': "断栅",              # Broken grid
-    'over_welding': "过焊",             # Over welding
-    'scratch': "划伤"                   # Scratch
+    'scratch': "划伤",                  # Scratch
+    'black_cell': "黑片"                # Black cell
 }
 
 Thermo_type = {
@@ -57,23 +45,11 @@ Segmentation_type = {
 }
 
 EL_class_colors = {
-    "linear_crack": (0, 0, 255),             # Red
-    "cross_crack": (0, 0, 200),             # Dark Red
-    "sheet_crack": (0, 0, 150),             # Deeper Red
-    "missing_corner": (0, 255, 255),               # Yellow
-    "fragment": (0, 200, 200),               # Light Yellow
-    "polarity_short_circuit": (0, 165, 255),          # Orange
-    "black_heart_cell": (255, 0, 0),               # Blue
-    "black_cell": (200, 0, 0),                 # Dark Blue
-    "black_edge": (150, 0, 0),                 # Deeper Blue
-    "cell_pollution": (255, 255, 0),          # Cyan
-    "cell_inherent_issue": (200, 200, 0),       # Light Cyan
-    "process_issue": (128, 0, 128),            # Purple
-    "mixed_grade": (0, 128, 255),               # Light Orange
-    "cold_welding": (255, 255, 255),             # White
-    "broken_grid": (200, 200, 200),             # Light Gray
-    "over_welding": (150, 150, 150),             # Dark Gray
-    "scratch": (100, 100, 100)              # Deeper Gray
+    "crack": (0, 0, 255),                     # Red
+    "missing_corner": (0, 255, 255),          # Yellow
+    "fragment": (0, 200, 200),                # Light Yellow
+    "scratch": (100, 100, 100),               # Deeper Gray
+    "black_cell": (200, 0, 0)                 # Dark Blue
 }
 
 Thermo_class_colors = {

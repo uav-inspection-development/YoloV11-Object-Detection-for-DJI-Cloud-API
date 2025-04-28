@@ -107,6 +107,7 @@ class Detection_UI:
         self.selectbox_placeholder = None  # 下拉框显示区域
         self.selectbox_target = None  # 下拉框选中项
         self.progress_bar = None  # 用于显示的进度条
+        self.export_format = 'CSV'  # 导出格式
 
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
@@ -332,10 +333,14 @@ class Detection_UI:
             if model_file is not None:
                 self.custom_model_file = save_uploaded_file(model_file)
                 self.model.load_model(model_path=self.custom_model_file)
-                self.colors = [
-                    self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
-                    for class_name in self.model.names
-                ]
+                # 检查模型类别是否与选定类别一致
+                if set(self.model.names) != set(self.selected_classes):
+                    st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+                else:
+                    self.colors = [
+                        self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
+                        for class_name in self.model.names
+                    ]
         elif model_file_option == "默认":
             if self.model_type == "检测任务":
                 if self.image_type == "红外":
@@ -355,11 +360,15 @@ class Detection_UI:
                     self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
                 else:
                     st.error("不支持的图像类型！")
-            # 为模型中的类别重新分配颜色
-            self.colors = [
-                self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
-                for class_name in self.model.names
-            ]
+            # 检查模型类别是否与选定类别一致
+            if set(self.model.names) != set(self.selected_classes):
+                st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+            else:
+                # 为模型中的类别重新分配颜色
+                self.colors = [
+                    self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
+                    for class_name in self.model.names
+                ]
 
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("输入源识别设置")
@@ -399,6 +408,9 @@ class Detection_UI:
             if self.enable_rtsp_output:
                 st.sidebar.write("设置RTSP/RTMP输出地址：")
                 self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
+
+        self.export_format = st.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
+        st.sidebar.caption(f"提示: {self.export_format} 文件将导出至 {self.saved_log_data} 路径。")
 
     def load_model_file(self):
         if self.custom_model_file:
@@ -460,6 +472,8 @@ class Detection_UI:
         current_frame = 0
         self.progress_bar.progress(0)  # 初始化进度条
 
+        frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
+
         try:
 
             cap = cv2.VideoCapture(input_source)
@@ -507,6 +521,12 @@ class Detection_UI:
                     framecopy = frame.copy()
                     image, detInfo, _ = self.frame_process(frame, input_type)
 
+                    # 更新检测结果
+                    frame_count_placeholder.metric("当前帧数", current_frame)
+                    fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
+                    target_count_placeholder.metric("检测目标数量", len(detInfo))
+                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+
                     # 保存目标结果图片
                     if detInfo:
                         file_name = abs_path(self.output_path + '/image/' + str(current_frame + 1) + '.jpg', path_type="current")
@@ -538,7 +558,12 @@ class Detection_UI:
                 else:
                     break
 
-            self.logTable.save_to_csv(self.saved_log_data)
+            if self.export_format == "CSV":
+                self.logTable.save_to_csv(self.saved_log_data)
+            elif self.export_format == "Excel":
+                self.logTable.save_to_excel(self.saved_log_data)
+            elif self.export_format == "JSON":
+                self.logTable.save_to_json(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)
             cap.release()
             if self.enable_video_output:
@@ -574,6 +599,8 @@ class Detection_UI:
             self.logTable.clear_frames()
             self.progress_bar.progress(0)
 
+            frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
+
             # 检查是否上传了多个文件
             if isinstance(self.uploaded_file, list):
                 # 批量处理上传的图片
@@ -587,6 +614,11 @@ class Detection_UI:
                     save_chinese_image(self.output_path + '/image/' + uploaded_file.name, image)
                     # self.selectbox_placeholder = st.empty()
                     # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
+
+                    # 更新检测结果
+                    frame_count_placeholder.metric("当前图片数", idx)
+                    target_count_placeholder.metric("检测目标数量", len(detInfo))
+                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
 
                     # 调整图像尺寸
                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
@@ -615,6 +647,10 @@ class Detection_UI:
                 # self.selectbox_placeholder = st.empty()
                 # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
+                # 更新检测结果
+                target_count_placeholder.metric("检测目标数量", len(detInfo))
+                detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+
                 # 调整图像尺寸
                 resized_image = cv2.resize(image, (self.new_width, self.new_height))
                 resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
@@ -629,7 +665,12 @@ class Detection_UI:
 
                 st.success("单张图片检测完成！")
 
-            self.logTable.save_to_csv(self.saved_log_data)
+            if self.export_format == "CSV":
+                self.logTable.save_to_csv(self.saved_log_data)
+            elif self.export_format == "Excel":
+                self.logTable.save_to_excel(self.saved_log_data)
+            elif self.export_format == "JSON":
+                self.logTable.save_to_json(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
         else:
             st.warning("请上传图片文件！")
@@ -645,6 +686,8 @@ class Detection_UI:
             self.logTable.clear_frames()
             self.progress_bar.progress(0)
             self.close_flag = self.close_placeholder.button(label="停止")
+
+            frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
 
             # 检查是否上传了多个视频文件
             if isinstance(self.uploaded_video, list):
@@ -692,6 +735,12 @@ class Detection_UI:
                                     current_time_str = format_time(current_time)
                                     image, detInfo, _ = self.frame_process(frame, uploaded_video.name, video_time=current_time_str)
 
+                                    # 更新检测结果
+                                    frame_count_placeholder.metric("当前帧数", current_frame)
+                                    fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
+                                    target_count_placeholder.metric("检测目标数量", len(detInfo))
+                                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+
                                     if detInfo:
                                         time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
                                         formatted_time = time_obj.strftime("%H_%M_%S")
@@ -723,7 +772,12 @@ class Detection_UI:
                             else:
                                 break
 
-                        self.logTable.save_to_csv(self.saved_log_data)
+                        if self.export_format == "CSV":
+                            self.logTable.save_to_csv(self.saved_log_data)
+                        elif self.export_format == "Excel":
+                            self.logTable.save_to_excel(self.saved_log_data)
+                        elif self.export_format == "JSON":
+                            self.logTable.save_to_json(self.saved_log_data)
                         self.logTable.update_table(self.log_table_placeholder)
                         cap.release()
                         if self.enable_video_output:
@@ -799,6 +853,13 @@ class Detection_UI:
                                 current_frame += 1
                                 current_time_str = format_time(current_time)
                                 image, detInfo, _ = self.frame_process(frame, self.uploaded_video.name, video_time=current_time_str)
+
+                                # 更新检测结果
+                                frame_count_placeholder.metric("当前帧数", current_frame)
+                                fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
+                                target_count_placeholder.metric("检测目标数量", len(detInfo))
+                                detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+
                                 # 保存目标结果图片
                                 if detInfo:
                                     # 将字符串转换为 datetime 对象
@@ -837,7 +898,12 @@ class Detection_UI:
                         else:
                             break
 
-                    self.logTable.save_to_csv(self.saved_log_data)
+                    if self.export_format == "CSV":
+                        self.logTable.save_to_csv(self.saved_log_data)
+                    elif self.export_format == "Excel":
+                        self.logTable.save_to_excel(self.saved_log_data)
+                    elif self.export_format == "JSON":
+                        self.logTable.save_to_json(self.saved_log_data)
                     self.logTable.update_table(self.log_table_placeholder)
                     cap.release()
                     if self.enable_video_output:
@@ -893,7 +959,7 @@ class Detection_UI:
                     label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
 
                     disp_res = ResultLogger()  # 创建结果记录器
-                    res = disp_res.concat_results(name, chinese_name,bbox, str(round(conf, 2)), str(use_time))  # 合并结果
+                    res = disp_res.concat_results(name, chinese_name, bbox, str(round(conf, 2)), str(use_time))  # 合并结果
                     self.table_placeholder.table(res)  # 在表格中显示结果
 
                     # 如果有保存的初始图像
@@ -917,13 +983,14 @@ class Detection_UI:
                 self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
                 self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
 
-    def frame_process(self, image, file_name,video_time = None):
+    def frame_process(self, image, file_name, video_time = None):
         """
         处理并预测单个图像帧的内容。
 
         Args:
             image (numpy.ndarray): 输入的图像。
             file_name (str): 处理的文件名。
+            video_time (str, optional): 视频时间戳，默认为 None。
 
         Returns:
             tuple: 处理后的图像，检测信息，选择信息列表。
@@ -934,7 +1001,7 @@ class Detection_UI:
         pre_img = self.model.preprocess(image)  # 对图像进行预处理
 
         # 更新模型参数
-        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold}
+        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold, 'classes': self.selected_classes}
         self.model.set_param(params)
 
         t1 = time.time()
@@ -942,6 +1009,7 @@ class Detection_UI:
 
         t2 = time.time()
         use_time = t2 - t1  # 计算单张图片推理时间
+        self.detection_time = use_time  # 更新检测时间
 
         det = pred[0]  # 获取预测结果
 
@@ -963,7 +1031,7 @@ class Detection_UI:
 
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
-                        image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=idx)
+                        image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=cnt)
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
                         # 获取中文名
@@ -973,7 +1041,7 @@ class Detection_UI:
                                                     video_time if video_time is not None else str(round(use_time, 2)))
 
                         # 添加日志条目
-                        self.logTable.add_log_entry(file_name, name, chinese_name,bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
+                        self.logTable.add_log_entry(file_name, name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
                         # 记录检测信息
                         detInfo.append([name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
                         # 添加到选择信息列表
@@ -984,6 +1052,18 @@ class Detection_UI:
                 self.table_placeholder.table(res)
 
         return image, detInfo, select_info
+
+    def real_time_dashboard(self):
+        """
+        显示实时监控仪表盘，包括帧数、帧率、目标数量和检测时间等信息。
+        """
+        st.header("实时监控仪表盘")
+        frame_count_placeholder = st.empty()
+        fps_placeholder = st.empty()
+        target_count_placeholder = st.empty()
+        detection_time_placeholder = st.empty()
+
+        return frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder
 
     def frame_table_process(self, frame, caption):
         """
@@ -1074,7 +1154,20 @@ class Detection_UI:
             if st.button("导出结果"):
                 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
                 self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
-                self.logTable.save_to_csv(self.saved_log_data)
+                
+                if self.export_format == "CSV":
+                    file_path = f"{self.saved_log_data}.csv"
+                    self.logTable.save_to_csv(file_path)
+                    st.write(f"识别结果文件已经保存为 CSV 格式：{file_path}")
+                elif self.export_format == "Excel":
+                    file_path = f"{self.saved_log_data}.xlsx"
+                    self.logTable.save_to_excel(file_path)
+                    st.write(f"识别结果文件已经保存为 Excel 格式：{file_path}")
+                elif self.export_format == "JSON":
+                    file_path = f"{self.saved_log_data}.json"
+                    self.logTable.save_to_json(file_path)
+                    st.write(f"识别结果文件已经保存为 JSON 格式：{file_path}")
+
                 if self.uploaded_video is None:
                     name_in = None
                 else:
