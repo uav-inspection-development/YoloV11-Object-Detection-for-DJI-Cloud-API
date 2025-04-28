@@ -16,7 +16,7 @@ from utils import save_uploaded_file, concat_results, load_default_image, get_ca
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
-
+from PseudoColorizer import PseudoColorizer
 
 class Detection_UI:
     """
@@ -376,6 +376,8 @@ class Detection_UI:
             st.sidebar.write("请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
         elif self.input_source == "图片文件":
             self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            # colorizer = PseudoColorizer()
+            # self.uploaded_file = colorizer.apply_colormap(self.uploaded_file)
             st.sidebar.write("请选择图片并点击'开始运行'按钮，进行图片检测！")
         elif self.input_source == "视频文件":
             self.uploaded_file = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi"], accept_multiple_files=True)
