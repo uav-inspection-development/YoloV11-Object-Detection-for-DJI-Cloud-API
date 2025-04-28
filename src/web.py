@@ -107,6 +107,7 @@ class Detection_UI:
         self.selectbox_placeholder = None  # 下拉框显示区域
         self.selectbox_target = None  # 下拉框选中项
         self.progress_bar = None  # 用于显示的进度条
+        self.export_format = 'CSV'  # 导出格式
 
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
@@ -406,6 +407,9 @@ class Detection_UI:
                 st.sidebar.write("设置RTSP/RTMP输出地址：")
                 self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
 
+        self.export_format = st.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
+        st.sidebar.caption(f"提示: {self.export_format} 文件将导出至 {self.saved_log_data} 路径。")
+
     def load_model_file(self):
         if self.custom_model_file:
             self.model.load_model(self.custom_model_file)
@@ -544,7 +548,12 @@ class Detection_UI:
                 else:
                     break
 
-            self.logTable.save_to_csv(self.saved_log_data)
+            if self.export_format == "CSV":
+                self.logTable.save_to_csv(self.saved_log_data)
+            elif self.export_format == "Excel":
+                self.logTable.save_to_excel(self.saved_log_data)
+            elif self.export_format == "JSON":
+                self.logTable.save_to_json(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)
             cap.release()
             if self.enable_video_output:
@@ -635,7 +644,12 @@ class Detection_UI:
 
                 st.success("单张图片检测完成！")
 
-            self.logTable.save_to_csv(self.saved_log_data)
+            if self.export_format == "CSV":
+                self.logTable.save_to_csv(self.saved_log_data)
+            elif self.export_format == "Excel":
+                self.logTable.save_to_excel(self.saved_log_data)
+            elif self.export_format == "JSON":
+                self.logTable.save_to_json(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
         else:
             st.warning("请上传图片文件！")
@@ -729,7 +743,12 @@ class Detection_UI:
                             else:
                                 break
 
-                        self.logTable.save_to_csv(self.saved_log_data)
+                        if self.export_format == "CSV":
+                            self.logTable.save_to_csv(self.saved_log_data)
+                        elif self.export_format == "Excel":
+                            self.logTable.save_to_excel(self.saved_log_data)
+                        elif self.export_format == "JSON":
+                            self.logTable.save_to_json(self.saved_log_data)
                         self.logTable.update_table(self.log_table_placeholder)
                         cap.release()
                         if self.enable_video_output:
@@ -843,7 +862,12 @@ class Detection_UI:
                         else:
                             break
 
-                    self.logTable.save_to_csv(self.saved_log_data)
+                    if self.export_format == "CSV":
+                        self.logTable.save_to_csv(self.saved_log_data)
+                    elif self.export_format == "Excel":
+                        self.logTable.save_to_excel(self.saved_log_data)
+                    elif self.export_format == "JSON":
+                        self.logTable.save_to_json(self.saved_log_data)
                     self.logTable.update_table(self.log_table_placeholder)
                     cap.release()
                     if self.enable_video_output:
@@ -979,7 +1003,7 @@ class Detection_UI:
                                                     video_time if video_time is not None else str(round(use_time, 2)))
 
                         # 添加日志条目
-                        self.logTable.add_log_entry(file_name, name, chinese_name,bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
+                        self.logTable.add_log_entry(file_name, name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
                         # 记录检测信息
                         detInfo.append([name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
                         # 添加到选择信息列表
@@ -1080,7 +1104,20 @@ class Detection_UI:
             if st.button("导出结果"):
                 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
                 self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
-                self.logTable.save_to_csv(self.saved_log_data)
+                
+                if self.export_format == "CSV":
+                    file_path = f"{self.saved_log_data}.csv"
+                    self.logTable.save_to_csv(file_path)
+                    st.write(f"识别结果文件已经保存为 CSV 格式：{file_path}")
+                elif self.export_format == "Excel":
+                    file_path = f"{self.saved_log_data}.xlsx"
+                    self.logTable.save_to_excel(file_path)
+                    st.write(f"识别结果文件已经保存为 Excel 格式：{file_path}")
+                elif self.export_format == "JSON":
+                    file_path = f"{self.saved_log_data}.json"
+                    self.logTable.save_to_json(file_path)
+                    st.write(f"识别结果文件已经保存为 JSON 格式：{file_path}")
+
                 if self.uploaded_video is None:
                     name_in = None
                 else:

@@ -221,9 +221,35 @@ class LogTable:
         columns = ['文件路径', '识别结果', '类型', '位置', '面积', '时间']
         self.data = pd.DataFrame(columns=columns)
 
-    def save_to_csv(self,csv_file_path):
+    def save_to_csv(self, csv_file_path):
+        """
+        将数据保存到CSV文件。
+
+        Args:
+            csv_file_path (str): CSV文件的路径。
+        """
         # 将更新后的DataFrame保存到CSV文件
         self.data.to_csv(csv_file_path, index=False, encoding='utf-8', mode='a', header=False)
+
+    def save_to_excel(self, excel_file_path):
+        """
+        将数据保存到Excel文件。
+
+        Args:
+            excel_file_path (str): Excel文件的路径。
+        """
+        # 将DataFrame保存到Excel文件
+        self.data.to_excel(excel_file_path, index=False, engine='openpyxl')
+
+    def save_to_json(self, json_file_path):
+        """
+        将数据保存到JSON文件。
+
+        Args:
+            json_file_path (str): JSON文件的路径。
+        """
+        # 将DataFrame保存到JSON文件
+        self.data.to_json(json_file_path, orient='records', lines=True, force_ascii=False)
 
     def update_table(self, log_table_placeholder):
         """
