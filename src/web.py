@@ -82,6 +82,7 @@ class Detection_UI:
 
         # 初始化检测类别相关的配置参数
         self.available_classes = None  # 可用的检测类别
+        self.available_class_keys = None # 可用的检测类别键
         self.selected_classes = list(self.cls_name.keys())  # 选定的检测类别
 
         # 初始化相机和文件相关的变量
@@ -311,6 +312,7 @@ class Detection_UI:
         # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
         st.sidebar.header("目标类别选择")
         self.available_classes = list(self.cls_name.values())
+        self.available_class_keys = list(self.cls_name.keys())
         self.selected_classes = st.sidebar.multiselect(
             "选择需要检测或分割的目标类别",
             options=self.available_classes,
@@ -339,7 +341,7 @@ class Detection_UI:
                 self.custom_model_file = save_uploaded_file(model_file)
                 self.model.load_model(model_path=self.custom_model_file)
                 # 检查模型类别是否与选定类别一致
-                if set(self.model.names) != set(self.selected_classes):
+                if set(self.model.names) != set(self.available_class_keys):
                     st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
                 else:
                     self.colors = [
@@ -366,7 +368,7 @@ class Detection_UI:
                 else:
                     st.error("不支持的图像类型！")
             # 检查模型类别是否与选定类别一致
-            if set(self.model.names) != set(self.selected_classes):
+            if set(self.model.names) != set(self.available_class_keys):
                 st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
             else:
                 # 为模型中的类别重新分配颜色
