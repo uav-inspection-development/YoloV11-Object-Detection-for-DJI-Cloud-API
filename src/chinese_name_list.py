@@ -18,7 +18,7 @@ Thermo_type = {
     'ejgdl': "二极管短路",
     'ygfs': "阳光反射",
     'gfb_zc_rcx': "光伏板正常热成像",
-    'ejgd_ycdw': "二极管短路_异常低温"
+    'ejgdl_ycdw': "二极管短路_异常低温"
 }
 
 Visible_type = {
@@ -62,7 +62,7 @@ Thermo_class_colors = {
     "ejgdl": (255, 255, 0),            # Cyan
     "ygfs": (0, 0, 128),         # Dark Red
     "gfb_zc_rcx": (255, 0, 255),         # Magenta
-    "ejgd_ycdw": (128, 128, 128)         # Gray
+    "ejgdl_ycdw": (128, 128, 128)         # Gray
 }
 
 Visible_class_colors = {

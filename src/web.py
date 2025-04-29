@@ -259,6 +259,10 @@ class Detection_UI:
             # 加载或创建模型实例
             st.session_state['model'] = Web_Detector()
 
+        st.sidebar.header("日志导出格式设置")
+        self.export_format = st.sidebar.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
+        st.sidebar.caption(f"提示: {self.export_format} 文件将导出至 {self.saved_log_data} 路径。")
+
         self.available_cameras = st.session_state['available_cameras']
         # 初始化或获取识别结果的表格
         self.logTable = st.session_state['logTable']
@@ -339,7 +343,10 @@ class Detection_UI:
             # 如果上传了模型文件，则保存并加载该模型
             if model_file is not None:
                 self.custom_model_file = save_uploaded_file(model_file)
-                self.model.load_model(model_path=self.custom_model_file)
+                try:
+                    self.model.load_model(model_path=self.custom_model_file)
+                except Exception as e:
+                    st.error(f"无法加载模型文件，请检查文件格式或路径是否正确！错误信息: {str(e)}")
                 # 检查模型类别是否与选定类别一致
                 if set(self.model.names) != set(self.available_class_keys):
                     st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
@@ -349,24 +356,27 @@ class Detection_UI:
                         for class_name in self.model.names
                     ]
         elif model_file_option == "默认":
-            if self.model_type == "检测任务":
-                if self.image_type == "红外":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo.pt", path_type="current"))
-                elif self.image_type == "EL隐裂":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el.pt", path_type="current"))
-                elif self.image_type == "可见光":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current"))
-                else:
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s.pt", path_type="current"))
-            elif self.model_type == "分割任务":
-                if self.image_type == "红外":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current"))
-                elif self.image_type == "EL隐裂":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current"))
-                elif self.image_type == "可见光":
-                    self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
-                else:
-                    st.error("不支持的图像类型！")
+            try:
+                if self.model_type == "检测任务":
+                    if self.image_type == "红外":
+                        self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo.pt", path_type="current"))
+                    elif self.image_type == "EL隐裂":
+                        self.model.load_model(model_path=abs_path("../weights/yolo11s-el.pt", path_type="current"))
+                    elif self.image_type == "可见光":
+                        self.model.load_model(model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current"))
+                    else:
+                        self.model.load_model(model_path=abs_path("../weights/yolo11s.pt", path_type="current"))
+                elif self.model_type == "分割任务":
+                    if self.image_type == "红外":
+                        self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current"))
+                    elif self.image_type == "EL隐裂":
+                        self.model.load_model(model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current"))
+                    elif self.image_type == "可见光":
+                        self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
+                    else:
+                        st.error("不支持的图像类型！")
+            except Exception as e:
+                st.error(f"无法加载默认模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
             # 检查模型类别是否与选定类别一致
             if set(self.model.names) != set(self.available_class_keys):
                 st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
@@ -408,7 +418,7 @@ class Detection_UI:
             st.sidebar.header("视频输出设置")
             self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
 
-        st.sidebar.write("选择输出文件路径：")
+        st.sidebar.header("输出文件路径设置")
         self.output_path = st.sidebar.text_input("输出文件路径", value="../output", placeholder="例如：../output 或 D:/videos")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
@@ -417,11 +427,8 @@ class Detection_UI:
 
             # RTSP/RTMP输出地址输入
             if self.enable_rtsp_output:
-                st.sidebar.write("设置RTSP/RTMP输出地址：")
                 self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
-
-        self.export_format = st.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
-        st.sidebar.caption(f"提示: {self.export_format} 文件将导出至 {self.saved_log_data} 路径。")
+                st.sidebar.write("设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
 
     def load_model_file(self):
         if self.custom_model_file:
