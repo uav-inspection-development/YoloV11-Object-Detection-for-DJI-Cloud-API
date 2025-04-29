@@ -267,10 +267,14 @@ class Detection_UI:
         # 初始化或获取识别结果的表格
         self.logTable = st.session_state['logTable']
         self.model = st.session_state['model']
+
+        st.sidebar.header("检测阈值设定")
         # 置信度阈值的滑动条
         self.conf_threshold = float(st.sidebar.slider("置信度设定", min_value=0.0, max_value=1.0, value=0.15))
+        st.sidebar.caption("提示: 置信度设定范围为0.0到1.0，代表检测结果的置信度。")
         # IOU阈值的滑动条
         self.iou_threshold = float(st.sidebar.slider("IOU设定", min_value=0.0, max_value=1.0, value=0.25))
+        st.sidebar.caption("提示: IOU设定范围为0.0到1.0，代表检测结果的重叠度。")
         # 设置侧边栏的模型设置部分
         st.sidebar.header("模型设置")
         # 选择模型类型的下拉菜单
