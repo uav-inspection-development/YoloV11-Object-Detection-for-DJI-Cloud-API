@@ -7,12 +7,13 @@ import numpy as np
 import streamlit as st
 from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
+from PIL import Image
 
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
-from utils import save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer
+from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -629,17 +630,20 @@ class Detection_UI:
                 for idx, uploaded_file in enumerate(self.uploaded_file):
                     # 处理每个上传的图片文件
                     source_img = uploaded_file.read()
+                    color_mod = Image.open(uploaded_file)
+                    bw_mod = np.array(color_mod)
+                    is_bw = is_black_and_white(bw_mod)
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
 
                     # 如果启用了伪彩色转换，应用转换
-                    if self.enable_pseudo_color:
-                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-                        temp_file.write(source_img)
-                        temp_file.close()
-                        pseudo_colored_img = convert_to_pseudo_colorizer(temp_file.name, contrast=self.image_contrast, brightness=self.image_brightness)
+                    if self.enable_pseudo_color and is_bw:
+                        color_mod = Image.open(uploaded_file).convert('L')
+                        pseudo_colored_img = convert_to_pseudo_colorizer(color_mod, contrast=self.image_contrast, brightness=self.image_brightness)
+
                         if pseudo_colored_img:
-                            image_ini = np.array(pseudo_colored_img)
+                            image_ini = cv2.cvtColor(np.array(pseudo_colored_img), cv2.COLOR_RGB2BGR)
+
 
                     framecopy = image_ini.copy()
                     image, detInfo, select_info = self.frame_process(image_ini, uploaded_file.name)
@@ -648,7 +652,7 @@ class Detection_UI:
                     # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
                     # 更新检测结果
-                    frame_count_placeholder.metric("当前图片数", idx)
+                    frame_count_placeholder.metric("当前图片数", idx+1)
                     target_count_placeholder.metric("检测目标数量", len(detInfo))
                     detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
 
@@ -676,12 +680,10 @@ class Detection_UI:
 
                 # 如果启用了伪彩色转换，应用转换
                 if self.enable_pseudo_color:
-                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-                    temp_file.write(source_img)
-                    temp_file.close()
-                    pseudo_colored_img = convert_to_pseudo_colorizer(temp_file.name, contrast=self.image_contrast, brightness=self.image_brightness)
+                    color_mod = Image.open(source_img).convert('L')
+                    pseudo_colored_img = convert_to_pseudo_colorizer(color_mod, contrast=self.image_contrast, brightness=self.image_brightness)
                     if pseudo_colored_img:
-                        image_ini = np.array(pseudo_colored_img)
+                        image_ini = cv2.cvtColor(np.array(pseudo_colored_img), cv2.COLOR_RGB2BGR)
 
                 framecopy = image_ini.copy()
                 image, detInfo, select_info = self.frame_process(image_ini, self.uploaded_file.name)
@@ -1027,6 +1029,7 @@ class Detection_UI:
 
     def frame_process(self, image, file_name, video_time = None):
         """
+        # FIXME:
         处理并预测单个图像帧的内容。
 
         Args:
@@ -1043,7 +1046,9 @@ class Detection_UI:
         pre_img = self.model.preprocess(image)  # 对图像进行预处理
 
         # 更新模型参数
-        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold, 'classes': self.selected_classes}
+        # FIXME:
+        # params = {'conf': self.conf_threshold, 'iou': self.iou_threshold, 'classes': self.selected_classes}
+        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold}
         self.model.set_param(params)
 
         t1 = time.time()
