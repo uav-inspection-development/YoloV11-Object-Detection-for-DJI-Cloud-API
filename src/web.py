@@ -68,6 +68,7 @@ class Detection_UI:
         self.cls_name = Visible_type
         self.detect_class_color = Visible_class_colors
         self.colors = [self.detect_class_color.get(class_name, (0, 255, 0)) for class_name in self.cls_name.values()]
+        self.selected_class_ids = None  # 选定的类别索引
 
         # 设置页面标题
         self.title = "光伏云组件检测系统"
@@ -200,9 +201,12 @@ class Detection_UI:
             elif self.image_type == "可见光":
                 model_path = abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
             else:
-                st.error("Invalid image type for segmentation task.")
+                print("Invalid image type for segmentation task.")
 
-        self.model.load_model(model_path=model_path)
+        try:
+            self.model.load_model(model_path=model_path)
+        except Exception as e:
+            print(f"无法加载模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
 
     def setup_page(self):
         """
@@ -327,6 +331,11 @@ class Detection_UI:
             options=self.available_classes,
             default=self.available_classes  # 默认选择所有类别
         )
+
+        # 将选定的类别转换为索引
+        self.selected_class_ids = [
+            idx for idx, name in enumerate(self.model.names) if name in self.selected_classes
+        ]
 
         # 添加提示信息
         if len(self.selected_classes) == 0:
@@ -1046,9 +1055,7 @@ class Detection_UI:
         pre_img = self.model.preprocess(image)  # 对图像进行预处理
 
         # 更新模型参数
-        # FIXME:
-        # params = {'conf': self.conf_threshold, 'iou': self.iou_threshold, 'classes': self.selected_classes}
-        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold}
+        params = {'conf': self.conf_threshold, 'iou': self.iou_threshold, 'classes': self.selected_class_ids}
         self.model.set_param(params)
 
         t1 = time.time()
