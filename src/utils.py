@@ -330,18 +330,6 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
     return pseudo_colored_img
 
 
-def create_custom_colormap(colors):
-    """
-    创建自定义颜色映射
-    :param colors: 包含元组的列表，格式为[(位置, (R, G, B)), ...]
-                   位置范围0.0-1.0，颜色分量范围0-255
-    :return: 自定义的Colormap对象
-    """
-    # 归一化颜色并排序
-    colors = sorted([(pos, tuple(np.array(color) / 255)) for pos, color in colors], key=lambda x: x[0])
-    return LinearSegmentedColormap.from_list("custom", [(pos, color) for pos, color in colors])
-
-
 def is_black_and_white(image_array):
     """
     判断一个 RGB 图像是否是黑白图像。

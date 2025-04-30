@@ -107,7 +107,7 @@ class Detection_UI:
         # 初始化UI显示相关的变量（仅Streamlit）
         self.display_mode = None  # 设置显示模式
         self.close_flag = None  # 控制图像显示结束的标志
-        self.close_placeholder = None  # 关闭按钮区域
+        self.close_placeholder = st.empty()  # 关闭按钮区域
         self.image_placeholder = None  # 用于显示图像的区域
         self.image_placeholder_res = None  # 图像显示区域
         self.table_placeholder = None  # 表格显示区域
@@ -435,7 +435,7 @@ class Detection_UI:
                 self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
             st.sidebar.caption("💡 提示: 请选择图片并点击'开始运行'按钮，进行图片检测！")
         elif self.input_source == "视频文件":
-            self.uploaded_file = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi"], accept_multiple_files=True)
+            self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi", "mov"], accept_multiple_files=True)
             st.sidebar.caption("💡 请选择视频并点击'开始运行'按钮，进行视频检测！")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
@@ -485,7 +485,10 @@ class Detection_UI:
                 input_source = 0
             else:
                 if len(self.selected_camera) < 8:
-                    input_source = int(self.selected_camera)
+                    try:
+                        input_source = int(self.selected_camera)
+                    except:
+                        st.warning("请检查摄像头序号")
                 else:
                     input_source = self.selected_camera
         elif self.input_source == "RTSP/RTMP流":
@@ -540,6 +543,9 @@ class Detection_UI:
                 # 设置视频保存路径，使用当前时间作为文件名后缀
                 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
                 file_name = os.path.join(self.output_path, "/video/", f"{input_type}_{current_time}.avi")
+                d_file_name = os.path.dirname(file_name)
+                if not os.path.exists(d_file_name):
+                    os.makedirs(d_file_name)
                 video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
 
                 if not video_out.isOpened():
@@ -855,7 +861,7 @@ class Detection_UI:
                         if self.uploaded_video is None:
                             name_in = None
                         else:
-                            name_in = self.uploaded_video.name
+                            name_in = uploaded_video.name
 
                         res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
                         st.write("识别结果文件已经保存：" + self.saved_log_data)
