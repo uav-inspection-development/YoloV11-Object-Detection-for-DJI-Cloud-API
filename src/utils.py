@@ -295,7 +295,7 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
     将灰度图像转换为伪彩色图像，使用自定义的颜色映射。
 
     参数:
-        image_path (str): 输入灰度图像的路径。
+        image (PIL.Image.Image): 输入的灰度图像。
         contrast (float): 对比度调整因子（默认值为1.0）。
         brightness (int): 亮度调整值（范围为-255到255，默认值为0）。
 
@@ -303,12 +303,6 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
         PIL.Image.Image: 伪彩色图像，如果输入不是灰度图像则返回 None。
     """
     # 定义自定义颜色映射的颜色
-    # colors = [
-    #     (0.0, (128, 128, 128)),  # 最低温度：灰色
-    #     (0.3, (128, 0, 128)),    # 低温：紫色
-    #     (0.8, (255, 50, 0)),     # 高温：红色
-    #     (1.0, (255, 255, 0))     # 最高温度：黄色
-    # ]
     colors = [
         (0.0, (128, 128, 128)),  # 最低温度：黑色
         (0.3, (128, 0, 128)),  # 低温温度：紫色
@@ -320,16 +314,8 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
     colors = sorted([(pos, tuple(np.array(color) / 255)) for pos, color in colors], key=lambda x: x[0])
     colormap = LinearSegmentedColormap.from_list("custom", [(pos, color) for pos, color in colors])
 
-
-    # if image.mode != 'L':  # 检查图像是否为灰度图
-    #     print("图像不是灰度图，不能应用伪彩色映射")
-    #     return None
-
     # 将图像转换为 NumPy 数组
-    print(image._mode)
     img_array = np.array(image)
-    print(img_array.min(),img_array.max())
-
 
     # 应用对比度和亮度调整
     img_array = np.clip(img_array.astype(np.float32) * contrast + brightness, 0, 255).astype(np.uint8)
@@ -338,12 +324,8 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
     colored_array = colormap(img_array / 255.0)[:, :, :3]  # 忽略alpha通道
     colored_array = (colored_array * 255).astype(np.uint8)
 
-
-
-
     # 将彩色数组转换回 PIL 图像
     pseudo_colored_img = Image.fromarray(colored_array)
-
 
     return pseudo_colored_img
 
