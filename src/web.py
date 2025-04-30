@@ -233,14 +233,14 @@ class Detection_UI:
         在侧边栏中配置模型设置、摄像头选择以及识别项目设置等选项。
         """
         # 添加显示设置
-        st.sidebar.header("显示设置")
+        st.sidebar.header("🖥️ 显示设置")
         self.new_width = st.sidebar.number_input("输入显示宽度 (默认: 1080)", min_value=100, max_value=3840, value=1080, step=10)
         self.new_height = st.sidebar.number_input("输入显示高度 (默认: 自动计算 16:9)", min_value=100, max_value=2160, value=int(self.new_width * (9 / 16)), step=10)
 
         # 添加 CSV 输出路径设置
-        st.sidebar.header("日志保存路径设置")
+        st.sidebar.header("📂 日志保存路径设置")
         self.csv_output_path = st.sidebar.text_input(
-            "输入CSV保存路径",
+            "输入日志保存路径",
             value=abs_path(f"../output/logs", path_type="current"),  # 默认路径
             placeholder="例如：D:/output/logs"
         )
@@ -249,9 +249,23 @@ class Detection_UI:
         if not self.csv_output_path.endswith(os.sep):
             self.csv_output_path += os.sep
 
+        st.sidebar.header("📤 日志导出格式设置")
+        self.export_format = st.sidebar.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
+        st.sidebar.caption(f"💡 提示: {self.export_format} 文件将导出至 {self.saved_log_data} 路径。")
+
+        # 根据用户选择的导出格式设置文件后缀
+        if self.export_format == "CSV":
+            file_suffix = ".csv"
+        elif self.export_format == "Excel":
+            file_suffix = ".xlsx"
+        elif self.export_format == "JSON":
+            file_suffix = ".json"
+        else:
+            file_suffix = ".txt"
+
         # 根据用户输入的路径设置日志文件路径
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
+        self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}{file_suffix}")
 
         # Streamlit模式初始化 session state
         if 'logTable' not in st.session_state:
@@ -264,38 +278,34 @@ class Detection_UI:
             # 加载或创建模型实例
             st.session_state['model'] = Web_Detector()
 
-        st.sidebar.header("日志导出格式设置")
-        self.export_format = st.sidebar.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
-        st.sidebar.caption(f"提示: {self.export_format} 文件将导出至 {self.saved_log_data} 路径。")
-
         self.available_cameras = st.session_state['available_cameras']
         # 初始化或获取识别结果的表格
         self.logTable = st.session_state['logTable']
         self.model = st.session_state['model']
 
-        st.sidebar.header("检测阈值设定")
+        st.sidebar.header("⚙️ 检测阈值设定")
         # 置信度阈值的滑动条
         self.conf_threshold = float(st.sidebar.slider("置信度设定", min_value=0.0, max_value=1.0, value=0.15))
-        st.sidebar.caption("提示: 置信度设定范围为0.0到1.0，代表检测结果的置信度。")
+        st.sidebar.caption("💡 提示: 置信度设定范围为0.0到1.0，代表检测结果的置信度。")
         # IOU阈值的滑动条
         self.iou_threshold = float(st.sidebar.slider("IOU设定", min_value=0.0, max_value=1.0, value=0.25))
-        st.sidebar.caption("提示: IOU设定范围为0.0到1.0，代表检测结果的重叠度。")
+        st.sidebar.caption("💡 提示: IOU设定范围为0.0到1.0，代表检测结果的重叠度。")
         # 设置侧边栏的模型设置部分
-        st.sidebar.header("模型设置")
+        st.sidebar.header("🧠 模型设置")
         # 选择模型类型的下拉菜单
         self.model_type = st.sidebar.selectbox("选择任务类型", ["检测任务", "分割任务"])
 
         available_options = []
         # 添加提示信息
         if self.model_type == "检测任务":
-            st.sidebar.caption("提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。")
+            st.sidebar.caption("💡 提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。")
             available_options = ["红外", "EL隐裂", "可见光", "其他"]
         elif self.model_type == "分割任务":
-            st.sidebar.caption("提示: 分割任务将对所有的光伏板轮廓进行分割，目标类别选择【太阳能板】即可。")
+            st.sidebar.caption("💡 提示: 分割任务将对所有的光伏板轮廓进行分割，目标类别选择【太阳能板】即可。")
             available_options = ["红外", "EL隐裂", "可见光"]
 
         # 添加图像类型选择
-        st.sidebar.header("图像类型选择")
+        st.sidebar.header("🖼️ 图像类型选择")
         self.image_type = st.sidebar.radio(
             "选择图像类型",
             options=available_options,
@@ -320,10 +330,10 @@ class Detection_UI:
             self.detect_class_color = Segmentation_class_colors
 
         # 提示用户选择的图像类型
-        st.sidebar.caption(f"提示: 当前选择的图像类型为: {self.image_type}")
+        st.sidebar.caption(f"💡 提示: 当前选择的图像类型为: {self.image_type}")
 
         # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
-        st.sidebar.header("目标类别选择")
+        st.sidebar.header("🎯 目标类别选择")
         self.available_classes = list(self.cls_name.values())
         self.available_class_keys = list(self.cls_name.keys())
         self.selected_classes = st.sidebar.multiselect(
@@ -339,9 +349,9 @@ class Detection_UI:
 
         # 添加提示信息
         if len(self.selected_classes) == 0:
-            st.sidebar.caption("提示: 未选择任何类别，模型将不会检测任何目标。")
+            st.sidebar.caption("💡 提示: 未选择任何类别，模型将不会检测任何目标。")
         else:
-            st.sidebar.caption(f"提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
+            st.sidebar.caption(f"💡 提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
 
         # 映射中文名称到英文名称
         self.selected_classes = [
@@ -349,6 +359,7 @@ class Detection_UI:
         ]
 
         # 选择模型文件类型，可以是默认的或者自定义的
+        st.sidebar.header("📁 模型文件设置")
         model_file_option = st.sidebar.radio("模型设置", ["默认", "指定权重文件"])
         if model_file_option == "指定权重文件":
             # 如果选择自定义模型文件，则提供文件上传器
@@ -360,10 +371,10 @@ class Detection_UI:
                 try:
                     self.model.load_model(model_path=self.custom_model_file)
                 except Exception as e:
-                    st.error(f"无法加载模型文件，请检查文件格式或路径是否正确！错误信息: {str(e)}")
+                    st.sidebar.error(f"⚠️ 错误: 无法加载模型文件，请检查文件格式或路径是否正确！错误信息: {str(e)}")
                 # 检查模型类别是否与选定类别一致
                 if set(self.model.names) != set(self.available_class_keys):
-                    st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+                    st.sidebar.error("⚠️ 错误: 模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
                 else:
                     self.colors = [
                         self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
@@ -388,12 +399,12 @@ class Detection_UI:
                     elif self.image_type == "可见光":
                         self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
                     else:
-                        st.error("不支持的图像类型！")
+                        st.sidebar.error("⚠️ 错误: 不支持的图像类型！")
             except Exception as e:
-                st.error(f"无法加载默认模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
+                st.sidebar.error(f"⚠️ 错误: 无法加载默认模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
             # 检查模型类别是否与选定类别一致
             if set(self.model.names) != set(self.available_class_keys):
-                st.error("模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+                st.sidebar.error("⚠️ 错误: 模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
             else:
                 # 为模型中的类别重新分配颜色
                 self.colors = [
@@ -402,18 +413,18 @@ class Detection_UI:
                 ]
 
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
-        st.sidebar.header("输入源识别设置")
+        st.sidebar.header("📹 输入源识别设置")
         # 选择输入源类型：无输入，摄像头或 RTSP/RTMP 流
         self.input_source = st.sidebar.radio("选择输入源", ["图片文件", "视频文件", "摄像头", "RTSP/RTMP流"])
 
         if self.input_source == "摄像头":
             # 选择摄像头的下拉菜单
             self.selected_camera = st.sidebar.selectbox("选择摄像头序号", self.available_cameras)
-            st.sidebar.write("请点击'开始检测'按钮，启动摄像头检测！")
+            st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动摄像头检测！")
         elif self.input_source == "RTSP/RTMP流":
             # 输入 RTSP/RTMP 地址
             self.rtsp_rtmp_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
-            st.sidebar.write("请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
+            st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
         elif self.input_source == "图片文件":
             self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
             # 添加伪彩色转换选项
@@ -422,27 +433,27 @@ class Detection_UI:
             if self.enable_pseudo_color:
                 self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
                 self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
-            st.sidebar.write("请选择图片并点击'开始运行'按钮，进行图片检测！")
+            st.sidebar.caption("💡 提示: 请选择图片并点击'开始运行'按钮，进行图片检测！")
         elif self.input_source == "视频文件":
             self.uploaded_file = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi"], accept_multiple_files=True)
-            st.sidebar.write("请选择视频并点击'开始运行'按钮，进行视频检测！")
+            st.sidebar.caption("💡 请选择视频并点击'开始运行'按钮，进行视频检测！")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
             # 添加视频输出和 RTSP 输出的启用复选框
-            st.sidebar.header("视频输出设置")
+            st.sidebar.header("🎥 视频输出设置")
             self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
 
-        st.sidebar.header("输出文件路径设置")
+        st.sidebar.header("📁 输出文件路径设置")
         self.output_path = st.sidebar.text_input("输出文件路径", value="../output", placeholder="例如：../output 或 D:/videos")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
-            st.sidebar.header("RTSP/RTMP输出设置")
+            st.sidebar.header("📡 RTSP/RTMP输出设置")
             self.enable_rtsp_output = st.sidebar.checkbox("启用RTSP/RTMP输出", value=False)
 
             # RTSP/RTMP输出地址输入
             if self.enable_rtsp_output:
                 self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
-                st.sidebar.write("设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
+                st.sidebar.write("💡 提示: 设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
 
     def load_model_file(self):
         if self.custom_model_file:
@@ -554,10 +565,10 @@ class Detection_UI:
                     image, detInfo, _ = self.frame_process(frame, input_type)
 
                     # 更新检测结果
-                    frame_count_placeholder.metric("当前帧数", current_frame)
-                    fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
-                    target_count_placeholder.metric("检测目标数量", len(detInfo))
-                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+                    frame_count_placeholder.metric("📸 当前帧数", current_frame)
+                    fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
+                    target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                    detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                     # 保存目标结果图片
                     if detInfo:
@@ -661,9 +672,9 @@ class Detection_UI:
                     # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
                     # 更新检测结果
-                    frame_count_placeholder.metric("当前图片数", idx+1)
-                    target_count_placeholder.metric("检测目标数量", len(detInfo))
-                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+                    frame_count_placeholder.metric("📸 当前图片数", idx+1)
+                    target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                    detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                     # 调整图像尺寸
                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
@@ -789,10 +800,10 @@ class Detection_UI:
                                     image, detInfo, _ = self.frame_process(frame, uploaded_video.name, video_time=current_time_str)
 
                                     # 更新检测结果
-                                    frame_count_placeholder.metric("当前帧数", current_frame)
-                                    fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
-                                    target_count_placeholder.metric("检测目标数量", len(detInfo))
-                                    detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+                                    frame_count_placeholder.metric("📸 当前帧数", current_frame)
+                                    fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
+                                    target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                                    detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                                     if detInfo:
                                         time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
@@ -908,10 +919,10 @@ class Detection_UI:
                                 image, detInfo, _ = self.frame_process(frame, self.uploaded_video.name, video_time=current_time_str)
 
                                 # 更新检测结果
-                                frame_count_placeholder.metric("当前帧数", current_frame)
-                                fps_placeholder.metric("当前帧率 (FPS)", self.FPS)
-                                target_count_placeholder.metric("检测目标数量", len(detInfo))
-                                detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+                                frame_count_placeholder.metric("📸 当前帧数", current_frame)
+                                fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
+                                target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                                detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                                 # 保存目标结果图片
                                 if detInfo:
@@ -1111,11 +1122,17 @@ class Detection_UI:
         """
         显示实时监控仪表盘，包括帧数、帧率、目标数量和检测时间等信息。
         """
-        st.header("实时监控仪表盘")
-        frame_count_placeholder = st.empty()
-        fps_placeholder = st.empty()
-        target_count_placeholder = st.empty()
-        detection_time_placeholder = st.empty()
+        st.header("📊 实时监控仪表盘")
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            frame_count_placeholder = st.metric("📸 当前帧数", "0")
+        with col2:
+            fps_placeholder = st.metric("⚡ 帧率 (FPS)", "0")
+        with col3:
+            target_count_placeholder = st.metric("🎯 目标数量", "0")
+        with col4:
+            detection_time_placeholder = st.metric("⏱️ 检测时间 (秒)", "0.00")
 
         return frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder
 
