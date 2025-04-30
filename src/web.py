@@ -200,9 +200,12 @@ class Detection_UI:
             elif self.image_type == "可见光":
                 model_path = abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
             else:
-                st.error("Invalid image type for segmentation task.")
+                print("Invalid image type for segmentation task.")
 
-        self.model.load_model(model_path=model_path)
+        try:
+            self.model.load_model(model_path=model_path)
+        except Exception as e:
+            print(f"无法加载模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
 
     def setup_page(self):
         """
