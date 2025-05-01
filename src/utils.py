@@ -342,7 +342,7 @@ def is_black_and_white(image_array):
     """
     # 检查图像是否为 RGB 格式
     if len(image_array.shape) != 3 or image_array.shape[2] != 3:
-        raise ValueError("输入图像不是 RGB 格式。")
+        return
 
     # 检查每个像素的 R、G、B 通道值是否相等
     is_bw = np.all(image_array[:, :, 0] == image_array[:, :, 1]) and np.all(image_array[:, :, 1] == image_array[:, :, 2])
