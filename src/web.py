@@ -129,6 +129,13 @@ class Detection_UI:
         # 初始化日志数据保存路径
         self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
 
+        # 获取文件所在的目录路径
+        log_dir = os.path.dirname(self.saved_log_data)
+
+        # 检查目录是否存在，如果不存在则创建
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
         # 初始化
         self.available_cameras = get_camera_names()
         self.logTable = LogTable(self.saved_log_data)
@@ -755,6 +762,7 @@ class Detection_UI:
             # 处理上传的视频
             self.logTable.clear_frames()
             self.progress_bar.progress(0)
+
             self.close_flag = self.close_placeholder.button(label="停止")
 
             frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
@@ -1282,6 +1290,7 @@ class Detection_UI:
         with col1:
             st.write("")
             run_button = st.button("开始检测")
+            self.close_placeholder = st.empty()
             if run_button:
                 self.process_camera_or_file()  # 运行摄像头或文件处理
             else:
