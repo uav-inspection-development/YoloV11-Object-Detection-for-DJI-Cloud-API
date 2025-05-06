@@ -1,6 +1,11 @@
 import os
+import sys
 import datetime
 import yaml
+
+# 添加上级目录到系统路径
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+
 from ultralytics import YOLO  # 导入YOLO模型
 from QtFusion.path import abs_path
 import matplotlib

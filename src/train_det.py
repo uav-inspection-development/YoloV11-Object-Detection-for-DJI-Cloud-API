@@ -1,6 +1,10 @@
 import os
+import sys
 import datetime
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+# 添加上级目录到系统路径
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 import yaml
 from ultralytics import YOLO  # 导入YOLO模型

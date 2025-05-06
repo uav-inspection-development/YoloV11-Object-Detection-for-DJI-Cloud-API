@@ -274,6 +274,13 @@ class Detection_UI:
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}{file_suffix}")
 
+        # 获取文件所在的目录路径
+        log_dir = os.path.dirname(self.saved_log_data)
+
+        # 检查目录是否存在，如果不存在则创建
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
         # Streamlit模式初始化 session state
         if 'logTable' not in st.session_state:
             # 如果在 session state 中不存在logTable，创建一个新的LogTable实例
