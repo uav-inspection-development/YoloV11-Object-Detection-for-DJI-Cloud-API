@@ -16,12 +16,15 @@ def get_model_options(base_path="../ultralytics/cfg/models/"):
     Returns:
         list: 包含所有可用 YAML 文件的相对路径。
     """
+    root_folder = os.path.dirname(os.path.abspath(__file__))  # Get the current script's directory
+    absolute_base_path = os.path.join(root_folder, base_path)
+
     model_options = []
-    for root, _, files in os.walk(base_path):
+    for root, _, files in os.walk(absolute_base_path):
         for file in files:
             if file.endswith(".yaml"):
-                relative_path = os.path.relpath(os.path.join(root, file), base_path)
-                model_options.append(relative_path)
+                absolute_path = os.path.join(root, file)
+                model_options.append(absolute_path)
     return model_options
 
 def get_pretrained_model_options(base_path="../weights/"):
@@ -34,8 +37,11 @@ def get_pretrained_model_options(base_path="../weights/"):
     Returns:
         list: 包含所有可用 .pt 文件的相对路径，首项为 None。
     """
+    root_folder = os.path.dirname(os.path.abspath(__file__))
+    absolute_base_path = os.path.join(root_folder, base_path)
+
     pretrained_model_options = ["None"]  # 将 None 作为第一个选项
-    for root, _, files in os.walk(base_path):
+    for root, _, files in os.walk(absolute_base_path):
         for file in files:
             if file.endswith(".pt"):
                 relative_path = os.path.relpath(os.path.join(root, file), base_path)
@@ -46,12 +52,15 @@ def train_interface(task, workers, batch, device, data_name, epochs, img_size, p
     """
     训练接口函数，根据任务类型选择相应的训练函数。
     """
+    # 获取当前脚本所在的根目录
+    root_folder = os.path.dirname(os.path.abspath(__file__))
+
     # 根据任务类型设置默认模型配置文件
-    if model_config is None:
+    if model_config is None or model_config == "":
         if task == "Detection":
-            model_config = "../ultralytics/cfg/models/v11/yolo11.yaml"
+            model_config = os.path.join(root_folder, "../ultralytics/cfg/models/v11/yolo11.yaml")
         elif task == "Segmentation":
-            model_config = "../ultralytics/cfg/models/v11/yolo11s-seg.yaml"
+            model_config = os.path.join(root_folder, "../ultralytics/cfg/models/v11/yolo11s-seg.yaml")
 
     # 如果选择了 "None"，将 pretrained_model 设置为 None
     if pretrained_model == "None":
@@ -71,6 +80,7 @@ def launch_gradio():
     """
     # 获取可用的模型配置文件选项
     model_options = get_model_options()
+    model_choices = {os.path.basename(option): option for option in model_options}
     # 获取可用的预训练模型选项
     pretrained_model_options = get_pretrained_model_options()
 
@@ -85,7 +95,7 @@ def launch_gradio():
             gr.Number(label="训练轮数", value=200, precision=0, info="训练的轮数，默认值为200。"),
             gr.Number(label="图像大小", value=640, precision=0, info="训练的图像大小，默认值为640。"),
             gr.Dropdown(choices=pretrained_model_options, label="预训练模型 (可选)", value="None", info="选择预训练模型的路径。如果选择 None，则不使用预训练模型。"),
-            gr.Dropdown(choices=model_options, label="YOLO 模型配置文件", value="", info="选择 YOLO 模型配置文件。如果为空，将根据任务类型选择默认模型。"),
+            gr.Dropdown(choices=list(model_choices.keys()), label="YOLO 模型配置文件", value="", info="选择 YOLO 模型配置文件。如果为空，将根据任务类型选择默认模型。"),
             gr.Checkbox(label="验证集评估", value=False, info="是否在每个 epoch 结束时对验证集进行评估。"),
         ],
         outputs="text",
