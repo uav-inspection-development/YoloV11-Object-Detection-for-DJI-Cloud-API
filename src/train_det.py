@@ -54,12 +54,18 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
                 yaml.safe_dump(data, file, sort_keys=False)
 
         # 初始化 YOLO 模型，注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
-        if pretrained_model:
-            # 如果提供了预训练模型路径，则加载该模型
-            model = YOLO(model=model_config, task='detect').load(pretrained_model)
-        else:
-            # 否则初始化一个新的模型
-            model = YOLO(model=model_config, task='detect')
+        try:
+            # 初始化 YOLO 模型，注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
+            if pretrained_model:
+                #return f'Model config {model_config}'
+                # 如果提供了预训练模型路径，则加载该模型
+                model = YOLO(model=model_config, task='detect').load(pretrained_model)
+            else:
+                #return f'Model config {model_config}'
+                # 否则初始化一个新的模型
+                model = YOLO(model=model_config, task='detect')
+        except Exception as e:
+            return f"模型加载失败: {str(e)}. 请检查预训练模型或配置文件是否正确。"
 
         # 生成当前时间字符串
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

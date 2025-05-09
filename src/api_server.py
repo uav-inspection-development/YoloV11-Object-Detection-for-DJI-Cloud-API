@@ -22,16 +22,16 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 # 验证环境变量是否存在
-if not OAUTH2_INTROSPECT_URL or not CLIENT_ID or not CLIENT_SECRET:
-    sys.stderr.write(
-        "Error: Missing required environment variables.\n"
-        "Please set the following variables:\n"
-        "  - OAUTH2_INTROSPECT_URL\n"
-        "  - CLIENT_ID\n"
-        "  - CLIENT_SECRET\n"
-    )
-    sys.exit(1)
-
+# if not OAUTH2_INTROSPECT_URL or not CLIENT_ID or not CLIENT_SECRET:
+#     sys.stderr.write(
+#         "Error: Missing required environment variables.\n"
+#         "Please set the following variables:\n"
+#         "  - OAUTH2_INTROSPECT_URL\n"
+#         "  - CLIENT_ID\n"
+#         "  - CLIENT_SECRET\n"
+#     )
+#     sys.exit(1)
+#
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins='*')
 

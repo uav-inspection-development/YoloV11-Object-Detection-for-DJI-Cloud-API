@@ -38,7 +38,7 @@ def run_streamlit(script_path):
 if __name__ == "__main__":
     # 使用 argparse 解析命令行参数
     parser = argparse.ArgumentParser(description="Run the application in different modes.")
-    parser.add_argument("--run-mode", default="streamlit", choices=["streamlit", "api"], help="Mode to run the application (streamlit or api).")
+    parser.add_argument("--run-mode", default="api", choices=["streamlit", "api"], help="Mode to run the application (streamlit or api).")
     parser.add_argument("--oauth2-introspect-url", default="https://your-auth-server.com/oauth2/introspect", help="OAuth2 introspection URL.")
     parser.add_argument("--oauth2-token-url", default="https://your-auth-server.com/oauth2/token", help="OAuth2 token endpoint URL.")
     parser.add_argument("--client-id", default="your-client-id", help="OAuth2 client ID.")
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     elif args.run_mode == "api":
         # 运行 Flask API
         from api_server import socketio, app
-        socketio.run(app, host="0.0.0.0", port=5000)
+        socketio.run(app, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True)
 
     else:
         print(f"Invalid RUN_MODE: {args.run_mode}. Please use 'streamlit' or 'api'.")

@@ -24,7 +24,7 @@ def get_model_options(base_path="../ultralytics/cfg/models/"):
                 model_options.append(relative_path)
     return model_options
 
-def get_pretrained_model_options(base_path="../weights/"):
+def get_pretrained_model_options(base_path="../weights/"):      # TODO: Change to abs path
     """
     获取指定目录下的所有 .pt 文件路径，用于动态生成预训练模型选择列表。
 
@@ -49,6 +49,7 @@ def train_interface(task, workers, batch, device, data_name, epochs, img_size, p
     # 根据任务类型设置默认模型配置文件
     if model_config is None:
         if task == "Detection":
+            print('###########################################')
             model_config = "../ultralytics/cfg/models/v11/yolo11.yaml"
         elif task == "Segmentation":
             model_config = "../ultralytics/cfg/models/v11/yolo11s-seg.yaml"
