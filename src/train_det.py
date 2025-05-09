@@ -1,6 +1,10 @@
 import os
+import sys
 import datetime
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+# 添加上级目录到系统路径
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 import yaml
 from ultralytics import YOLO  # 导入YOLO模型
@@ -53,15 +57,12 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
             with open(data_path, 'w') as file:
                 yaml.safe_dump(data, file, sort_keys=False)
 
-        # 初始化 YOLO 模型，注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
         try:
             # 初始化 YOLO 模型，注意！不同模型大小不同，对设备等要求不同，如果要求较高的模型【报错】则换其他模型测试即可
             if pretrained_model:
-                #return f'Model config {model_config}'
                 # 如果提供了预训练模型路径，则加载该模型
                 model = YOLO(model=model_config, task='detect').load(pretrained_model)
             else:
-                #return f'Model config {model_config}'
                 # 否则初始化一个新的模型
                 model = YOLO(model=model_config, task='detect')
         except Exception as e:

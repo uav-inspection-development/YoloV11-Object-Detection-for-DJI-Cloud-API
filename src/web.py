@@ -162,6 +162,13 @@ class Detection_UI:
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
 
+        # 获取文件所在的目录路径
+        log_dir = os.path.dirname(self.saved_log_data)
+
+        # 检查目录是否存在，如果不存在则创建
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
         self.available_cameras = get_camera_names()
         self.logTable = LogTable(self.saved_log_data)
         self.model = Web_Detector()
@@ -273,6 +280,13 @@ class Detection_UI:
         # 根据用户输入的路径设置日志文件路径
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}{file_suffix}")
+
+        # 获取文件所在的目录路径
+        log_dir = os.path.dirname(self.saved_log_data)
+
+        # 检查目录是否存在，如果不存在则创建
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
 
         # Streamlit模式初始化 session state
         if 'logTable' not in st.session_state:

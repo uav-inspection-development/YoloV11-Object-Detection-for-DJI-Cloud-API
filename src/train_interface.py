@@ -16,15 +16,18 @@ def get_model_options(base_path="../ultralytics/cfg/models/"):
     Returns:
         list: 包含所有可用 YAML 文件的相对路径。
     """
+    root_folder = os.path.dirname(os.path.abspath(__file__))  # Get the current script's directory
+    absolute_base_path = os.path.join(root_folder, base_path)
+
     model_options = []
-    for root, _, files in os.walk(base_path):
+    for root, _, files in os.walk(absolute_base_path):
         for file in files:
             if file.endswith(".yaml"):
-                relative_path = os.path.relpath(os.path.join(root, file), base_path)
-                model_options.append(relative_path)
+                absolute_path = os.path.join(root, file)
+                model_options.append(absolute_path)
     return model_options
 
-def get_pretrained_model_options(base_path="../weights/"):      # TODO: Change to abs path
+def get_pretrained_model_options(base_path="../weights/"):
     """
     获取指定目录下的所有 .pt 文件路径，用于动态生成预训练模型选择列表。
 
@@ -34,25 +37,30 @@ def get_pretrained_model_options(base_path="../weights/"):      # TODO: Change t
     Returns:
         list: 包含所有可用 .pt 文件的相对路径，首项为 None。
     """
+    root_folder = os.path.dirname(os.path.abspath(__file__))
+    absolute_base_path = os.path.join(root_folder, base_path)
+
     pretrained_model_options = ["None"]  # 将 None 作为第一个选项
-    for root, _, files in os.walk(base_path):
+    for root, _, files in os.walk(absolute_base_path):
         for file in files:
             if file.endswith(".pt"):
-                relative_path = os.path.relpath(os.path.join(root, file), base_path)
-                pretrained_model_options.append(relative_path)
+                absolute_path = os.path.join(root, file)
+                pretrained_model_options.append(absolute_path)
     return pretrained_model_options
 
 def train_interface(task, workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config=None, validate=False):
     """
     训练接口函数，根据任务类型选择相应的训练函数。
     """
+    # 获取当前脚本所在的根目录
+    root_folder = os.path.dirname(os.path.abspath(__file__))
+
     # 根据任务类型设置默认模型配置文件
-    if model_config is None:
+    if model_config is None or model_config == "":
         if task == "Detection":
-            print('###########################################')
-            model_config = "../ultralytics/cfg/models/v11/yolo11.yaml"
+            model_config = os.path.join(root_folder, "../ultralytics/cfg/models/v11/yolo11.yaml")
         elif task == "Segmentation":
-            model_config = "../ultralytics/cfg/models/v11/yolo11s-seg.yaml"
+            model_config = os.path.join(root_folder, "../ultralytics/cfg/models/v11/yolo11s-seg.yaml")
 
     # 如果选择了 "None"，将 pretrained_model 设置为 None
     if pretrained_model == "None":
@@ -72,21 +80,23 @@ def launch_gradio():
     """
     # 获取可用的模型配置文件选项
     model_options = get_model_options()
+    model_choices = {os.path.basename(option): option for option in model_options}
     # 获取可用的预训练模型选项
     pretrained_model_options = get_pretrained_model_options()
+    pretrained_model_choices = {os.path.basename(option): option for option in pretrained_model_options}
 
     interface = gr.Interface(
         fn=train_interface,
         inputs=[
-            gr.Radio(["Detection", "Segmentation"], label="选择任务", info="选择要训练的任务。"),
+            gr.Radio(["Detection", "Segmentation"], value="Detection", label="选择任务", info="选择要训练的任务。"),
             gr.Number(label="工作线程数", value=1, precision=0, info="用于数据加载的工作线程数，默认值为1。"),
             gr.Number(label="批次大小", value=8, precision=0, info="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为8。"),
             gr.Textbox(label="设备 (例如 '0' 表示 GPU 或 'cpu')", value="0" if torch.cuda.is_available() else "cpu", info="用于训练的设备，例如 '0' 表示 GPU 或 'cpu'。"),
             gr.Textbox(label="数据集名称", value="data", info="数据集的名称，例如 'data'。"),
             gr.Number(label="训练轮数", value=200, precision=0, info="训练的轮数，默认值为200。"),
             gr.Number(label="图像大小", value=640, precision=0, info="训练的图像大小，默认值为640。"),
-            gr.Dropdown(choices=pretrained_model_options, label="预训练模型 (可选)", value="None", info="选择预训练模型的路径。如果选择 None，则不使用预训练模型。"),
-            gr.Dropdown(choices=model_options, label="YOLO 模型配置文件", value="", info="选择 YOLO 模型配置文件。如果为空，将根据任务类型选择默认模型。"),
+            gr.Dropdown(choices=list(pretrained_model_choices.keys()), label="预训练模型 (可选)", value="None", info="选择预训练模型的路径。如果选择 None，则不使用预训练模型。"),
+            gr.Dropdown(choices=list(model_choices.keys()), label="YOLO 模型配置文件", value="yolo11.yaml", info="选择 YOLO 模型配置文件。如果为空，将根据任务类型选择默认模型。"),
             gr.Checkbox(label="验证集评估", value=False, info="是否在每个 epoch 结束时对验证集进行评估。"),
         ],
         outputs="text",
@@ -98,7 +108,7 @@ def launch_gradio():
 # 主函数，用于处理 argparse 和 Gradio
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="YOLO 训练界面")
-    parser.add_argument("--task", type=str, choices=["Detection", "Segmentation"], help="选择要训练的任务 (Detection 或 Segmentation)。")
+    parser.add_argument("--task", type=str, choices=["Detection", "Segmentation"], default="Detection", help="选择要训练的任务 (Detection 或 Segmentation)。")
     parser.add_argument("--workers", type=int, default=1, help="用于数据加载的工作线程数，默认值为1。")
     parser.add_argument("--batch", type=int, default=8, help="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为8。")
     parser.add_argument("--device", type=str, default="0" if torch.cuda.is_available() else "cpu", help="用于训练的设备 (例如 '0' 表示 GPU 或 'cpu')，默认当前有GPU时为 '0'。")
