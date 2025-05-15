@@ -22,16 +22,16 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 # 验证环境变量是否存在
-# if not OAUTH2_INTROSPECT_URL or not CLIENT_ID or not CLIENT_SECRET:
-#     sys.stderr.write(
-#         "Error: Missing required environment variables.\n"
-#         "Please set the following variables:\n"
-#         "  - OAUTH2_INTROSPECT_URL\n"
-#         "  - CLIENT_ID\n"
-#         "  - CLIENT_SECRET\n"
-#     )
-#     sys.exit(1)
-#
+if not OAUTH2_INTROSPECT_URL or not CLIENT_ID or not CLIENT_SECRET:
+    sys.stderr.write(
+        "Error: Missing required environment variables.\n"
+        "Please set the following variables:\n"
+        "  - OAUTH2_INTROSPECT_URL\n"
+        "  - CLIENT_ID\n"
+        "  - CLIENT_SECRET\n"
+    )
+    sys.exit(1)
+
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins='*')
 
@@ -266,6 +266,7 @@ def detect_image(validated_params, files):
     }
     """
     try:
+        det_info = []
         img_file = files.get("image")
         if not img_file:
             return jsonify({"error": "No image uploaded"}), 400
@@ -273,12 +274,30 @@ def detect_image(validated_params, files):
         img_data = np.frombuffer(img_file.read(), np.uint8)
         image = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
 
+        # 检查图片维度并处理
+        original_shape = image.shape
+        if len(image.shape) == 4 and image.shape[0] == 1:
+            # 删除第一个维度（批量维度）
+            image = image.squeeze(0)
+            processed_shape = image.shape
+        else:
+            processed_shape = original_shape
+
+        # 确保图片维度正确
+        # if len(image.shape) != 3 or image.shape[0] != 3:
+        #     return jsonify({
+        #         "error": "Invalid image dimensions. Expected shape (3, 640, 640)",
+        #         "original_shape": str(original_shape),
+        #         "processed_shape": str(processed_shape)
+        #     }), 400
+
         detector = Detection_UI(from_streamlit=False, api_params=validated_params)
         _, det_info, _ = detector.frame_process(image, "api_image.jpg")
-        return jsonify({"detections": det_info})
+        return jsonify({"detections": "det_info"})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route("/api/detect/video", methods=["POST"])

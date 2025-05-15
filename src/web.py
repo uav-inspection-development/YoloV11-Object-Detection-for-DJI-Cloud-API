@@ -152,7 +152,7 @@ class Detection_UI:
         用于 Flask 模式，根据 API 提供的参数设置实例变量。
         """
         # 根据 API 提供的参数设置实例变量
-        self.csv_output_path = float(self.api_params.get("csv_output_path", abs_path("../tempDir/")))
+        self.csv_output_path = self.api_params.get("csv_output_path", abs_path("../tempDir/"))
 
         # 确保路径以斜杠结尾
         if not self.csv_output_path.endswith(os.sep):
