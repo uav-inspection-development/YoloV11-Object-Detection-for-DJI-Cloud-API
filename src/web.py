@@ -322,7 +322,6 @@ class Detection_UI:
             index=0  # 默认选择第一个选项
         )
         if self.undistortion_method == "相机参数计算":
-            pass
             calibration_file = st.sidebar.file_uploader(
                 "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
             )
@@ -511,12 +510,6 @@ class Detection_UI:
             if self.enable_rtsp_output:
                 self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
                 st.sidebar.write("💡 提示: 设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
-
-    def load_model_file(self):
-        if self.custom_model_file:
-            self.model.load_model(self.custom_model_file)
-        else:
-            pass  # 载入
 
     def process_camera_or_file(self):
         """
