@@ -3,6 +3,7 @@ import tempfile
 import time
 import os
 import cv2
+import json
 import numpy as np
 import streamlit as st
 from QtFusion.path import abs_path
@@ -13,7 +14,7 @@ from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
-from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer
+from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -123,6 +124,12 @@ class Detection_UI:
         # 初始化FPS和视频时间指针
         self.FPS = 30
         self.timenow = 0
+
+        # 初始化相机参数
+        self.undistortion_method = "不去除"
+        self.camera_matrix = None
+        self.dist_coeffs = None
+        self.calibration_file = None
 
         self.csv_output_path = abs_path("../tempDir/")
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -300,9 +307,38 @@ class Detection_UI:
             st.session_state['model'] = Web_Detector()
 
         self.available_cameras = st.session_state['available_cameras']
+        if len(self.available_cameras) == 1:
+            st.write("未找到可用的摄像头")
+
         # 初始化或获取识别结果的表格
         self.logTable = st.session_state['logTable']
         self.model = st.session_state['model']
+
+        # 图像畸变校正参数设置
+        st.sidebar.header("🖼️ 图像畸变校正")
+        self.undistortion_method = st.sidebar.radio(
+            "选择畸变校正类型",
+            options=["不去除", "相机参数计算", "图像自动计算"],
+            index=0  # 默认选择第一个选项
+        )
+        if self.undistortion_method == "相机参数计算":
+            pass
+            calibration_file = st.sidebar.file_uploader(
+                "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
+            )
+            if calibration_file is not None:
+                try:
+                    calib_data = json.load(calibration_file)
+                    self.camera_matrix = np.array(calib_data["camera_matrix"])
+                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
+                    self.calibration_file = calibration_file.name
+                    st.sidebar.success("相机标定参数加载成功！")
+                except Exception as e:
+                    st.sidebar.error(f"标定文件解析失败: {e}")
+            else:
+                self.camera_matrix = None
+                self.dist_coeffs = None
+                self.calibration_file = None
 
         st.sidebar.header("⚙️ 检测阈值设定")
         # 置信度阈值的滑动条
@@ -584,6 +620,11 @@ class Detection_UI:
             while cap.isOpened() and not self.close_flag:
                 ret, frame = cap.read()
                 if ret:
+                    # 去畸变
+                    if self.undistortion_method == "相机参数计算":
+                        frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
+                    elif self.undistortion_method == "图像自动计算":
+                        frame = auto_undistort_image(frame)
                     # 调节摄像头的分辨率
                     # 调整图像尺寸
                     frame = cv2.resize(frame, (self.new_width, self.new_height))
@@ -682,6 +723,11 @@ class Detection_UI:
                     is_bw = is_black_and_white(bw_mod)
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
+                    # 去畸变
+                    if self.undistortion_method == "相机参数计算":
+                        image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
+                    elif self.undistortion_method == "图像自动计算":
+                        image_ini = auto_undistort_image(image_ini)
 
                     # 如果启用了伪彩色转换，应用转换
                     if self.enable_pseudo_color and is_bw:
@@ -724,6 +770,11 @@ class Detection_UI:
                 source_img = self.uploaded_file.read()
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
+                # 去畸变
+                if self.undistortion_method == "相机参数计算":
+                    image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
+                elif self.undistortion_method == "图像自动计算":
+                    image_ini = auto_undistort_image(image_ini)
 
                 # 如果启用了伪彩色转换，应用转换
                 if self.enable_pseudo_color:
@@ -820,6 +871,11 @@ class Detection_UI:
                         while cap.isOpened() and not self.close_flag:
                             ret, frame = cap.read()
                             if ret:
+                                # 去畸变
+                                if self.undistortion_method == "相机参数计算":
+                                    frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
+                                elif self.undistortion_method == "图像自动计算":
+                                    frame = auto_undistort_image(frame)
                                 framecopy = frame.copy()
                                 current_time = current_frame / fps
                                 if current_time < total_length:
@@ -938,6 +994,11 @@ class Detection_UI:
                     while cap.isOpened() and not self.close_flag:
                         ret, frame = cap.read()
                         if ret:
+                            # 去畸变
+                            if self.undistortion_method == "相机参数计算":
+                                frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
+                            elif self.undistortion_method == "图像自动计算":
+                                frame = auto_undistort_image(frame)
                             framecopy = frame.copy()
                             # 计算当前帧对应的时间（秒）
                             current_time = current_frame / fps
