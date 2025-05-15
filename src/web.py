@@ -126,6 +126,7 @@ class Detection_UI:
         self.timenow = 0
 
         # 初始化相机参数
+        self.undistortion_method = "不去除"
         self.camera_matrix = None
         self.dist_coeffs = None
         self.calibration_file = None
@@ -306,28 +307,38 @@ class Detection_UI:
             st.session_state['model'] = Web_Detector()
 
         self.available_cameras = st.session_state['available_cameras']
+        if len(self.available_cameras) == 1:
+            st.write("未找到可用的摄像头")
+
         # 初始化或获取识别结果的表格
         self.logTable = st.session_state['logTable']
         self.model = st.session_state['model']
 
-        # 摄像头畸变校正参数设置
-        st.sidebar.header("📷 摄像头畸变校正")
-        calibration_file = st.sidebar.file_uploader(
-            "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
+        # 图像畸变校正参数设置
+        st.sidebar.header("🖼️ 图像畸变校正")
+        self.undistortion_method = st.sidebar.radio(
+            "选择畸变校正类型",
+            options=["不去除", "相机参数计算", "图像自动计算"],
+            index=0  # 默认选择第一个选项
         )
-        if calibration_file is not None:
-            try:
-                calib_data = json.load(calibration_file)
-                self.camera_matrix = np.array(calib_data["camera_matrix"])
-                self.dist_coeffs = np.array(calib_data["dist_coeffs"])
-                self.calibration_file = calibration_file.name
-                st.sidebar.success("相机标定参数加载成功！")
-            except Exception as e:
-                st.sidebar.error(f"标定文件解析失败: {e}")
-        else:
-            self.camera_matrix = None
-            self.dist_coeffs = None
-            self.calibration_file = None
+        if self.undistortion_method == "相机参数计算":
+            pass
+            calibration_file = st.sidebar.file_uploader(
+                "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
+            )
+            if calibration_file is not None:
+                try:
+                    calib_data = json.load(calibration_file)
+                    self.camera_matrix = np.array(calib_data["camera_matrix"])
+                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
+                    self.calibration_file = calibration_file.name
+                    st.sidebar.success("相机标定参数加载成功！")
+                except Exception as e:
+                    st.sidebar.error(f"标定文件解析失败: {e}")
+            else:
+                self.camera_matrix = None
+                self.dist_coeffs = None
+                self.calibration_file = None
 
         st.sidebar.header("⚙️ 检测阈值设定")
         # 置信度阈值的滑动条
@@ -610,7 +621,10 @@ class Detection_UI:
                 ret, frame = cap.read()
                 if ret:
                     # 去畸变
-                    frame = undistort_if_needed(frame, self.camera_matrix, self.dist_coeffs)
+                    if self.undistortion_method == "相机参数计算":
+                        frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
+                    elif self.undistortion_method == "图像自动计算":
+                        frame = auto_undistort_image(frame)
                     # 调节摄像头的分辨率
                     # 调整图像尺寸
                     frame = cv2.resize(frame, (self.new_width, self.new_height))
@@ -710,7 +724,10 @@ class Detection_UI:
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
                     # 去畸变
-                    image_ini = undistort_if_needed(image_ini, self.camera_matrix, self.dist_coeffs)
+                    if self.undistortion_method == "相机参数计算":
+                        image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
+                    elif self.undistortion_method == "图像自动计算":
+                        image_ini = auto_undistort_image(image_ini)
 
                     # 如果启用了伪彩色转换，应用转换
                     if self.enable_pseudo_color and is_bw:
@@ -754,7 +771,10 @@ class Detection_UI:
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
                 # 去畸变
-                image_ini = undistort_if_needed(image_ini, self.camera_matrix, self.dist_coeffs)
+                if self.undistortion_method == "相机参数计算":
+                    image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
+                elif self.undistortion_method == "图像自动计算":
+                    image_ini = auto_undistort_image(image_ini)
 
                 # 如果启用了伪彩色转换，应用转换
                 if self.enable_pseudo_color:
@@ -852,7 +872,10 @@ class Detection_UI:
                             ret, frame = cap.read()
                             if ret:
                                 # 去畸变
-                                frame = undistort_if_needed(frame, self.camera_matrix, self.dist_coeffs)
+                                if self.undistortion_method == "相机参数计算":
+                                    frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
+                                elif self.undistortion_method == "图像自动计算":
+                                    frame = auto_undistort_image(frame)
                                 framecopy = frame.copy()
                                 current_time = current_frame / fps
                                 if current_time < total_length:
@@ -972,7 +995,10 @@ class Detection_UI:
                         ret, frame = cap.read()
                         if ret:
                             # 去畸变
-                            frame = undistort_if_needed(frame, self.camera_matrix, self.dist_coeffs)
+                            if self.undistortion_method == "相机参数计算":
+                                frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
+                            elif self.undistortion_method == "图像自动计算":
+                                frame = auto_undistort_image(frame)
                             framecopy = frame.copy()
                             # 计算当前帧对应的时间（秒）
                             current_time = current_frame / fps
