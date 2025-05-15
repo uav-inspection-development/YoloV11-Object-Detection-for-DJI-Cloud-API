@@ -348,3 +348,31 @@ def is_black_and_white(image_array):
     is_bw = np.all(image_array[:, :, 0] == image_array[:, :, 1]) and np.all(image_array[:, :, 1] == image_array[:, :, 2])
 
     return is_bw
+
+def undistort_if_needed(frame, camera_matrix=None, dist_coeffs=None):
+    """
+    如果有相机标定参数，则对输入帧进行去畸变处理。
+
+    参数：
+        frame (numpy.ndarray): 输入的图像帧。
+        camera_matrix (numpy.ndarray): 相机内参矩阵。
+        dist_coeffs (numpy.ndarray): 相机畸变系数。
+
+    返回：
+        numpy.ndarray: 去畸变后的图像帧。
+    """
+    if camera_matrix is not None and dist_coeffs is not None:
+        try:
+            h, w = frame.shape[:2]
+            new_camera_mtx, roi = cv2.getOptimalNewCameraMatrix(
+                camera_matrix, dist_coeffs, (w, h), 1, (w, h)
+            )
+            undistorted = cv2.undistort(frame, camera_matrix, dist_coeffs, None, new_camera_mtx)
+            # 可选：裁剪ROI
+            x, y, w, h = roi
+            undistorted = undistorted[y:y+h, x:x+w]
+            return undistorted
+        except Exception as e:
+            st.warning(f"去畸变失败: {e}")
+            return frame
+    return frame
