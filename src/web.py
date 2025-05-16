@@ -15,6 +15,7 @@ from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
 from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, calculate_polygon_area
+from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -322,7 +323,6 @@ class Detection_UI:
             index=0  # 默认选择第一个选项
         )
         if self.undistortion_method == "相机参数计算":
-            pass
             calibration_file = st.sidebar.file_uploader(
                 "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
             )
@@ -511,12 +511,6 @@ class Detection_UI:
             if self.enable_rtsp_output:
                 self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
                 st.sidebar.write("💡 提示: 设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
-
-    def load_model_file(self):
-        if self.custom_model_file:
-            self.model.load_model(self.custom_model_file)
-        else:
-            pass  # 载入
 
     def process_camera_or_file(self):
         """
