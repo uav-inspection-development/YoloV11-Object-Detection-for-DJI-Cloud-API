@@ -3,7 +3,7 @@ import xml.dom.minidom
 from pathlib import Path
 
 # 指定源文件夹路径
-source_folder = input("请输入包含 train/test/val 子文件夹的源文件夹路径：").strip()
+source_folder = input("请输入包含 train/test/val 子文件夹的labels文件夹路径：").strip()
 
 # 检查源文件夹是否存在
 if not os.path.exists(source_folder):

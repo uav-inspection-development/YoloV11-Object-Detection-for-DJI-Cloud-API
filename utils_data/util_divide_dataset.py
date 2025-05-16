@@ -2,6 +2,10 @@ import os
 import shutil
 import random
 
+"这段代码是一个用于组织图像和对应XML标签文件的Python脚本。"
+"它的主要功能是将图像文件和XML文件从一个源文件夹中提取出来，"
+"并按照是否有标签（XML文件）以及训练集、测试集和验证集的比例分配到不同的目标文件夹中。"
+
 # 源文件夹路径
 source_folder = input("请输入包含图像和XML文件的源文件夹路径：").strip()
 

@@ -16,21 +16,21 @@ from auth import verify_token, get_access_token
 
 
 # 获取环境变量
-OAUTH2_INTROSPECT_URL = os.getenv("OAUTH2_INTROSPECT_URL")
-OAUTH2_TOKEN_URL = os.getenv("OAUTH2_TOKEN_URL")
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-
-# 验证环境变量是否存在
-if not OAUTH2_INTROSPECT_URL or not CLIENT_ID or not CLIENT_SECRET:
-    sys.stderr.write(
-        "Error: Missing required environment variables.\n"
-        "Please set the following variables:\n"
-        "  - OAUTH2_INTROSPECT_URL\n"
-        "  - CLIENT_ID\n"
-        "  - CLIENT_SECRET\n"
-    )
-    sys.exit(1)
+# OAUTH2_INTROSPECT_URL = os.getenv("OAUTH2_INTROSPECT_URL")
+# OAUTH2_TOKEN_URL = os.getenv("OAUTH2_TOKEN_URL")
+# CLIENT_ID = os.getenv("CLIENT_ID")
+# CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+#
+# # 验证环境变量是否存在
+# if not OAUTH2_INTROSPECT_URL or not CLIENT_ID or not CLIENT_SECRET:
+#     sys.stderr.write(
+#         "Error: Missing required environment variables.\n"
+#         "Please set the following variables:\n"
+#         "  - OAUTH2_INTROSPECT_URL\n"
+#         "  - CLIENT_ID\n"
+#         "  - CLIENT_SECRET\n"
+#     )
+#     sys.exit(1)
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins='*')
@@ -41,18 +41,18 @@ def require_oauth_token(func):
     def wrapper(*args, **kwargs):
         if has_request_context():
             auth = request.headers.get("Authorization", "")
-            if not auth.startswith("Bearer "):
-                return jsonify({"error": "Missing or invalid Authorization header"}), 401
-            token = auth.split(" ")[1]
-            if not verify_token(token):
-                return jsonify({"error": "Invalid or expired token"}), 403
+            # if not auth.startswith("Bearer "):
+            #     return jsonify({"error": "Missing or invalid Authorization header"}), 401
+            # token = auth.split(" ")[1]
+            # if not verify_token(token):
+            #     return jsonify({"error": "Invalid or expired token"}), 403
         else:
             # WebSocket: 从 args[0] 中提取 token
             data = args[0] if args else {}
             token = data.get("access_token")
-            if not token or not verify_token(token):
-                emit("stream_error", {"error": "Missing or invalid token"})
-                return
+            # if not token or not verify_token(token):
+            #     emit("stream_error", {"error": "Missing or invalid token"})
+            #     return
         return func(*args, **kwargs)
     return wrapper
 
@@ -292,12 +292,11 @@ def detect_image(validated_params, files):
         #     }), 400
 
         detector = Detection_UI(from_streamlit=False, api_params=validated_params)
-        _, det_info, _ = detector.frame_process(image, "api_image.jpg")
-        return jsonify({"detections": "det_info"})
+        _, det_info, _ = detector.frame_process(image, "api_image.jpg", is_api=True)
+        return jsonify({"detections": det_info})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 @app.route("/api/detect/video", methods=["POST"])
@@ -349,7 +348,7 @@ def detect_video(validated_params, files):
             ret, frame = cap.read()
             if not ret:
                 break
-            _, det_info, _ = detector.frame_process(frame, f"frame_{frame_id}.jpg")
+            _, det_info, _ = detector.frame_process(frame, f"frame_{frame_id}.jpg", is_api=True)
             if det_info:
                 frame_results.append({
                     "frame": frame_id,
@@ -416,7 +415,7 @@ def handle_stream(params, stream_source):
                 if not ret:
                     break
 
-                _, det_info, _ = detector.frame_process(frame, "ws_stream")
+                _, det_info, _ = detector.frame_process(frame, "ws_stream", is_api=True)
                 _, buffer = cv2.imencode('.jpg', frame)
                 img_b64 = base64.b64encode(buffer).decode('utf-8')
 

@@ -166,7 +166,7 @@ def adjust_parameter(image_size, base_size=1000):
     return max_size / base_size
 
 
-def draw_detections(image, info, color = (0, 0, 255), alpha=0.2, line_number=None):
+def draw_detections(image, info, color = (0, 0, 255), alpha=0.2, line_number=None, is_api = False):
     """
     在图像上绘制检测结果，包括边界框、类别名称和掩码（如果有）
 
@@ -226,7 +226,7 @@ def draw_detections(image, info, color = (0, 0, 255), alpha=0.2, line_number=Non
             print(f"An error occurred: {e}")
 
     # 在检测框中间绘制行号
-    if line_number is not None:
+    if line_number is not None and ~is_api:
         x1, y1, x2, y2 = bbox
         center_x = int((x1 + x2) / 2)
         center_y = int((y1 + y2) / 2)

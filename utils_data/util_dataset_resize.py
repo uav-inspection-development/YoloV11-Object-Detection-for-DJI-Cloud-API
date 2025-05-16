@@ -3,10 +3,14 @@ import cv2
 import re
 from pathlib import Path
 
+"此脚本需要在xml to txt后执行"
+
+
 def remove_chinese_chars_and_symbols(filename):
     """清除文件名中的中文字符和特定符号"""
     pattern = re.compile(r'[\u4e00-\u9fff，,]')
     return pattern.sub('', filename)
+
 
 def ensure_unique_filename(directory, filename):
     """确保文件名唯一，如果重复则添加数字后缀"""
@@ -27,8 +31,8 @@ if not os.path.exists(source_folder):
     exit()
 
 # 目标尺寸（宽度和高度）
-target_width = 600
-target_height = 400
+target_width = 720
+target_height = 480
 
 # 创建调整大小后的图像和标签存储文件夹
 resized_images_folder = os.path.join(source_folder, "resized_images")

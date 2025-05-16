@@ -14,7 +14,7 @@ from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
-from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, undistort_if_needed
+from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, calculate_polygon_area
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -1136,7 +1136,7 @@ class Detection_UI:
                 self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
                 self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
 
-    def frame_process(self, image, file_name, video_time = None):
+    def frame_process(self, image, file_name, video_time = None, is_api = False):
         """
         # FIXME:
         处理并预测单个图像帧的内容。
@@ -1185,7 +1185,10 @@ class Detection_UI:
 
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
-                        image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=cnt)
+                        if ~is_api:
+                            image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=cnt)
+                        else:
+                            image, aim_frame_area = draw_detections(image, info, alpha=0.5, line_number=cnt, is_api=True)
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
                         # 获取中文名
@@ -1203,7 +1206,8 @@ class Detection_UI:
                         cnt += 1
 
                 # 在表格中显示检测结果
-                self.table_placeholder.table(res)
+                if ~is_api:
+                    self.table_placeholder.table(res)
 
         return image, detInfo, select_info
 
