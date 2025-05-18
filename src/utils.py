@@ -312,6 +312,9 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
     colors = sorted([(pos, tuple(np.array(color) / 255)) for pos, color in colors], key=lambda x: x[0])
     colormap = LinearSegmentedColormap.from_list("custom", [(pos, color) for pos, color in colors])
 
+    # 将图像转换为灰度图像
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
     # 将图像转换为 NumPy 数组
     img_array = np.array(image)
 
@@ -322,27 +325,24 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
     colored_array = colormap(img_array / 255.0)[:, :, :3]  # 忽略alpha通道
     colored_array = (colored_array * 255).astype(np.uint8)
 
-    # 将彩色数组转换回 PIL 图像
-    pseudo_colored_img = Image.fromarray(colored_array)
-
-    return pseudo_colored_img
+    return cv2.cvtColor(colored_array, cv2.COLOR_RGB2BGR)
 
 
 def is_black_and_white(image_array):
     """
-    判断一个 RGB 图像是否是黑白图像。
+    判断一个 BGR 图像是否是黑白图像。
 
     参数:
-        image_array (numpy.ndarray): 输入的 RGB 图像数组。
+        image_array (numpy.ndarray): 输入的 BGR 图像数组。
 
     返回:
         bool: 如果图像是黑白图像，返回 True；否则返回 False。
     """
-    # 检查图像是否为 RGB 格式
+    # 检查图像是否为 BGR 格式
     if len(image_array.shape) != 3 or image_array.shape[2] != 3:
         return
 
-    # 检查每个像素的 R、G、B 通道值是否相等
+    # 检查每个像素的 B、G、R 通道值是否相等
     is_bw = np.all(image_array[:, :, 0] == image_array[:, :, 1]) and np.all(image_array[:, :, 1] == image_array[:, :, 2])
 
     return is_bw

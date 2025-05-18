@@ -634,6 +634,11 @@ class Detection_UI:
                     # 调节摄像头的分辨率
                     # 调整图像尺寸
                     frame = cv2.resize(frame, (self.new_width, self.new_height))
+                    is_bw = is_black_and_white(frame)
+
+                    # 如果启用了伪彩色转换，应用转换
+                    if self.enable_pseudo_color and is_bw:
+                        frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
 
                     framecopy = frame.copy()
                     image, detInfo, _ = self.frame_process(frame, input_type)
@@ -723,11 +728,9 @@ class Detection_UI:
                 for idx, uploaded_file in enumerate(self.uploaded_file):
                     # 处理每个上传的图片文件
                     source_img = uploaded_file.read()
-                    color_mod = Image.open(uploaded_file)
-                    bw_mod = np.array(color_mod)
-                    is_bw = is_black_and_white(bw_mod)
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
+                    is_bw = is_black_and_white(image_ini)
                     # 去畸变
                     if self.undistortion_method == "相机参数计算":
                         image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
@@ -736,11 +739,7 @@ class Detection_UI:
 
                     # 如果启用了伪彩色转换，应用转换
                     if self.enable_pseudo_color and is_bw:
-                        color_mod = Image.open(uploaded_file).convert('L')
-                        pseudo_colored_img = convert_to_pseudo_colorizer(color_mod, contrast=self.image_contrast, brightness=self.image_brightness)
-
-                        if pseudo_colored_img:
-                            image_ini = cv2.cvtColor(np.array(pseudo_colored_img), cv2.COLOR_RGB2BGR)
+                        image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
 
                     framecopy = image_ini.copy()
                     image, detInfo, select_info = self.frame_process(image_ini, uploaded_file.name)
@@ -774,6 +773,7 @@ class Detection_UI:
                 source_img = self.uploaded_file.read()
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
+                is_bw = is_black_and_white(image_ini)
                 # 去畸变
                 if self.undistortion_method == "相机参数计算":
                     image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
@@ -781,11 +781,8 @@ class Detection_UI:
                     image_ini = auto_undistort_image(image_ini)
 
                 # 如果启用了伪彩色转换，应用转换
-                if self.enable_pseudo_color:
-                    color_mod = Image.open(source_img).convert('L')
-                    pseudo_colored_img = convert_to_pseudo_colorizer(color_mod, contrast=self.image_contrast, brightness=self.image_brightness)
-                    if pseudo_colored_img:
-                        image_ini = cv2.cvtColor(np.array(pseudo_colored_img), cv2.COLOR_RGB2BGR)
+                if self.enable_pseudo_color and is_bw:
+                    image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
 
                 framecopy = image_ini.copy()
                 image, detInfo, select_info = self.frame_process(image_ini, self.uploaded_file.name)
@@ -880,6 +877,12 @@ class Detection_UI:
                                     frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
                                 elif self.undistortion_method == "图像自动计算":
                                     frame = auto_undistort_image(frame)
+                                is_bw = is_black_and_white(frame)
+
+                                # 如果启用了伪彩色转换，应用转换
+                                if self.enable_pseudo_color and is_bw:
+                                    frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
+
                                 framecopy = frame.copy()
                                 current_time = current_frame / fps
                                 if current_time < total_length:
@@ -1003,6 +1006,12 @@ class Detection_UI:
                                 frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
                             elif self.undistortion_method == "图像自动计算":
                                 frame = auto_undistort_image(frame)
+                            is_bw = is_black_and_white(frame)
+
+                            # 如果启用了伪彩色转换，应用转换
+                            if self.enable_pseudo_color and is_bw:
+                                frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
+
                             framecopy = frame.copy()
                             # 计算当前帧对应的时间（秒）
                             current_time = current_frame / fps
