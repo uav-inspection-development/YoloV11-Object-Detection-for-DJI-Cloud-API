@@ -106,6 +106,9 @@ class Detection_UI:
         self.detection_confidence = None
         self.detection_time = None
 
+        # 初始化分割结果输出相关的变量
+        self.rectangle_bounding_output = True
+
         # 初始化UI显示相关的变量（仅Streamlit）
         self.display_mode = None  # 设置显示模式
         self.close_flag = None  # 控制图像显示结束的标志
@@ -358,7 +361,8 @@ class Detection_UI:
             st.sidebar.caption("💡 提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。")
             available_options = ["红外", "EL隐裂", "可见光", "其他"]
         elif self.model_type == "分割任务":
-            st.sidebar.caption("💡 提示: 分割任务将对所有的光伏板轮廓进行分割，目标类别选择【太阳能板】即可。")
+            self.rectangle_bounding_output = st.sidebar.checkbox("输出矩形边框", value=True)
+            st.sidebar.caption("💡 提示: 分割任务将对所有的光伏板轮廓进行分割，选择输出矩形边框后，将检测矩形边框并输出，否则输出原始边缘，目标类别选择【太阳能板】即可。")
             available_options = ["红外", "EL隐裂", "可见光"]
 
         # 添加图像类型选择
@@ -1130,9 +1134,8 @@ class Detection_UI:
                 self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
                 self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
 
-    def frame_process(self, image, file_name, video_time = None, is_api = False):
+    def frame_process(self, image, file_name, video_time=None, is_api=False):
         """
-        # FIXME:
         处理并预测单个图像帧的内容。
 
         Args:
@@ -1177,9 +1180,18 @@ class Detection_UI:
                 for idx, info in enumerate(det_info):
                     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
 
+                    if mask is not None and self.rectangle_bounding_output:
+                        # mask: numpy array, shape (H, W), values 0/1 or 0/255
+                        mask_bin = (mask > 0).astype(np.uint8)
+                        contours, _ = cv2.findContours(mask_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                        if contours:
+                            x, y, w, h = cv2.boundingRect(contours[0])
+                            bbox = [x, y, x + w, y + h]
+                            info['bbox'] = bbox  # 更新bbox为矩形框
+
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
-                        if ~is_api:
+                        if not is_api:
                             image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=cnt)
                         else:
                             image, aim_frame_area = draw_detections(image, info, alpha=0.5, line_number=cnt, is_api=True)
@@ -1200,7 +1212,7 @@ class Detection_UI:
                         cnt += 1
 
                 # 在表格中显示检测结果
-                if ~is_api:
+                if not is_api:
                     self.table_placeholder.table(res)
 
         return image, detInfo, select_info

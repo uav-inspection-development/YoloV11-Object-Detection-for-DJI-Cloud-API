@@ -226,7 +226,7 @@ def draw_detections(image, info, color = (0, 0, 255), alpha=0.2, line_number=Non
             print(f"An error occurred: {e}")
 
     # 在检测框中间绘制行号
-    if line_number is not None and ~is_api:
+    if line_number is not None and not is_api:
         x1, y1, x2, y2 = bbox
         center_x = int((x1 + x2) / 2)
         center_y = int((y1 + y2) / 2)
