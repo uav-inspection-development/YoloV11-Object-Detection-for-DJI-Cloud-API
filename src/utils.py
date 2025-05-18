@@ -70,7 +70,7 @@ def load_default_image():
     Returns:
         Image: 返回默认图片对象。
     """
-    ini_image = abs_path("../icon/ini-image.png")
+    ini_image = abs_path("../icon/ini.jpg")
     return Image.open(ini_image)
 
 
@@ -166,7 +166,7 @@ def adjust_parameter(image_size, base_size=1000):
     return max_size / base_size
 
 
-def draw_detections(image, info, color = (0, 0, 255), alpha=0.2, line_number=None, is_api = False):
+def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None, is_api=False):
     """
     在图像上绘制检测结果，包括边界框、类别名称和掩码（如果有）
 
@@ -347,6 +347,7 @@ def is_black_and_white(image_array):
 
     return is_bw
 
+
 def camera_undistortion(frame, camera_matrix=None, dist_coeffs=None):
     """
     对输入帧进行去畸变处理。
@@ -374,6 +375,7 @@ def camera_undistortion(frame, camera_matrix=None, dist_coeffs=None):
             print(f"去畸变失败: {e}")
             return frame
     return frame
+
 
 def auto_undistort_image(img):
     """

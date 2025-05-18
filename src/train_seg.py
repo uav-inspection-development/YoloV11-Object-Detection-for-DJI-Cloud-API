@@ -28,7 +28,7 @@ def train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_mo
         validate (bool, optional): 是否在每个 epoch 结束时对验证集进行评估。默认为 False。
     """
     try:
-        data_path = abs_path(f'datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
+        data_path = abs_path(f'../datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
         unix_style_path = data_path.replace(os.sep, '/')
 
         # 检查数据集配置文件是否存在

@@ -65,6 +65,12 @@ class Detection_UI:
 
         self.from_streamlit = from_streamlit
         self.api_params = api_params or {}
+        self.input_source = None
+        self.rtsp_input_url = None
+        self.enable_video_output = None
+        self.output_path = None
+        self.enable_rtsp_output = None
+        self.rtsp_output_url = None
 
         # 初始化类别标签列表和为每个类别随机分配颜色
         self.cls_name = Visible_type
@@ -319,12 +325,20 @@ class Detection_UI:
         self.model = st.session_state['model']
 
         # 图像畸变校正参数设置
-        st.sidebar.header("🖼️ 图像畸变校正")
+        st.sidebar.header("🖼️ 输入图像处理")
+        # 添加伪彩色转换选项
+        self.enable_pseudo_color = st.sidebar.checkbox("启用伪彩色转换", value=False)
+        st.sidebar.caption("💡 提示: 伪彩色转换针对于输入图像为黑白图像且图像类型为红外热图。")
+        # 如果启用伪彩色转换，显示对比度和亮度调整选项
+        if self.enable_pseudo_color:
+            self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
+            self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
         self.undistortion_method = st.sidebar.radio(
             "选择畸变校正类型",
             options=["不去除", "相机参数计算", "图像自动计算"],
             index=0  # 默认选择第一个选项
         )
+        st.sidebar.caption("💡 提示: 相机参数计算需要用户输入相机标定文件，图像自动计算需要保证输入图像包含较为明显的线条用于修正畸变。")
         if self.undistortion_method == "相机参数计算":
             calibration_file = st.sidebar.file_uploader(
                 "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
@@ -484,16 +498,10 @@ class Detection_UI:
             st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动摄像头检测！")
         elif self.input_source == "RTSP/RTMP流":
             # 输入 RTSP/RTMP 地址
-            self.rtsp_rtmp_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
+            self.rtsp_input_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
             st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
         elif self.input_source == "图片文件":
             self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
-            # 添加伪彩色转换选项
-            self.enable_pseudo_color = st.sidebar.checkbox("启用伪彩色转换", value=False)
-            # 如果启用伪彩色转换，显示对比度和亮度调整选项
-            if self.enable_pseudo_color:
-                self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
-                self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
             st.sidebar.caption("💡 提示: 请选择图片并点击'开始运行'按钮，进行图片检测！")
         elif self.input_source == "视频文件":
             self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi", "mov"], accept_multiple_files=True)
@@ -548,10 +556,10 @@ class Detection_UI:
                     input_source = self.selected_camera
         elif self.input_source == "RTSP/RTMP流":
             input_type = "stream"
-            if not self.rtsp_rtmp_url:
+            if not self.rtsp_input_url:
                 st.warning("请输入有效的RTSP/RTMP地址！")
                 return
-            input_source = self.rtsp_rtmp_url
+            input_source = self.rtsp_input_url
         self.logTable.clear_frames()  # 清除之前的帧记录
         # 创建一个结束按钮
         self.close_flag = self.close_placeholder.button(label="停止")
@@ -680,7 +688,6 @@ class Detection_UI:
             if self.enable_rtsp_output:
                 stream_out.release()
 
-
         finally:
             cap.release()
             if self.enable_video_output:
@@ -734,7 +741,6 @@ class Detection_UI:
 
                         if pseudo_colored_img:
                             image_ini = cv2.cvtColor(np.array(pseudo_colored_img), cv2.COLOR_RGB2BGR)
-
 
                     framecopy = image_ini.copy()
                     image, detInfo, select_info = self.frame_process(image_ini, uploaded_file.name)
@@ -1142,6 +1148,7 @@ class Detection_UI:
             image (numpy.ndarray): 输入的图像。
             file_name (str): 处理的文件名。
             video_time (str, optional): 视频时间戳，默认为 None。
+            is_api (bool, optional): 是否使用API功能，默认为 False。
 
         Returns:
             tuple: 处理后的图像，检测信息，选择信息列表。
@@ -1263,7 +1270,6 @@ class Detection_UI:
         运行检测系统。
         """
 
-
         # 使用自定义 CSS 样式调整列的宽度
         st.markdown(
             """
@@ -1307,8 +1313,6 @@ class Detection_UI:
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
             # 显示用的进度条
             self.progress_bar = st.progress(0)
-
-
 
         # 创建一个空的结果表格
         res = concat_results("None", "[0, 0, 0, 0]", "0.00", "0.00s")

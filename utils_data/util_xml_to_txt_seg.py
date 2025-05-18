@@ -3,7 +3,7 @@ import xml.dom.minidom
 from pathlib import Path
 
 # 指定源文件夹路径
-source_folder = input("请输入包含 train/test/val 子文件夹的labels文件夹路径：").strip()
+source_folder = input("请输入包含 train/test/val 子文件夹的 labels 文件夹路径：").strip()
 
 # 检查源文件夹是否存在
 if not os.path.exists(source_folder):
@@ -48,8 +48,23 @@ def process_xml(xml_path, txt_path, width, height):
         if len(points) > 1 and points[-1] == points[0]:
             points.pop()
 
+        # 计算边界框信息
+        x_coords, y_coords = zip(*points)
+        x_min, x_max = min(x_coords), max(x_coords)
+        y_min, y_max = min(y_coords), max(y_coords)
+        x_center = (x_min + x_max) / 2.0
+        y_center = (y_min + y_max) / 2.0
+        bbox_width = x_max - x_min
+        bbox_height = y_max - y_min
+
+        # 归一化边界框信息
+        x_center_norm = x_center / width
+        y_center_norm = y_center / height
+        bbox_width_norm = bbox_width / width
+        bbox_height_norm = bbox_height / height
+
         # 拼接成 YOLO 格式的字符串
-        txt_line = f"{label}"
+        txt_line = f"{label} {x_center_norm:.14f} {y_center_norm:.14f} {bbox_width_norm:.14f} {bbox_height_norm:.14f}"
         for point in points:
             txt_line += f" {point[0] / width:.14f} {point[1] / height:.14f}"
         txt_line += "\n"

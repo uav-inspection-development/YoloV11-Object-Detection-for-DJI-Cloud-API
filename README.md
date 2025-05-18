@@ -74,14 +74,29 @@ This project provides a comprehensive solution for detecting solar panel anomali
 
 ```plaintext
 src/
-├── train.py              # Script for training the model
-├── ui.py                 # Main interface for detection
-├── utils.py              # Utility functions for preprocessing and postprocessing
-├── models/               # Contains model definitions
-├── runs/                 # Stores training results and weights
+├── _init_.py                 # Init
+├── api_server.py             # Flask app for object detection
+├── auth.py                   # Functions to verify OAuth2 tokens and get access tokens
+├── chinese_name.py           # Chinese name of labels
+├── demo_test_camera.py       # Demo of testing camera
+├── demo_test_image.py        # Demo of testing image
+├── demo_test_video.py        # Demo of testing video
+├── log.py                    # Tools for image/video processing and logging
+├── model.py                  # YOLOv8 detector with model loading and processing
+├── train_det.py              # Script of training detection model
+├── train_interface.py        # Script of training entrance
+├── train_seg.py              # Script of training segmennt model
+├── ui.py                     # Main interface for detection
+├── ui_style.py               # Custom CSS and HTML styles for Streamlit app
+├── utils.py                  # Utility functions for preprocessing and postprocessing
+├── web.py
+util_data             # Tools for processing non txt format datasets
+models/               # Contains model definitions
+runs/                 # Stores training results and weights
+weights/              # YOLO pre training weights for various versions
 fonts/
-├── Arial.ttf             # Font file for visualization
-requirements.txt          # List of dependencies
+├── Arial.ttf                 # Font file for visualization
+requirements.txt      # List of dependencies
 ```
 
 ---
@@ -171,6 +186,220 @@ requirements.txt          # List of dependencies
 
 ---
 
+## API Usage
+
+### POST /v1/deposit/withdraw
+
+Withdraw the tokens to the user address.
+
+#### Request
+
+- **Method**: POST
+- **URL**: `/api/detect/image`
+- **Body**: JSON object containing the image file and config.
+
+```json
+{
+   "image": 'your image file'
+   "conf_threshold": 0.5
+   "iou_threshold": 0.4
+   "model_type": 检测任务
+   "image_type": 红外
+   "selected_classes": [
+      "dyrb",
+      "dmjrb",
+      "dyrb_ycdw",
+      "dmjrb_ycdw",
+      "ycdw",
+      "dyrb_ejgdl",
+      "ejgdl",
+      "ygfs",
+      "gfb_zc_rcx",
+      "ejgdl_ycdw"
+   ]
+}
+```
+
+#### Example
+
+```bash
+POST http://127.0.0.1:5000/api/detect/image
+```
+
+#### Response
+
+```json
+{
+  "detections": [
+        {
+            "class_id": 0,
+            "extent": 3760,
+            "name": "大面积热斑",
+            "region": [
+                11,
+                202,
+                58,
+                282
+            ],
+            "time": "0.01",
+            "type": "dmjrb"
+        },
+        {
+            "class_id": 0,
+            "extent": 3680,
+            "name": "大面积热斑",
+            "region": [
+                95,
+                200,
+                141,
+                280
+            ],
+            "time": "0.01",
+            "type": "dmjrb"
+        },
+     ...
+     ]
+}
+```
+
+- **Method**: POST
+- **URL**: `/api/detect/video`
+- **Body**: JSON object containing the video file and config.
+
+```json
+{
+   "image": 'your video file'
+   "conf_threshold": 0.5
+   "iou_threshold": 0.4
+   "model_type": 检测任务
+   "image_type": 红外
+   "selected_classes": [
+      "dyrb",
+      "dmjrb",
+      "dyrb_ycdw",
+      "dmjrb_ycdw",
+      "ycdw",
+      "dyrb_ejgdl",
+      "ejgdl",
+      "ygfs",
+      "gfb_zc_rcx",
+      "ejgdl_ycdw"
+   ]
+}
+```
+
+#### Example
+
+```bash
+POST http://127.0.0.1:5000/api/detect/video
+```
+
+#### Response
+
+```json
+{
+  "results": [
+        {
+            "detections": [
+                {
+                    "class_id": 3,
+                    "extent": 10260,
+                    "name": "光伏板正常热成像",
+                    "region": [
+                        501,
+                        331,
+                        577,
+                        466
+                    ],
+                    "time": "0.02",
+                    "type": "gfb_zc_rcx"
+                },
+                ...
+                ],
+            "frame": 0
+        },
+        ...
+     
+}
+```
+
+### GET /v1/airdrop/network
+
+Retrieve network information.
+
+#### Request
+
+- **Method**: GET
+- **URL**: `/api/types`
+
+#### Example
+
+```bash
+GET http://127.0.0.1:5000/api/types
+```
+
+#### Response
+
+```json
+{
+    "分割任务": {
+        "EL隐裂": [
+            {
+                "chinese_name": "太阳能板",
+                "name": "solar_panel"
+            }
+        ],
+        "可见光": [
+            {
+                "chinese_name": "太阳能板",
+                "name": "solar_panel"
+            }
+        ],
+        "红外": [
+            {
+                "chinese_name": "太阳能板",
+                "name": "solar_panel"
+            }
+        ]
+    },
+    "检测任务": {
+        "EL隐裂": [
+            {
+                "chinese_name": "隐裂",
+                "name": "crack"
+            },
+            ...
+        ],
+        "其他": [
+            {
+                "chinese_name": "行人",
+                "name": "people"
+            },
+            {
+                "chinese_name": "车辆",
+                "name": "vehicle"
+            }
+        ],
+        "可见光": [
+            {
+                "chinese_name": "遮挡",
+                "name": "yyzd"
+            },
+            ...
+        ],
+        "红外": [
+            {
+                "chinese_name": "单一热斑",
+                "name": "dyrb"
+            },
+            ...
+        ]
+    }
+}
+```
+
+---
+
 ## Troubleshooting
 
 - **Font Download Timeout**:
@@ -191,3 +420,11 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 - Dataset provided by [EL Crack Dataset](https://pan.baidu.com/s/11_Qj8LsRqgpXz4PLqeiE0w?pwd=d1dj).
 - Model training and detection powered by PyTorch and YOLO.
+
+## TODO (DO NOT COMMIT !!)
+
+[] Add full image path output for the API response
+[] Update README
+[] Test the websocket asynchronize handling procedure
+[] Test the image auto distortion elimination function
+[] Output the segmentation example and append it to the README

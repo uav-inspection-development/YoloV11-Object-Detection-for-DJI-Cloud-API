@@ -22,6 +22,10 @@ augmented_labels_folder = os.path.join(augmented_folder, "labels")
 os.makedirs(augmented_images_folder, exist_ok=True)
 os.makedirs(augmented_labels_folder, exist_ok=True)
 
+# 固定图像尺寸
+target_width = 720
+target_height = 480
+
 # 遍历 train, val, test 子文件夹
 subfolders = ["train", "val", "test"]
 
@@ -57,59 +61,88 @@ for subfolder in subfolders:
 
         # 加载图像
         image = Image.open(image_path)
-        width, height = image.size
+        original_width, original_height = image.size
 
         # 读取标注文件
         with open(txt_path, 'r') as f:
             labels = [line.strip().split() for line in f.readlines()]
 
+        # 将原图像和标注文件复制到增强后的文件夹中
+        original_image_path = os.path.join(augmented_images_subfolder, f"{image_file.stem}.jpg")
+        original_txt_path = os.path.join(augmented_labels_subfolder, f"{image_file.stem}.txt")
+        image.save(original_image_path)
+        with open(original_txt_path, 'w') as f:
+            for label in labels:
+                line = " ".join(label)
+                f.write(line + "\n")
+
         # 对每张图像生成10个增强版本
         for i in range(10):
             # 随机缩放
-            scale_factor = random.uniform(0.8, 1.2)
-            new_width = int(width * scale_factor)
-            new_height = int(height * scale_factor)
+            scale_factor = random.uniform(0.5, 1.5)
+            new_width = int(original_width * scale_factor)
+            new_height = int(original_height * scale_factor)
             image_resized = image.resize((new_width, new_height))
 
             # 随机旋转
-            angle = random.uniform(-10, 10)  # 旋转角度范围为-10到10度
+            angle = random.uniform(-180, 180)  # 旋转角度范围为-180到180度
             image_rotated = image_resized.rotate(angle, expand=True)
-            new_width, new_height = image_rotated.size
+            rotated_width, rotated_height = image_rotated.size
 
             # 随机亮度调整
             enhancer = ImageEnhance.Brightness(image_rotated)
-            brightness_factor = random.uniform(0.8, 1.2)
+            brightness_factor = random.uniform(0.6, 1.4)
             image_augmented = enhancer.enhance(brightness_factor)
+
+            # 调整图像大小到目标尺寸
+            image_final = image_augmented.resize((target_width, target_height))
 
             # 调整标注点
             augmented_labels = []
             for label in labels:
                 class_id = label[0]
-                points = np.array(label[1:], dtype=np.float32).reshape(-1, 2)
+                x_center, y_center, bbox_width, bbox_height = map(float, label[1:5])
+                points = np.array(label[5:], dtype=np.float32).reshape(-1, 2)
 
                 # 缩放
+                x_center *= scale_factor
+                y_center *= scale_factor
+                bbox_width *= scale_factor
+                bbox_height *= scale_factor
                 points[:, 0] *= scale_factor
                 points[:, 1] *= scale_factor
 
                 # 旋转
-                center = np.array([width / 2, height / 2])
+                center = np.array([new_width / 2, new_height / 2])
                 rotation_matrix = np.array([
                     [np.cos(np.deg2rad(angle)), -np.sin(np.deg2rad(angle))],
                     [np.sin(np.deg2rad(angle)), np.cos(np.deg2rad(angle))]
                 ])
                 points = np.dot(points - center, rotation_matrix) + center
 
-                # 归一化到新图像尺寸
-                points[:, 0] /= new_width
-                points[:, 1] /= new_height
+                # 调整到目标尺寸
+                x_center = x_center / rotated_width * target_width
+                y_center = y_center / rotated_height * target_height
+                bbox_width = bbox_width / rotated_width * target_width
+                bbox_height = bbox_height / rotated_height * target_height
+                points[:, 0] = points[:, 0] / rotated_width * target_width
+                points[:, 1] = points[:, 1] / rotated_height * target_height
+
+                # 归一化到 [0, 1]
+                x_center /= target_width
+                y_center /= target_height
+                bbox_width /= target_width
+                bbox_height /= target_height
+                points[:, 0] /= target_width
+                points[:, 1] /= target_height
 
                 # 生成新的标注行
-                new_label = [class_id] + points.flatten().tolist()
+                new_label = [class_id, x_center, y_center, bbox_width, bbox_height] + points.flatten().tolist()
                 augmented_labels.append(new_label)
 
             # 保存增强后的图像
             augmented_image_path = os.path.join(augmented_images_subfolder, f"{image_file.stem}_{i}.jpg")
-            image_augmented.save(augmented_image_path)
+            image_final.save(augmented_image_path)
 
             # 保存增强后的标注文件
             augmented_txt_path = os.path.join(augmented_labels_subfolder, f"{image_file.stem}_{i}.txt")

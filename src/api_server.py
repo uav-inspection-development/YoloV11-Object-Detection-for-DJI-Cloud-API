@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from flask import Flask, request, jsonify, has_request_context
 from flask_socketio import SocketIO, emit
 import numpy as np
@@ -293,7 +295,18 @@ def detect_image(validated_params, files):
 
         detector = Detection_UI(from_streamlit=False, api_params=validated_params)
         _, det_info, _ = detector.frame_process(image, "api_image.jpg", is_api=True)
-        return jsonify({"detections": det_info})
+        transformed_list = []
+        for item in det_info:
+            transformed_item = OrderedDict([
+                ("type", item[0]),
+                ("name", item[1]),
+                ("region", item[2]),
+                ("extent", item[3]),
+                ("time", item[4]),
+                ("class_id", item[5])
+            ])
+            transformed_list.append(transformed_item)
+        return jsonify({"detections": transformed_list})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -349,10 +362,21 @@ def detect_video(validated_params, files):
             if not ret:
                 break
             _, det_info, _ = detector.frame_process(frame, f"frame_{frame_id}.jpg", is_api=True)
-            if det_info:
+            transformed_list = []
+            for item in det_info:
+                transformed_item = OrderedDict([
+                    ("type", item[0]),
+                    ("name", item[1]),
+                    ("region", item[2]),
+                    ("extent", item[3]),
+                    ("time", item[4]),
+                    ("class_id", item[5])
+                ])
+                transformed_list.append(transformed_item)
+            if transformed_list:
                 frame_results.append({
                     "frame": frame_id,
-                    "detections": det_info
+                    "detections": transformed_list
                 })
             frame_id += 1
 

@@ -2,13 +2,12 @@ import sys
 import os
 import subprocess
 import argparse
+from QtFusion.path import abs_path
 
 
 # 设置环境变量以避免 OpenMP 错误
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["ENABLE_OAUTH"] = "FALSE"
-
-from QtFusion.path import abs_path
 
 
 def run_streamlit(script_path):
