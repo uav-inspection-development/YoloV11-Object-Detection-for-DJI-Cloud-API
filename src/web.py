@@ -195,6 +195,8 @@ class Detection_UI:
         self.model_type = self.api_params.get("model_type", "检测任务")
         self.image_type = self.api_params.get("image_type", "可见光")
         self.selected_classes = self.api_params.get("selected_classes", list(Visible_type.keys()))
+        self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
+        self.undistortion_method = self.api_params.get("undistortion_method", "不去除")
 
         # 设置类别标签
         if self.model_type == "分割任务":

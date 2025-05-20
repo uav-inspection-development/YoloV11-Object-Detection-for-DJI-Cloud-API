@@ -262,6 +262,12 @@ POST http://127.0.0.1:5000/api/detect/image
 }
 ```
 
+### POST /api/detect/video
+
+Detect objects in a single video.
+
+#### Request
+
 - **Method**: POST
 - **URL**: `/api/detect/video`
 - **Body**: JSON object containing the video file and config.
