@@ -188,9 +188,9 @@ requirements.txt      # List of dependencies
 
 ## API Usage
 
-### POST /v1/deposit/withdraw
+### POST /api/detect/image
 
-Withdraw the tokens to the user address.
+Detect objects in a single image.
 
 #### Request
 
@@ -200,23 +200,23 @@ Withdraw the tokens to the user address.
 
 ```json
 {
-   "image": 'your image file'
-   "conf_threshold": 0.5
-   "iou_threshold": 0.4
-   "model_type": 检测任务
-   "image_type": 红外
-   "selected_classes": [
-      "dyrb",
-      "dmjrb",
-      "dyrb_ycdw",
-      "dmjrb_ycdw",
-      "ycdw",
-      "dyrb_ejgdl",
-      "ejgdl",
-      "ygfs",
-      "gfb_zc_rcx",
-      "ejgdl_ycdw"
-   ]
+    "image": "your image file",
+    "conf_threshold": 0.5,
+    "iou_threshold": 0.4,
+    "model_type": "检测任务",
+    "image_type": "红外",
+    "selected_classes": [
+        "dyrb",
+        "dmjrb",
+        "dyrb_ycdw",
+        "dmjrb_ycdw",
+        "ycdw",
+        "dyrb_ejgdl",
+        "ejgdl",
+        "ygfs",
+        "gfb_zc_rcx",
+        "ejgdl_ycdw"
+    ]
 }
 ```
 
@@ -230,7 +230,7 @@ POST http://127.0.0.1:5000/api/detect/image
 
 ```json
 {
-  "detections": [
+    "detections": [
         {
             "class_id": 0,
             "extent": 3760,
@@ -257,8 +257,8 @@ POST http://127.0.0.1:5000/api/detect/image
             "time": "0.01",
             "type": "dmjrb"
         },
-     ...
-     ]
+        ...
+    ]
 }
 ```
 
@@ -268,23 +268,23 @@ POST http://127.0.0.1:5000/api/detect/image
 
 ```json
 {
-   "image": 'your video file'
-   "conf_threshold": 0.5
-   "iou_threshold": 0.4
-   "model_type": 检测任务
-   "image_type": 红外
-   "selected_classes": [
-      "dyrb",
-      "dmjrb",
-      "dyrb_ycdw",
-      "dmjrb_ycdw",
-      "ycdw",
-      "dyrb_ejgdl",
-      "ejgdl",
-      "ygfs",
-      "gfb_zc_rcx",
-      "ejgdl_ycdw"
-   ]
+    "image": "your video file"
+    "conf_threshold": 0.5,
+    "iou_threshold": 0.4,
+    "model_type": "检测任务",
+    "image_type": "红外",
+    "selected_classes": [
+        "dyrb",
+        "dmjrb",
+        "dyrb_ycdw",
+        "dmjrb_ycdw",
+        "ycdw",
+        "dyrb_ejgdl",
+        "ejgdl",
+        "ygfs",
+        "gfb_zc_rcx",
+        "ejgdl_ycdw"
+    ]
 }
 ```
 
@@ -298,7 +298,7 @@ POST http://127.0.0.1:5000/api/detect/video
 
 ```json
 {
-  "results": [
+    "results": [
         {
             "detections": [
                 {
@@ -315,17 +315,17 @@ POST http://127.0.0.1:5000/api/detect/video
                     "type": "gfb_zc_rcx"
                 },
                 ...
-                ],
+            ],
             "frame": 0
         },
         ...
-     
+    ]
 }
 ```
 
-### GET /v1/airdrop/network
+### GET /api/types
 
-Retrieve network information.
+Retrieve the available detection types and their corresponding classes.
 
 #### Request
 
