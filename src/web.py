@@ -198,6 +198,35 @@ class Detection_UI:
         self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
         self.undistortion_method = self.api_params.get("undistortion_method", "不去除")
 
+        # 通过API方式上传相机标定文件
+        if self.undistortion_method == "相机参数计算":
+            calibration_file = self.api_params.get("calibration_file", None)
+            if calibration_file is not None:
+                try:
+                    # calibration_file 可以是文件路径或文件内容
+                    if isinstance(calibration_file, str) and os.path.exists(calibration_file):
+                        with open(calibration_file, "r", encoding="utf-8") as f:
+                            calib_data = json.load(f)
+                    else:
+                        # 假设是文件内容（字典或JSON字符串）
+                        if isinstance(calibration_file, dict):
+                            calib_data = calibration_file
+                        else:
+                            calib_data = json.loads(calibration_file)
+                    self.camera_matrix = np.array(calib_data["camera_matrix"])
+                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
+                    self.calibration_file = calibration_file if isinstance(calibration_file, str) else "api_upload"
+                    print("相机标定参数加载成功！")
+                except Exception as e:
+                    print(f"标定文件解析失败: {e}")
+                    self.camera_matrix = None
+                    self.dist_coeffs = None
+                    self.calibration_file = None
+            else:
+                self.camera_matrix = None
+                self.dist_coeffs = None
+                self.calibration_file = None
+
         # 设置类别标签
         if self.model_type == "分割任务":
             self.cls_name = Segmentation_type
@@ -345,6 +374,10 @@ class Detection_UI:
             calibration_file = st.sidebar.file_uploader(
                 "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
             )
+            calibration_input = st.sidebar.text_area(
+                "或直接粘贴标定参数（JSON字符串或Python字典）", value="", height=150
+            )
+            calib_data = None
             if calibration_file is not None:
                 try:
                     calib_data = json.load(calibration_file)
@@ -354,6 +387,26 @@ class Detection_UI:
                     st.sidebar.success("相机标定参数加载成功！")
                 except Exception as e:
                     st.sidebar.error(f"标定文件解析失败: {e}")
+            elif calibration_input.strip():
+                try:
+                    # 尝试先用json解析，否则用eval（仅限受信环境）
+                    try:
+                        calib_data = json.loads(calibration_input)
+                    except Exception:
+                        calib_data = eval(calibration_input, {"__builtins__": {}})
+                    self.calibration_file = "sidebar_input"
+                except Exception as e:
+                    st.sidebar.error(f"标定参数解析失败: {e}")
+            if calib_data is not None:
+                try:
+                    self.camera_matrix = np.array(calib_data["camera_matrix"])
+                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
+                    st.sidebar.success("相机标定参数加载成功！")
+                except Exception as e:
+                    st.sidebar.error(f"标定参数内容有误: {e}")
+                    self.camera_matrix = None
+                    self.dist_coeffs = None
+                    self.calibration_file = None
             else:
                 self.camera_matrix = None
                 self.dist_coeffs = None

@@ -216,7 +216,9 @@ Detect objects in a single image.
         "ygfs",
         "gfb_zc_rcx",
         "ejgdl_ycdw"
-    ]
+    ],
+    "enable_pseudo_color": false,
+    "undistortion_method": "不去除"
 }
 ```
 
@@ -290,7 +292,9 @@ Detect objects in a single video.
         "ygfs",
         "gfb_zc_rcx",
         "ejgdl_ycdw"
-    ]
+    ],
+    "enable_pseudo_color": false,
+    "undistortion_method": "不去除"
 }
 ```
 
