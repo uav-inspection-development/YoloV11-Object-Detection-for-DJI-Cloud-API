@@ -1216,7 +1216,7 @@ class Detection_UI:
                         # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
                         # 获取中文名
-                        chinese_name = Thermo_type.get(name, "未知类别")
+                        chinese_name = self.cls_name.get(name, "未知类别")
 
                         res = disp_res.concat_results(name, chinese_name,bbox, str(int(aim_frame_area)),
                                                     video_time if video_time is not None else str(round(use_time, 2)))
