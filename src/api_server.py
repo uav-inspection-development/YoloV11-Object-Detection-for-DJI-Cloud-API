@@ -170,6 +170,11 @@ def _check_params(required_fields, params):
         if params["undistortion_method"] not in ["不去除", "相机参数计算", "图像自动计算"]:
             errors.append("undistortion_method must be one of ['不去除', '相机参数计算', '图像自动计算']")
 
+        # 如果选择了相机参数计算，必须提供 calibration_file
+        if params["undistortion_method"] == "相机参数计算":
+            if "calibration_file" not in params or not params["calibration_file"]:
+                errors.append("When undistortion_method is '相机参数计算', 'calibration_file' is required.")
+
     return errors
 
 
