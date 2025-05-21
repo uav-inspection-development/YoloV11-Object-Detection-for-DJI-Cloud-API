@@ -162,6 +162,14 @@ def _check_params(required_fields, params):
             if cls not in valid_classes:
                 errors.append(f"Invalid selected_class '{cls}' for image_type '{image_type}'")
 
+    if "enable_pseudo_color" in params:
+        if not (isinstance(params["enable_pseudo_color"], bool) or params["enable_pseudo_color"] in ["true", "false", "True", "False", 0, 1, "0", "1"]):
+            errors.append("enable_pseudo_color must be a boolean or 'true'/'false'")
+
+    if "undistortion_method" in params:
+        if params["undistortion_method"] not in ["不去除", "相机参数计算", "图像自动计算"]:
+            errors.append("undistortion_method must be one of ['不去除', '相机参数计算', '图像自动计算']")
+
     return errors
 
 
@@ -245,7 +253,7 @@ def get_types():
 
 @app.route("/api/detect/image", methods=["POST"])
 @require_oauth_token
-@validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes"])
+@validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes", "enable_pseudo_color", "undistortion_method"])
 def detect_image(validated_params, files):
     """
     Detect objects in an uploaded image.
@@ -314,7 +322,7 @@ def detect_image(validated_params, files):
 
 @app.route("/api/detect/video", methods=["POST"])
 @require_oauth_token
-@validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes"])
+@validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes", "enable_pseudo_color", "undistortion_method"])
 def detect_video(validated_params, files):
     """
     Detect objects in an uploaded video.
@@ -394,7 +402,7 @@ def detect_video(validated_params, files):
 
 @socketio.on('start_stream')
 @require_oauth_token
-@validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes"])
+@validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes", "enable_pseudo_color", "undistortion_method"])
 def handle_stream(params, stream_source):
     """
     Handle real-time video stream detection.
