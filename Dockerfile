@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.2.2-cudnn8-runtime-ubuntu20.04
+FROM nvidia/cuda:12.6.1-base-ubuntu24.04
 
 # Set the working directory
 WORKDIR /app
