@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.6.1-base-ubuntu24.04
+FROM nvidia/cuda:12.6.1-devel-ubuntu24.04
 
 # Set the working directory
 WORKDIR /app
@@ -6,11 +6,15 @@ WORKDIR /app
 # Install Python and pip
 RUN apt-get update && apt-get install -y python3 python3-pip
 
+# Install torch and torchvision first (with CUDA 12.1 wheels)
+RUN pip3 install --no-cache-dir --break-system-packages torch==2.3.1+cu121 torchvision==0.18.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
+
 # Copy the requirements file
 COPY requirements.txt .
 
 # Install dependencies
 RUN pip3 install --no-cache-dir --break-system-packages packaging
+# Install the rest of the dependencies
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Copy the source code into the container
