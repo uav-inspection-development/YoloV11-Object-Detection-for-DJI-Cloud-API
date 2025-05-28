@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from flask import Flask, request, jsonify, has_request_context
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, copy_current_request_context
 import numpy as np
 import cv2
 import tempfile
@@ -408,7 +408,8 @@ def detect_video(validated_params, files):
 @socketio.on('start_stream')
 @require_oauth_token
 @validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes", "enable_pseudo_color", "undistortion_method"])
-def handle_stream(params, stream_source):
+# FIXME:
+def handle_stream(data):
     """
     Handle real-time video stream detection.
 
@@ -436,6 +437,9 @@ def handle_stream(params, stream_source):
     }
     """
     try:
+        params = data.get("params", {})
+        stream_source = data.get("stream_source", "0")
+
         if isinstance(stream_source, str) and stream_source.isdigit():
             stream_source = int(stream_source)
 
@@ -446,6 +450,7 @@ def handle_stream(params, stream_source):
 
         detector = Detection_UI(from_streamlit=False, api_params=params)
 
+        @copy_current_request_context
         def stream_loop():
             while cap.isOpened():
                 ret, frame = cap.read()
