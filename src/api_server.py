@@ -446,6 +446,7 @@ def handle_stream(data):
         cap = cv2.VideoCapture(stream_source)
         if not cap.isOpened():
             emit("stream_error", {"error": f"Unable to open stream: {stream_source}"})
+            print(f"⚠️ 无法打开视频流: {stream_source}")
             return
 
         detector = Detection_UI(from_streamlit=False, api_params=params)
@@ -454,24 +455,10 @@ def handle_stream(data):
         def stream_loop():
             while cap.isOpened():
                 ret, frame = cap.read()
-                # ========== 新增验证代码 ==========
-                if not ret:
-                    print(f"⚠️ 无法读取视频帧 (ret={ret})")
-                    break
-
-                if frame is None:
-                    print("❌ 获取到空帧")
-                    break
-
-                try:
-                    print(f"✅ 帧尺寸: {frame.shape}")  # 关键输出
-                except AttributeError as e:
-                    print(f"❌ 帧数据异常: {str(e)}")
-                    break
-                # ========== 验证代码结束 ==========
-
-                if not ret:
-                    break
+                if not ret or frame is None:
+                    print(f"⚠️ 无法读取视频帧或帧为空: {stream_source}")
+                    emit("stream_warning", {"warning": "Failed to read video frame or frame is empty"})
+                    continue
 
                 _, det_info, _ = detector.frame_process(frame, "ws_stream", is_api=True)
                 _, buffer = cv2.imencode('.jpg', frame)
@@ -486,4 +473,5 @@ def handle_stream(data):
 
     except Exception as e:
         emit("stream_error", {"error": str(e)})
-
+        cap.release()
+        print(f"⚠️ 处理流时发生错误: {str(e)}")

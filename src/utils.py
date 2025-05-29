@@ -377,70 +377,21 @@ def camera_undistortion(frame, camera_matrix=None, dist_coeffs=None):
     return frame
 
 
-def auto_undistort_image(img):
+def auto_undistort_image(img, k1):
     """
-    自动根据图像中的线条进行去畸变处理。
+    根据用户提供的畸变系数对图像进行去畸变处理。
 
     参数：
         img (numpy.ndarray): 输入的图像。
+        k1 (float): 用户提供的畸变系数。
 
     返回：
         numpy.ndarray: 去畸变后的图像。
     """
-    def extract_lines(gray_img):
-        # Step 1: Edge detection
-        edges = cv2.Canny(gray_img, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=20)
-        if lines is None:
-            return []
-        return [((x1, y1), (x2, y2)) for [[x1, y1, x2, y2]] in lines]
-
-    def interpolate_line_points(lines):
-        """Generate multiple points between endpoints of lines."""
-        all_points = []
-        for (x1, y1), (x2, y2) in lines:
-            line_pts = np.linspace((x1, y1), (x2, y2), 20)  # 20 interpolated points per line
-            all_points.append(line_pts)
-        return all_points
-
-    def distort_points(points, k1, cx, cy):
-        result = []
-        for x, y in points:
-            dx, dy = x - cx, y - cy
-            r2 = dx * dx + dy * dy
-            factor = 1 + k1 * r2
-            result.append((cx + dx * factor, cy + dy * factor))
-        return np.array(result)
-
-    def straightness_loss(k1, lines_pts, cx, cy):
-        loss = 0
-        for pts in lines_pts:
-            pts = distort_points(pts, k1, cx, cy)
-            [vx, vy, x0, y0] = cv2.fitLine(pts.astype(np.float32), cv2.DIST_L2, 0, 0.01, 0.01)
-            # Orthogonal distance of all points to the line
-            for x, y in pts:
-                dist = abs(vy * x - vx * y + (x0 * vy - y0 * vx)) / np.sqrt(vx**2 + vy**2)
-                loss += dist**2
-        return loss
-
     # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    lines = extract_lines(gray)
-    if len(lines) < 5:
-        print("Not enough lines found for correction.")
-        return img.copy()
-
-    # Prepare data
     h, w = gray.shape
     cx, cy = w / 2, h / 2
-    interpolated_lines = interpolate_line_points(lines)
-
-    # Optimize distortion coefficient (start at 0, typical k1 range is [-0.5, 0.5])
-    result = minimize(lambda k: straightness_loss(k[0], interpolated_lines, cx, cy), [0.0],
-                      bounds=[(-0.5, 0.5)], method='L-BFGS-B')
-
-    k1 = result.x[0]
-    print(f"Estimated distortion k1 = {k1:.5f}")
 
     # Undistort image using OpenCV remap
     K = np.array([[w, 0, cx], [0, w, cy], [0, 0, 1]])  # approximate fx = fy = w

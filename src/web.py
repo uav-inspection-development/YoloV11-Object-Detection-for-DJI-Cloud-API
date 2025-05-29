@@ -140,6 +140,7 @@ class Detection_UI:
         self.camera_matrix = None
         self.dist_coeffs = None
         self.calibration_file = None
+        self.image_k1 = 0.0  # 畸变系数
 
         self.csv_output_path = abs_path("../tempDir/")
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -382,53 +383,6 @@ class Detection_UI:
         if self.enable_pseudo_color:
             self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
             self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
-        self.undistortion_method = st.sidebar.radio(
-            "选择畸变校正类型",
-            options=["不去除", "相机参数计算", "图像自动计算"],
-            index=0  # 默认选择第一个选项
-        )
-        st.sidebar.caption("💡 提示: 相机参数计算需要用户输入相机标定文件，图像自动计算需要保证输入图像包含较为明显的线条用于修正畸变。")
-        if self.undistortion_method == "相机参数计算":
-            calibration_file = st.sidebar.file_uploader(
-                "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
-            )
-            calibration_input = st.sidebar.text_area(
-                "或直接粘贴标定参数（JSON字符串或Python字典）", value="", height=150
-            )
-            calib_data = None
-            if calibration_file is not None:
-                try:
-                    calib_data = json.load(calibration_file)
-                    self.camera_matrix = np.array(calib_data["camera_matrix"])
-                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
-                    self.calibration_file = calibration_file.name
-                    st.sidebar.success("相机标定参数加载成功！")
-                except Exception as e:
-                    st.sidebar.error(f"标定文件解析失败: {e}")
-            elif calibration_input.strip():
-                try:
-                    # 尝试先用json解析，否则用eval（仅限受信环境）
-                    try:
-                        calib_data = json.loads(calibration_input)
-                    except Exception:
-                        calib_data = eval(calibration_input, {"__builtins__": {}})
-                    self.calibration_file = "sidebar_input"
-                except Exception as e:
-                    st.sidebar.error(f"标定参数解析失败: {e}")
-            if calib_data is not None:
-                try:
-                    self.camera_matrix = np.array(calib_data["camera_matrix"])
-                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
-                    st.sidebar.success("相机标定参数加载成功！")
-                except Exception as e:
-                    st.sidebar.error(f"标定参数内容有误: {e}")
-                    self.camera_matrix = None
-                    self.dist_coeffs = None
-                    self.calibration_file = None
-            else:
-                self.camera_matrix = None
-                self.dist_coeffs = None
-                self.calibration_file = None
 
         st.sidebar.header("⚙️ 检测阈值设定")
         # 置信度阈值的滑动条
@@ -585,6 +539,80 @@ class Detection_UI:
             st.sidebar.header("🎥 视频输出设置")
             self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
 
+        self.undistortion_method = st.sidebar.radio(
+            "选择畸变校正类型",
+            options=["不去除", "相机参数计算", "手动调整参数"],
+            index=0  # 默认选择第一个选项
+        )
+        st.sidebar.caption("💡 提示: 相机参数计算需要用户输入相机标定文件，手动调整参数需要保证输入图像包含较为明显的线条用于修正畸变。")
+        if self.undistortion_method == "相机参数计算":
+            calibration_file = st.sidebar.file_uploader(
+                "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
+            )
+            calibration_input = st.sidebar.text_area(
+                "或直接粘贴标定参数（JSON字符串或Python字典）", value="", height=150
+            )
+            calib_data = None
+            if calibration_file is not None:
+                try:
+                    calib_data = json.load(calibration_file)
+                    self.camera_matrix = np.array(calib_data["camera_matrix"])
+                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
+                    self.calibration_file = calibration_file.name
+                    st.sidebar.success("相机标定参数加载成功！")
+                except Exception as e:
+                    st.sidebar.error(f"标定文件解析失败: {e}")
+            elif calibration_input.strip():
+                try:
+                    # 尝试先用json解析，否则用eval（仅限受信环境）
+                    try:
+                        calib_data = json.loads(calibration_input)
+                    except Exception:
+                        calib_data = eval(calibration_input, {"__builtins__": {}})
+                    self.calibration_file = "sidebar_input"
+                except Exception as e:
+                    st.sidebar.error(f"标定参数解析失败: {e}")
+            if calib_data is not None:
+                try:
+                    self.camera_matrix = np.array(calib_data["camera_matrix"])
+                    self.dist_coeffs = np.array(calib_data["dist_coeffs"])
+                    st.sidebar.success("相机标定参数加载成功！")
+                except Exception as e:
+                    st.sidebar.error(f"标定参数内容有误: {e}")
+                    self.camera_matrix = None
+                    self.dist_coeffs = None
+                    self.calibration_file = None
+            else:
+                self.camera_matrix = None
+                self.dist_coeffs = None
+                self.calibration_file = None
+        elif self.undistortion_method == "手动调整参数":
+            # Add slider for distortion coefficient
+            self.image_k1 = st.sidebar.slider("调整畸变系数 (k1)", min_value=-0.5, max_value=0.5, value=0.0, step=0.01)
+            st.sidebar.caption("💡 提示: 使用滑动条调整图像畸变系数前，用户需要上传畸变后的图片。")
+
+            # Apply distortion adjustment using the slider value
+            if self.uploaded_file is not None:
+                if isinstance(self.uploaded_file, list):  # Handle multiple file uploads
+                    for uploaded_file in self.uploaded_file:
+                        source_img = uploaded_file.read()
+                        file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
+                        image_ini = cv2.imdecode(file_bytes, 1)
+                        distorted_image = auto_undistort_image(image_ini, self.image_k1)
+
+                        # Display original and distorted images for each file
+                        st.image([image_ini, distorted_image], caption=[f"原始图像: {uploaded_file.name}", f"调整后的图像: {uploaded_file.name}"], channels="BGR")
+                else:  # Handle single file upload
+                    source_img = self.uploaded_file.read()
+                    file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
+                    image_ini = cv2.imdecode(file_bytes, 1)
+                    distorted_image = auto_undistort_image(image_ini, self.image_k1)
+
+                    # Display original and distorted images
+                    st.image([image_ini, distorted_image], caption=[f"原始图像: {self.uploaded_file.name}", f"调整后的图像: {self.uploaded_file.name}"], channels="BGR")
+            else:
+                st.sidebar.warning("💡 请先上传图像以调整畸变系数。")
+
         st.sidebar.header("📁 输出文件路径设置")
         self.output_path = st.sidebar.text_input("输出文件路径", value="../output", placeholder="例如：../output 或 D:/videos")
 
@@ -702,8 +730,8 @@ class Detection_UI:
                     # 去畸变
                     if self.undistortion_method == "相机参数计算":
                         frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
-                    elif self.undistortion_method == "图像自动计算":
-                        frame = auto_undistort_image(frame)
+                    elif self.undistortion_method == "手动调整参数":
+                        frame = auto_undistort_image(frame, self.image_k1)
                     # 调节摄像头的分辨率
                     # 调整图像尺寸
                     frame = cv2.resize(frame, (self.new_width, self.new_height))
@@ -807,8 +835,8 @@ class Detection_UI:
                     # 去畸变
                     if self.undistortion_method == "相机参数计算":
                         image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
-                    elif self.undistortion_method == "图像自动计算":
-                        image_ini = auto_undistort_image(image_ini)
+                    elif self.undistortion_method == "手动调整参数":
+                        image_ini = auto_undistort_image(image_ini, self.image_k1)
 
                     # 如果启用了伪彩色转换，应用转换
                     if self.enable_pseudo_color and is_bw:
@@ -850,8 +878,8 @@ class Detection_UI:
                 # 去畸变
                 if self.undistortion_method == "相机参数计算":
                     image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
-                elif self.undistortion_method == "图像自动计算":
-                    image_ini = auto_undistort_image(image_ini)
+                elif self.undistortion_method == "手动调整参数":
+                    image_ini = auto_undistort_image(image_ini, self.image_k1)
 
                 # 如果启用了伪彩色转换，应用转换
                 if self.enable_pseudo_color and is_bw:
@@ -948,8 +976,8 @@ class Detection_UI:
                                 # 去畸变
                                 if self.undistortion_method == "相机参数计算":
                                     frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
-                                elif self.undistortion_method == "图像自动计算":
-                                    frame = auto_undistort_image(frame)
+                                elif self.undistortion_method == "手动调整参数":
+                                    frame = auto_undistort_image(frame, self.image_k1)
                                 is_bw = is_black_and_white(frame)
 
                                 # 如果启用了伪彩色转换，应用转换
@@ -1077,8 +1105,8 @@ class Detection_UI:
                             # 去畸变
                             if self.undistortion_method == "相机参数计算":
                                 frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
-                            elif self.undistortion_method == "图像自动计算":
-                                frame = auto_undistort_image(frame)
+                            elif self.undistortion_method == "手动调整参数":
+                                frame = auto_undistort_image(frame, self.image_k1)
                             is_bw = is_black_and_white(frame)
 
                             # 如果启用了伪彩色转换，应用转换
