@@ -449,6 +449,22 @@ def handle_stream(params, stream_source):
         def stream_loop():
             while cap.isOpened():
                 ret, frame = cap.read()
+                # ========== 新增验证代码 ==========
+                if not ret:
+                    print(f"⚠️ 无法读取视频帧 (ret={ret})")
+                    break
+
+                if frame is None:
+                    print("❌ 获取到空帧")
+                    break
+
+                try:
+                    print(f"✅ 帧尺寸: {frame.shape}")  # 关键输出
+                except AttributeError as e:
+                    print(f"❌ 帧数据异常: {str(e)}")
+                    break
+                # ========== 验证代码结束 ==========
+
                 if not ret:
                     break
 
