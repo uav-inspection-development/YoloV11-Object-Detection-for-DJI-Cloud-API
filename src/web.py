@@ -296,8 +296,26 @@ class Detection_UI:
         """
         # 添加显示设置
         st.sidebar.header("🖥️ 显示设置")
-        self.new_width = st.sidebar.number_input("输入显示宽度 (默认: 1080)", min_value=100, max_value=3840, value=1080, step=10)
-        self.new_height = st.sidebar.number_input("输入显示高度 (默认: 自动计算 16:9)", min_value=100, max_value=2160, value=int(self.new_width * (9 / 16)), step=10)
+
+        # 添加固定比例选项
+        aspect_ratio = st.sidebar.selectbox("选择显示比例", ["16:9", "4:3", "自由调整"], index=0)
+        if aspect_ratio == "16:9":
+            ratio = 16 / 9
+        elif aspect_ratio == "4:3":
+            ratio = 4 / 3
+        else:
+            ratio = None  # 自由调整
+
+        # 根据选择的比例调整宽度和高度
+        if ratio:
+            # 用户输入高度时自动调整宽度
+            self.new_height = st.sidebar.number_input("输入显示高度 (默认: 1080)", min_value=100, max_value=2160, value=1080, step=10)
+            self.new_width = int(self.new_height * ratio)
+            st.sidebar.number_input("输入显示宽度", value=self.new_width, disabled=True)
+        else:
+            # 自由调整模式
+            self.new_width = st.sidebar.number_input("输入显示宽度 (默认: 1080)", min_value=100, max_value=3840, value=1080, step=10)
+            self.new_height = st.sidebar.number_input("输入显示高度 (默认: 720)", min_value=100, max_value=2160, value=720, step=10)
 
         # 添加 CSV 输出路径设置
         st.sidebar.header("📂 日志保存路径设置")
