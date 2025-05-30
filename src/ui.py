@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import argparse
+from check_license import check_license
 from QtFusion.path import abs_path
 
 
@@ -37,12 +38,20 @@ def run_streamlit(script_path):
 if __name__ == "__main__":
     # 使用 argparse 解析命令行参数
     parser = argparse.ArgumentParser(description="Run the application in different modes.")
+    parser.add_argument("--secret-key", required=True, help="Secret key for license encryption/decryption.")
+    parser.add_argument("--license-file", default="license.dat", help="Path to the license file.")
+    parser.add_argument("--bind-info-file", default="bind_info.json", help="Path to the bind info file.")
     parser.add_argument("--run-mode", default="api", choices=["streamlit", "api"], help="Mode to run the application (streamlit or api).")
     parser.add_argument("--oauth2-introspect-url", default="https://your-auth-server.com/oauth2/introspect", help="OAuth2 introspection URL.")
     parser.add_argument("--oauth2-token-url", default="https://your-auth-server.com/oauth2/token", help="OAuth2 token endpoint URL.")
     parser.add_argument("--client-id", default="your-client-id", help="OAuth2 client ID.")
     parser.add_argument("--client-secret", default="your-client-secret", help="OAuth2 client secret.")
     args = parser.parse_args()
+
+    # 将 SECRET_KEY 转换为字节
+    secret_key = args.secret_key.encode()
+
+    check_license(secret_key, args.license_file, args.bind_info_file)
 
     # 设置环境变量以传递 OAuth2 配置
     os.environ["OAUTH2_INTROSPECT_URL"] = args.oauth2_introspect_url

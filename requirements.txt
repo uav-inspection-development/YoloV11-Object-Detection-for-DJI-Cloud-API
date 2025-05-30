@@ -50,6 +50,7 @@ pyarrow
 pyasn1
 pyasn1-modules
 pycocotools
+pycryptodome
 pydeck
 Pygments
 pyparsing
