@@ -218,7 +218,8 @@ Detect objects in a single image.
         "ejgdl_ycdw"
     ],
     "enable_pseudo_color": false,
-    "undistortion_method": "不去除"
+    "undistortion_method": "不去除",
+    "enable_keystone_correction": false
 }
 ```
 
@@ -294,7 +295,8 @@ Detect objects in a single video.
         "ejgdl_ycdw"
     ],
     "enable_pseudo_color": false,
-    "undistortion_method": "不去除"
+    "undistortion_method": "不去除",
+    "enable_keystone_correction": false
 }
 ```
 
@@ -430,11 +432,3 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 - Dataset provided by [EL Crack Dataset](https://pan.baidu.com/s/11_Qj8LsRqgpXz4PLqeiE0w?pwd=d1dj).
 - Model training and detection powered by PyTorch and YOLO.
-
-## TODO (DO NOT COMMIT !!)
-
-[] Add full image path output for the API response
-[] Update README
-[] Test the websocket asynchronize handling procedure
-[] Test the image auto distortion elimination function
-[] Output the segmentation example and append it to the README

@@ -230,6 +230,17 @@ class Detection_UI:
                 self.camera_matrix = None
                 self.dist_coeffs = None
                 self.calibration_file = None
+        elif self.undistortion_method == "手动调整参数":
+            # 从API参数中获取畸变系数
+            self.image_k1 = float(self.api_params.get("image_k1", 0.0))
+        
+        if self.enable_pseudo_color:
+            self.image_contrast = float(self.api_params.get("image_contrast", 1.0))
+            self.image_brightness = float(self.api_params.get("image_brightness", 0.0))
+
+        if self.enable_keystone_correction:
+            self.rot_angle_x = float(self.api_params.get("rot_angle_x", 0))
+            self.rot_angle_y = float(self.api_params.get("rot_angle_y", 0))
 
         # 设置类别标签
         if self.model_type == "分割任务":
