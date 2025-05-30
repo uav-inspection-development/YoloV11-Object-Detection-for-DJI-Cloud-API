@@ -160,7 +160,7 @@ requirements.txt      # List of dependencies
 1. Run the detection interface:
 
     ```shell
-    python src/ui.py --run-mode $RUN_MODE --oauth2-token-url $OAUTH2_TOKEN_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
+    python src/ui.py --run-mode=$RUN_MODE --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET" --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
     ```
 
     **Explanation of Arguments**:
@@ -168,11 +168,14 @@ requirements.txt      # List of dependencies
     - `--oauth2-token-url`: The URL of the OAuth2 token endpoint used to retrieve access tokens (required if authentication is enabled).
     - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
     - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
+    - `--secret-key`: The secret key used for license encryption and decryption.
+    - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/0)).
+    - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/1)).
 
 2. Run the detection API endpoints:
 
     ```shell
-    python src/ui.py --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
+    python src/ui.py --run-mode=api --oauth2-introspect-url=$OAUTH2_INTROSPECT_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
     ```
 
     **Explanation of Arguments**:
@@ -180,6 +183,9 @@ requirements.txt      # List of dependencies
     - `--oauth2-introspect-url`: The URL of the OAuth2 introspection endpoint used to validate access tokens.
     - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
     - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
+    - `--secret-key`: The secret key used for license encryption and decryption.
+    - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/2)).
+    - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/3)).
 
 3. Load the `best.pt` weight file in the interface.
 4. Select the image type (**Visible**, **EL**, or **Thermo**) and start detection.
