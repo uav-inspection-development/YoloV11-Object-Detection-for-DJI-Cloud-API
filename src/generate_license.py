@@ -2,11 +2,12 @@
 
 import json
 import argparse
+from datetime import datetime
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
 
-def generate_license(secret_key: bytes, user_email: str, license_id: str, output_path: str):
+def generate_license(secret_key: bytes, user_email: str, license_id: str, valid_until: str, output_path: str):
     """
     生成加密的许可证文件。
 
@@ -14,14 +15,22 @@ def generate_license(secret_key: bytes, user_email: str, license_id: str, output
         secret_key (bytes): 用于加密的密钥。
         user_email (str): 用户的电子邮件地址。
         license_id (str): 许可证 ID。
+        valid_until (str): 许可证的有效期，格式为 "YYYY-MM-DD"。如果为 "None"，则表示无过期日期。
         output_path (str): 输出许可证文件的路径。
     """
+    # 获取当前日期作为 issued_at
+    issued_at = datetime.now().strftime("%Y-%m-%d")
+
+    # 如果 valid_until 为 "None"，设置为无过期日期
+    if valid_until == "None":
+        valid_until = "9999-12-31"
+
     license_data = {
         "user": user_email,
         "license_id": license_id,
         "bound_fingerprint": None,
-        "issued_at": "2025-05-30",
-        "valid_until": "2026-05-30"
+        "issued_at": issued_at,
+        "valid_until": valid_until
     }
 
     raw = json.dumps(license_data).encode()
@@ -40,6 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("--secret-key", required=True, help="Secret key for license encryption.")
     parser.add_argument("--user-email", required=True, help="User email for the license.")
     parser.add_argument("--license-id", required=True, help="License ID.")
+    parser.add_argument("--valid-until", default="None", help="License expiration date (YYYY-MM-DD). Default is no expiration.")
     parser.add_argument("--output-path", default="license.dat", help="Path to save the generated license file.")
     args = parser.parse_args()
 
@@ -47,4 +57,4 @@ if __name__ == "__main__":
     secret_key = args.secret_key.encode()
 
     # 调用生成许可证函数
-    generate_license(secret_key, args.user_email, args.license_id, args.output_path)
+    generate_license(secret_key, args.user_email, args.license_id, args.valid_until, args.output_path)
