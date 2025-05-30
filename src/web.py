@@ -14,8 +14,7 @@ from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
-from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, calculate_polygon_area
-from utils import is_black_and_white,save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image
+from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image, rotate_image
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -105,6 +104,9 @@ class Detection_UI:
         self.enable_pseudo_color = False
         self.image_contrast = 1.0
         self.image_brightness = 0.0
+        self.enable_keystone_correction = False  # 启用梯形校正
+        self.rot_angle_x = 0  # 垂直旋转角度
+        self.rot_angle_y = 0  # 水平旋转角度
 
         # 初始化检测结果相关的变量
         self.detection_result = None
@@ -197,6 +199,7 @@ class Detection_UI:
         self.image_type = self.api_params.get("image_type", "可见光")
         self.selected_classes = self.api_params.get("selected_classes", list(Visible_type.keys()))
         self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
+        self.enable_keystone_correction = self.api_params.get("enable_keystone_correction", False)
         self.undistortion_method = self.api_params.get("undistortion_method", "不去除")
 
         # 通过API方式上传相机标定文件
@@ -374,16 +377,6 @@ class Detection_UI:
         self.logTable = st.session_state['logTable']
         self.model = st.session_state['model']
 
-        # 图像畸变校正参数设置
-        st.sidebar.header("🖼️ 输入图像处理")
-        # 添加伪彩色转换选项
-        self.enable_pseudo_color = st.sidebar.checkbox("启用伪彩色转换", value=False)
-        st.sidebar.caption("💡 提示: 伪彩色转换针对于输入图像为黑白图像且图像类型为红外热图。")
-        # 如果启用伪彩色转换，显示对比度和亮度调整选项
-        if self.enable_pseudo_color:
-            self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
-            self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
-
         st.sidebar.header("⚙️ 检测阈值设定")
         # 置信度阈值的滑动条
         self.conf_threshold = float(st.sidebar.slider("置信度设定", min_value=0.0, max_value=1.0, value=0.15))
@@ -539,12 +532,32 @@ class Detection_UI:
             st.sidebar.header("🎥 视频输出设置")
             self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
 
+        # 图像畸变校正参数设置
+        st.sidebar.header("🖼️ 输入图像或视频处理")
+        # 添加伪彩色转换选项
+        self.enable_pseudo_color = st.sidebar.checkbox("启用伪彩色转换", value=False)
+        st.sidebar.caption("💡 提示: 伪彩色转换针对于输入图像为黑白图像且图像类型为红外热图。")
+        # 如果启用伪彩色转换，显示对比度和亮度调整选项
+        if self.enable_pseudo_color:
+            self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
+            self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
+
+        # 添加梯形校正选项
+        self.enable_keystone_correction = st.sidebar.checkbox("启用梯形校正", value=False)
+        if self.enable_keystone_correction:
+            # 滑动条调整水平和垂直旋转角度
+            self.rot_angle_x = st.sidebar.slider("垂直旋转角度（绕X轴）", min_value=-90, max_value=90, value=0, step=1)
+            self.rot_angle_y = st.sidebar.slider("水平旋转角度（绕Y轴）", min_value=-90, max_value=90, value=0, step=1)
+        st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。")
+        
+        # 添加图像畸变校正选项
         self.undistortion_method = st.sidebar.radio(
-            "选择畸变校正类型",
+            "选择相机畸变校正类型",
             options=["不去除", "相机参数计算", "手动调整参数"],
             index=0  # 默认选择第一个选项
         )
         st.sidebar.caption("💡 提示: 相机参数计算需要用户输入相机标定文件，手动调整参数需要保证输入图像包含较为明显的线条用于修正畸变。")
+
         if self.undistortion_method == "相机参数计算":
             calibration_file = st.sidebar.file_uploader(
                 "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
@@ -591,27 +604,58 @@ class Detection_UI:
             self.image_k1 = st.sidebar.slider("调整畸变系数 (k1)", min_value=-0.5, max_value=0.5, value=0.0, step=0.01)
             st.sidebar.caption("💡 提示: 使用滑动条调整图像畸变系数前，用户需要上传畸变后的图片。")
 
-            # Apply distortion adjustment using the slider value
-            if self.uploaded_file is not None:
-                if isinstance(self.uploaded_file, list):  # Handle multiple file uploads
-                    for uploaded_file in self.uploaded_file:
-                        source_img = uploaded_file.read()
-                        file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
-                        image_ini = cv2.imdecode(file_bytes, 1)
-                        distorted_image = auto_undistort_image(image_ini, self.image_k1)
-
-                        # Display original and distorted images for each file
-                        st.image([image_ini, distorted_image], caption=[f"原始图像: {uploaded_file.name}", f"调整后的图像: {uploaded_file.name}"], channels="BGR")
-                else:  # Handle single file upload
-                    source_img = self.uploaded_file.read()
+        # Apply distortion adjustment using the slider value
+        if self.uploaded_file is not None:
+            if isinstance(self.uploaded_file, list):  # Handle multiple file uploads
+                for uploaded_file in self.uploaded_file:
+                    source_img = uploaded_file.read()
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
-                    distorted_image = auto_undistort_image(image_ini, self.image_k1)
+                    if self.enable_pseudo_color and is_black_and_white(image_ini):
+                        converted_image = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
+                    else:
+                        converted_image = image_ini.copy()
 
-                    # Display original and distorted images
-                    st.image([image_ini, distorted_image], caption=[f"原始图像: {self.uploaded_file.name}", f"调整后的图像: {self.uploaded_file.name}"], channels="BGR")
-            else:
-                st.sidebar.warning("💡 请先上传图像以调整畸变系数。")
+                    if self.enable_keystone_correction:
+                        corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                    else:
+                        corrected_image = converted_image.copy()
+
+                    if self.undistortion_method == "相机参数计算" and self.camera_matrix is not None and self.dist_coeffs is not None:
+                        distorted_image = camera_undistortion(corrected_image, self.camera_matrix, self.dist_coeffs)
+                    elif self.undistortion_method == "手动调整参数":
+                        distorted_image = auto_undistort_image(corrected_image, self.image_k1)
+                    else:
+                        distorted_image = corrected_image.copy()
+
+                    # Display original and distorted images for each file
+                    st.sidebar.image([image_ini, distorted_image], caption=[f"原始图像: {uploaded_file.name}", f"调整后的图像: {uploaded_file.name}"], channels="BGR")
+            else:  # Handle single file upload
+                source_img = self.uploaded_file.read()
+                file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
+                image_ini = cv2.imdecode(file_bytes, 1)
+                
+                if self.enable_pseudo_color and is_black_and_white(image_ini):
+                    converted_image = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
+                else:
+                    converted_image = image_ini.copy()
+
+                if self.enable_keystone_correction:
+                    corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                else:
+                    corrected_image = converted_image.copy()
+
+                if self.undistortion_method == "相机参数计算" and self.camera_matrix is not None and self.dist_coeffs is not None:
+                    distorted_image = camera_undistortion(corrected_image, self.camera_matrix, self.dist_coeffs)
+                elif self.undistortion_method == "手动调整参数":
+                    distorted_image = auto_undistort_image(corrected_image, self.image_k1)
+                else:
+                    distorted_image = corrected_image.copy()
+
+                # Display original and distorted images
+                st.sidebar.image([image_ini, distorted_image], caption=[f"原始图像: {self.uploaded_file.name}", f"调整后的图像: {self.uploaded_file.name}"], channels="BGR")
+        else:
+            st.sidebar.warning("💡 请先上传图像以调整畸变系数。")
 
         st.sidebar.header("📁 输出文件路径设置")
         self.output_path = st.sidebar.text_input("输出文件路径", value="../output", placeholder="例如：../output 或 D:/videos")
@@ -732,11 +776,16 @@ class Detection_UI:
                         frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
                     elif self.undistortion_method == "手动调整参数":
                         frame = auto_undistort_image(frame, self.image_k1)
+
+                    # 梯形校正
+                    if self.enable_keystone_correction:
+                        frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
                     # 调节摄像头的分辨率
                     # 调整图像尺寸
                     frame = cv2.resize(frame, (self.new_width, self.new_height))
-                    is_bw = is_black_and_white(frame)
 
+                    # 检查图像是否为黑白图像
+                    is_bw = is_black_and_white(frame)
                     # 如果启用了伪彩色转换，应用转换
                     if self.enable_pseudo_color and is_bw:
                         frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
@@ -831,13 +880,18 @@ class Detection_UI:
                     source_img = uploaded_file.read()
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
-                    is_bw = is_black_and_white(image_ini)
                     # 去畸变
                     if self.undistortion_method == "相机参数计算":
                         image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
                     elif self.undistortion_method == "手动调整参数":
                         image_ini = auto_undistort_image(image_ini, self.image_k1)
 
+                    # 梯形校正
+                    if self.enable_keystone_correction:
+                        image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+
+                    # 检查图像是否为黑白图像
+                    is_bw = is_black_and_white(image_ini)
                     # 如果启用了伪彩色转换，应用转换
                     if self.enable_pseudo_color and is_bw:
                         image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
@@ -874,13 +928,18 @@ class Detection_UI:
                 source_img = self.uploaded_file.read()
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
-                is_bw = is_black_and_white(image_ini)
                 # 去畸变
                 if self.undistortion_method == "相机参数计算":
                     image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
                 elif self.undistortion_method == "手动调整参数":
                     image_ini = auto_undistort_image(image_ini, self.image_k1)
 
+                # 梯形校正
+                if self.enable_keystone_correction:
+                    image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+
+                # 检查图像是否为黑白图像
+                is_bw = is_black_and_white(image_ini)
                 # 如果启用了伪彩色转换，应用转换
                 if self.enable_pseudo_color and is_bw:
                     image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
@@ -978,8 +1037,12 @@ class Detection_UI:
                                     frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
                                 elif self.undistortion_method == "手动调整参数":
                                     frame = auto_undistort_image(frame, self.image_k1)
-                                is_bw = is_black_and_white(frame)
+                                # 梯形校正
+                                if self.enable_keystone_correction:
+                                    frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
 
+                                # 检查是否为黑白图像
+                                is_bw = is_black_and_white(frame)
                                 # 如果启用了伪彩色转换，应用转换
                                 if self.enable_pseudo_color and is_bw:
                                     frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
@@ -1107,8 +1170,13 @@ class Detection_UI:
                                 frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
                             elif self.undistortion_method == "手动调整参数":
                                 frame = auto_undistort_image(frame, self.image_k1)
-                            is_bw = is_black_and_white(frame)
 
+                            # 梯形校正
+                            if self.enable_keystone_correction:
+                                frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+
+                            # 检查是否为黑白图像
+                            is_bw = is_black_and_white(frame)
                             # 如果启用了伪彩色转换，应用转换
                             if self.enable_pseudo_color and is_bw:
                                 frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)

@@ -401,3 +401,62 @@ def auto_undistort_image(img, k1):
     undistorted = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR)
 
     return undistorted
+
+
+def rotate_image(img, angle_x, angle_y):
+    """
+    对图像进行旋转变换。
+    参数：
+        img (numpy.ndarray): 输入的图像。
+        angle_x (float): 绕X轴旋转的角度（单位：度）。
+        angle_y (float): 绕Y轴旋转的角度（单位：度）。
+    返回：
+        numpy.ndarray: 旋转变换后的图像。
+    """
+    h, w = img.shape[:2]
+    cx, cy = w / 2, h / 2
+
+    # 弧度制
+    pitch = np.deg2rad(angle_x)
+    roll = np.deg2rad(angle_y)
+
+    # 构造 K
+    f = 1.2 * max(h, w)
+    K = np.array([[f, 0, cx],
+                  [0, f, cy],
+                  [0, 0, 1]])
+    K_inv = np.linalg.inv(K)
+
+    # 构造 R
+    Rx = np.array([[1, 0, 0],
+                   [0, np.cos(pitch), -np.sin(pitch)],
+                   [0, np.sin(pitch),  np.cos(pitch)]])
+    
+    Rz = np.array([[np.cos(roll), -np.sin(roll), 0],
+                   [np.sin(roll),  np.cos(roll), 0],
+                   [0, 0, 1]])
+    R = Rz @ Rx
+
+    # 透视矩阵 H
+    H = K @ R @ K_inv
+
+    # 计算原图中心变换后的位置
+    orig_center = np.array([[cx], [cy], [1]])
+    new_center = H @ orig_center
+    new_center /= new_center[2]
+
+    # 偏移量（让变换后图像的中心 = 原中心）
+    dx = cx - new_center[0, 0]
+    dy = cy - new_center[1, 0]
+
+    # 构造平移矩阵 T
+    T = np.array([[1, 0, dx],
+                  [0, 1, dy],
+                  [0, 0, 1]])
+
+    # 加入平移补偿后的新变换矩阵
+    H_corrected = T @ H
+
+    # 应用变换
+    result = cv2.warpPerspective(img, H_corrected, (w, h), flags=cv2.INTER_LINEAR)
+    return result
