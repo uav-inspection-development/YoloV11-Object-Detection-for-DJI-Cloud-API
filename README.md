@@ -184,10 +184,32 @@ requirements.txt              # List of dependencies
 
 ### Running the Detection Interface
 
-1. Run the detection interface:
+1. **Generate a License File**:
+
+    Before running the detection interface, you need to generate a license file. Use the following command:
 
     ```shell
-    python src/ui.py --run-mode=$RUN_MODE --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET" --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
+    python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" --user-email "user@example.com" --license-id "LIC-000001" --valid-until "2026-12-31" --output-path "license.dat"
+    ```
+
+    **Explanation of Arguments**:
+    - `--secret-key`: The secret key used for encrypting the license file.
+    - `--user-email`: The email address of the user associated with the license.
+    - `--license-id`: A unique identifier for the license.
+    - `--valid-until`: The expiration date of the license in `YYYY-MM-DD` format. Use `"None"` for no expiration.
+    - `--output-path`: The path where the generated license file will be saved (default: [license.dat](http://_vscodecontentref_/0)).
+
+    **Example**:
+    ```shell
+    python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" --user-email "alice@example.com" --license-id "LIC-000002" --valid-until "None" --output-path "license.dat"
+    ```
+
+    After running this command, the encrypted license file will be saved to the specified path.
+
+2. **Run the Detection Interface**:
+
+    ```shell
+    python src/ui.py --run-mode=$RUN_MODE --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
     ```
 
     **Explanation of Arguments**:
@@ -196,10 +218,10 @@ requirements.txt              # List of dependencies
     - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
     - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
     - `--secret-key`: The secret key used for license encryption and decryption.
-    - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/0)).
-    - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/1)).
+    - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/1)).
+    - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/2)).
 
-2. Run the detection API endpoints:
+3. **Run the Detection API Endpoints**:
 
     ```shell
     python src/ui.py --run-mode=api --oauth2-introspect-url=$OAUTH2_INTROSPECT_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
@@ -211,11 +233,14 @@ requirements.txt              # List of dependencies
     - `--client-id`: The client ID for the application, used to authenticate with the OAuth2 server.
     - `--client-secret`: The client secret for the application, used to authenticate with the OAuth2 server.
     - `--secret-key`: The secret key used for license encryption and decryption.
-    - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/2)).
-    - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/3)).
+    - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/3)).
+    - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/4)).
 
-3. Load the `best.pt` weight file in the interface.
-4. Select the image type (**Visible**, **EL**, or **Thermo**) and start detection.
+4. **Load the `best.pt` Weight File**:
+    - Open the detection interface and load the trained weight file (`best.pt`).
+
+5. **Select the Image Type**:
+    - Choose the image type (**Visible**, **EL**, or **Thermo**) and start detection.
 
 ---
 
