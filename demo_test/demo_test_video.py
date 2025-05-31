@@ -1,9 +1,15 @@
+import sys
+import os
 import argparse
 import random
 import cv2
 import numpy as np
 from PIL import ImageFont, ImageDraw, Image
 from hashlib import md5
+
+# Add the parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
 from model import Web_Detector
 from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type
 

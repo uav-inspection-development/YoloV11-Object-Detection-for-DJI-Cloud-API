@@ -1,9 +1,15 @@
+import sys
+import os
 import argparse
 import random
 import cv2
 import numpy as np
 from PIL import ImageFont, ImageDraw, Image
 from hashlib import md5
+
+# Add the parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
 from model import Web_Detector
 from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type
 
@@ -97,33 +103,33 @@ def process_frame(model, image):
 
 if __name__ == "__main__":
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Process an image with a YOLO model.")
+    parser = argparse.ArgumentParser(description="Process a camera feed with a YOLO model.")
     parser.add_argument("--model_type", type=str, required=True, choices=["detection", "segmentation"], help="Type of model task.", default="detection")
-    parser.add_argument("--image_type", type=str, required=True, choices=["thermo", "el", "visible"], help="Type of image.", default="visible")
-    parser.add_argument("--image_path", type=str, required=True, help="Path to the input image.", default="./icon/OIP.jpg")
+    parser.add_argument("--video_type", type=str, required=True, choices=["thermo", "el", "visible"], help="Type of video.", default="visible")
+    parser.add_argument("--camera_index", type=int, required=True, help="Camera index.", default=0)
     args = parser.parse_args()
 
     model = Web_Detector()
 
     # Set class names and colors based on image type
     if args.model_type == "detection":
-        if args.image_type == "thermo":
+        if args.video_type == "thermo":
             cls_name = Thermo_type
             model.load_model("./weights/yolo11s-thermo.pt")
-        elif args.image_type == "el":
+        elif args.video_type == "el":
             cls_name = EL_type
             model.load_model("./weights/yolo11s-el.pt")
-        elif args.image_type == "visible":
+        elif args.video_type == "visible":
             cls_name = Visible_type
             model.load_model("./weights/yolo11s-visible.pt")
         else:
             raise ValueError("Invalid image type.")
     elif args.model_type == "segmentation":
-        if args.image_type == "thermo":
+        if args.video_type == "thermo":
             model.load_model("./weights/yolo11s-thermo-seg.pt")
-        elif args.image_type == "el":
+        elif args.video_type == "el":
             model.load_model("./weights/yolo11s-el-seg.pt")
-        elif args.image_type == "visible":
+        elif args.video_type == "visible":
             model.load_model("./weights/yolo11s-visible-seg.pt")
         else:
             raise ValueError("Invalid image type.")
@@ -131,13 +137,19 @@ if __name__ == "__main__":
     else:
         raise ValueError("Invalid model type.")
 
-    image = cv2.imread(args.image_path)
-    if image is not None:
-        processed_image = process_frame(model, image)
-        processed_image = cv2.resize(processed_image, (800, 500))
-        cv2.imshow('Processed Image', processed_image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    else:
-        print('Image not found.')
+    # 摄像头实时处理
+    cap = cv2.VideoCapture(args.camera_index)
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        exit()
 
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        processed_frame = process_frame(model, frame)
+        cv2.imshow('Camera Feed', processed_frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cap.release()
+    cv2.destroyAllWindows()

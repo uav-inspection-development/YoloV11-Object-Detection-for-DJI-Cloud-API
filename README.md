@@ -73,30 +73,57 @@ This project provides a comprehensive solution for detecting solar panel anomali
 ## File Structure
 
 ```plaintext
-src/
-├── _init_.py                 # Init
-├── api_server.py             # Flask app for object detection
-├── auth.py                   # Functions to verify OAuth2 tokens and get access tokens
-├── chinese_name.py           # Chinese name of labels
+demo_test/                    # Directory for demo test scripts
 ├── demo_test_camera.py       # Demo of testing camera
 ├── demo_test_image.py        # Demo of testing image
 ├── demo_test_video.py        # Demo of testing video
+example/
+├── EL/
+│   ├── image/
+│   ├── video/
+├── Thermo/
+│   ├── image/
+│   ├── video/
+├── Visible/
+│   ├── image/
+│   ├── video/
+fonts/
+├── Arial.ttf                 # Font file for visualization
+icon/
+├── ini.jpg                   # Icon for the application
+output/
+├── logs/
+src/                          # Source code directory
+├── _init_.py                 # Init
+├── api_server.py             # Flask app for object detection
+├── auth.py                   # Functions to verify OAuth2 tokens and get access tokens
+├── check_license.py          # License verification and management
+├── chinese_name.py           # Chinese name of labels
+├── generate_license.py       # Script to generate license file
 ├── log.py                    # Tools for image/video processing and logging
 ├── model.py                  # YOLOv8 detector with model loading and processing
 ├── train_det.py              # Script of training detection model
 ├── train_interface.py        # Script of training entrance
-├── train_seg.py              # Script of training segmennt model
+├── train_seg.py              # Script of training segmentation model
 ├── ui.py                     # Main interface for detection
 ├── ui_style.py               # Custom CSS and HTML styles for Streamlit app
 ├── utils.py                  # Utility functions for preprocessing and postprocessing
-├── web.py
-util_data             # Tools for processing non txt format datasets
-models/               # Contains model definitions
-runs/                 # Stores training results and weights
-weights/              # YOLO pre training weights for various versions
-fonts/
-├── Arial.ttf                 # Font file for visualization
-requirements.txt      # List of dependencies
+├── web.py                    # Web interface for detection
+tempDir/
+ultralytics/                  # YOLOv8 source code
+util_data/                    # Tools for processing non txt format datasets
+├── util_dataset_enhance.py   # Dataset enhancement tools
+├── util_dataset_resize.py    # Dataset resizing tools
+├── util_dataset_split.py     # Dataset splitting tools
+├── util_visual.py            # Visualization tools
+├── util_xml_to_txt_seg.py    # XML to TXT segmentation tools
+├── util_xml_to_txt.py        # XML to TXT conversion tools
+models/                       # Contains model definitions
+runs/                         # Stores training results and weights
+weights/                      # YOLO pre training weights for various versions
+docker-compose.yml            # Docker Compose file for containerized deployment
+Dockerfile                    # Dockerfile for building the application image
+requirements.txt              # List of dependencies
 ```
 
 ---
