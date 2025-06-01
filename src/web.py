@@ -67,7 +67,7 @@ class Detection_UI:
         self.input_source = None
         self.rtsp_input_url = None
         self.enable_video_output = None
-        self.output_path = None
+        self.output_path = abs_path("../output/")
         self.enable_rtsp_output = None
         self.rtsp_output_url = None
 
@@ -144,17 +144,10 @@ class Detection_UI:
         self.calibration_file = None
         self.image_k1 = 0.0  # 畸变系数
 
-        self.csv_output_path = abs_path("../tempDir/")
+        self.csv_output_path = abs_path("../output/logs/", path_type="current")
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         # 初始化日志数据保存路径
         self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
-
-        # 获取文件所在的目录路径
-        log_dir = os.path.dirname(self.saved_log_data)
-
-        # 检查目录是否存在，如果不存在则创建
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
 
         # 初始化
         self.available_cameras = get_camera_names()
@@ -172,7 +165,7 @@ class Detection_UI:
         用于 Flask 模式，根据 API 提供的参数设置实例变量。
         """
         # 根据 API 提供的参数设置实例变量
-        self.csv_output_path = self.api_params.get("csv_output_path", abs_path("../tempDir/"))
+        self.csv_output_path = self.api_params.get("csv_output_path", abs_path("../output/logs/", path_type="current"))
 
         # 确保路径以斜杠结尾
         if not self.csv_output_path.endswith(os.sep):
@@ -182,12 +175,9 @@ class Detection_UI:
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
 
-        # 获取文件所在的目录路径
-        log_dir = os.path.dirname(self.saved_log_data)
-
         # 检查目录是否存在，如果不存在则创建
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        if not os.path.exists(self.csv_output_path):
+            os.makedirs(self.csv_output_path)
 
         self.available_cameras = get_camera_names()
         self.logTable = LogTable(self.saved_log_data)
@@ -335,8 +325,8 @@ class Detection_UI:
         # 添加 CSV 输出路径设置
         st.sidebar.header("📂 日志保存路径设置")
         self.csv_output_path = st.sidebar.text_input(
-            "输入日志保存路径",
-            value=abs_path(f"../output/logs", path_type="current"),  # 默认路径
+            "输出日志保存路径",
+            value=abs_path("../output/logs", path_type="current"),  # 默认路径
             placeholder="例如：D:/output/logs"
         )
 
@@ -346,7 +336,7 @@ class Detection_UI:
 
         st.sidebar.header("📤 日志导出格式设置")
         self.export_format = st.sidebar.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
-        st.sidebar.caption(f"💡 提示: {self.export_format} 文件将导出至 {self.saved_log_data} 路径。")
+        st.sidebar.caption(f"💡 提示: {self.export_format} 文件将导出至 {self.csv_output_path} 路径。")
 
         # 根据用户选择的导出格式设置文件后缀
         if self.export_format == "CSV":
@@ -362,12 +352,9 @@ class Detection_UI:
         current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}{file_suffix}")
 
-        # 获取文件所在的目录路径
-        log_dir = os.path.dirname(self.saved_log_data)
-
         # 检查目录是否存在，如果不存在则创建
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        if not os.path.exists(self.csv_output_path):
+            os.makedirs(self.csv_output_path)
 
         # Streamlit模式初始化 session state
         if 'logTable' not in st.session_state:
@@ -671,7 +658,8 @@ class Detection_UI:
             st.sidebar.warning("💡 请先上传图像以调整畸变系数。")
 
         st.sidebar.header("📁 输出文件路径设置")
-        self.output_path = st.sidebar.text_input("输出文件路径", value="../output", placeholder="例如：../output 或 D:/videos")
+        # FIXME:
+        self.output_path = st.sidebar.text_input("输出文件路径", value=abs_path("../output", path_type="current"), placeholder="例如：../output 或 D:/videos")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             st.sidebar.header("📡 RTSP/RTMP输出设置")
@@ -689,8 +677,20 @@ class Detection_UI:
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             self._process_stream()
         elif self.input_source == "图片文件":
+            # Reset file pointer for uploaded files
+            if isinstance(self.uploaded_file, list):  # Multiple files
+                for uploaded_file in self.uploaded_file:
+                    uploaded_file.seek(0)  # Reset file pointer for each file
+            elif self.uploaded_file:  # Single file
+                self.uploaded_file.seek(0)  # Reset file pointer
             self._process_image_input()
         elif self.input_source == "视频文件":
+            # Reset file pointer for uploaded videos
+            if isinstance(self.uploaded_video, list):  # Multiple videos
+                for uploaded_video in self.uploaded_video:
+                    uploaded_video.seek(0)  # Reset file pointer for each video
+            elif self.uploaded_video:  # Single video
+                self.uploaded_video.seek(0)  # Reset file pointer
             self._process_video_input()
         else:
             st.warning("请选择有效的输入源！")
@@ -744,6 +744,10 @@ class Detection_UI:
         try:
 
             cap = cv2.VideoCapture(input_source)
+
+            if not cap.isOpened():
+                st.error(f"无法打开摄像头或RTSP/RTMP流，请检查地址或设备连接！")
+                return
 
             # 获取视频属性
             fps = cap.get(cv2.CAP_PROP_FPS)
@@ -843,19 +847,7 @@ class Detection_UI:
                 else:
                     break
 
-            if self.export_format == "CSV":
-                self.logTable.save_to_csv(self.saved_log_data)
-            elif self.export_format == "Excel":
-                self.logTable.save_to_excel(self.saved_log_data)
-            elif self.export_format == "JSON":
-                self.logTable.save_to_json(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)
-            cap.release()
-            if self.enable_video_output:
-                video_out.release()
-            if self.enable_rtsp_output:
-                stream_out.release()
-
         finally:
             cap.release()
             if self.enable_video_output:
@@ -868,7 +860,6 @@ class Detection_UI:
                 name_in = self.uploaded_video.name
 
             res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
-            st.write("识别结果文件已经保存：" + self.saved_log_data)
             if res:
                 st.write(f"结果的目标文件已经保存：{res}")
 
@@ -891,6 +882,9 @@ class Detection_UI:
                 for idx, uploaded_file in enumerate(self.uploaded_file):
                     # 处理每个上传的图片文件
                     source_img = uploaded_file.read()
+                    if not source_img:
+                        st.error(f"文件 {uploaded_file.name} 读取失败或为空！")
+                        continue
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
                     # 去畸变
@@ -939,6 +933,9 @@ class Detection_UI:
             else:
                 # 单个文件处理
                 source_img = self.uploaded_file.read()
+                if not source_img:
+                    st.error(f"文件 {self.uploaded_file.name} 读取失败或为空！")
+                    return
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
                 # 去畸变
@@ -981,12 +978,6 @@ class Detection_UI:
 
                 st.success("单张图片检测完成！")
 
-            if self.export_format == "CSV":
-                self.logTable.save_to_csv(self.saved_log_data)
-            elif self.export_format == "Excel":
-                self.logTable.save_to_excel(self.saved_log_data)
-            elif self.export_format == "JSON":
-                self.logTable.save_to_json(self.saved_log_data)
             self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
         else:
             st.warning("请上传图片文件！")
@@ -1019,6 +1010,9 @@ class Detection_UI:
                         tfile.seek(0)  # 确保文件指针回到文件开头
 
                         cap = cv2.VideoCapture(tfile.name)
+                        if not cap.isOpened():
+                            st.error(f"无法打开视频文件: {uploaded_video.name}")
+                            continue  # Skip to the next file
 
                         # 获取视频总帧数和帧率
                         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -1104,17 +1098,7 @@ class Detection_UI:
                             else:
                                 break
 
-                        if self.export_format == "CSV":
-                            self.logTable.save_to_csv(self.saved_log_data)
-                        elif self.export_format == "Excel":
-                            self.logTable.save_to_excel(self.saved_log_data)
-                        elif self.export_format == "JSON":
-                            self.logTable.save_to_json(self.saved_log_data)
                         self.logTable.update_table(self.log_table_placeholder)
-                        cap.release()
-                        if self.enable_video_output:
-                            video_out.release()
-
                     finally:
                         cap.release()
                         if self.enable_video_output:
@@ -1126,7 +1110,6 @@ class Detection_UI:
                             name_in = uploaded_video.name
 
                         res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
-                        st.write("识别结果文件已经保存：" + self.saved_log_data)
                         if res:
                             st.write(f"结果的目标文件已经保存：{res}")
 
@@ -1150,6 +1133,10 @@ class Detection_UI:
                     tfile.seek(0)  # 确保文件指针回到文件开头
 
                     cap = cv2.VideoCapture(tfile.name)
+
+                    if not cap.isOpened():
+                        st.error(f"无法打开视频文件: {uploaded_video.name}")
+                        return
 
                     # 获取视频总帧数和帧率
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -1246,17 +1233,7 @@ class Detection_UI:
                         else:
                             break
 
-                    if self.export_format == "CSV":
-                        self.logTable.save_to_csv(self.saved_log_data)
-                    elif self.export_format == "Excel":
-                        self.logTable.save_to_excel(self.saved_log_data)
-                    elif self.export_format == "JSON":
-                        self.logTable.save_to_json(self.saved_log_data)
                     self.logTable.update_table(self.log_table_placeholder)
-                    cap.release()
-                    if self.enable_video_output:
-                        video_out.release()
-
                 finally:
                     cap.release()
                     if self.enable_video_output:
@@ -1268,7 +1245,6 @@ class Detection_UI:
                         name_in = self.uploaded_video.name
 
                     res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
-                    st.write("识别结果文件已经保存：" + self.saved_log_data)
                     if res:
                         st.write(f"结果的目标文件已经保存：{res}")
 
@@ -1398,7 +1374,7 @@ class Detection_UI:
                         # 获取中文名
                         chinese_name = self.cls_name.get(name, "未知类别")
 
-                        res = disp_res.concat_results(name, chinese_name,bbox, str(int(aim_frame_area)),
+                        res = disp_res.concat_results(name, chinese_name, bbox, str(int(aim_frame_area)),
                                                     video_time if video_time is not None else str(round(use_time, 2)))
 
                         # 添加日志条目
@@ -1489,6 +1465,7 @@ class Detection_UI:
 
         # 在第一列设置显示模式的选择
         with col1:
+            st.header("📷 视频/图片检测系统")
             self.display_mode = st.radio("单/双画面显示设置", ["叠加显示", "对比显示"])
             # 根据显示模式创建用于显示视频画面的空容器
             if self.display_mode == "叠加显示":
@@ -1510,7 +1487,7 @@ class Detection_UI:
 
         # 在最右侧列设置识别结果表格的显示
         with col2:
-            st.write("当前图片检测结果")
+            st.header("🖼️ 当前图片检测结果")
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
 
@@ -1518,31 +1495,23 @@ class Detection_UI:
             st.write("---------------------")
             if st.button("导出结果"):
                 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-                self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}.csv")
-                
-                if self.export_format == "CSV":
-                    file_path = f"{self.saved_log_data}.csv"
-                    self.logTable.save_to_csv(file_path)
-                    st.write(f"识别结果文件已经保存为 CSV 格式：{file_path}")
-                elif self.export_format == "Excel":
-                    file_path = f"{self.saved_log_data}.xlsx"
-                    self.logTable.save_to_excel(file_path)
-                    st.write(f"识别结果文件已经保存为 Excel 格式：{file_path}")
-                elif self.export_format == "JSON":
-                    file_path = f"{self.saved_log_data}.json"
-                    self.logTable.save_to_json(file_path)
-                    st.write(f"识别结果文件已经保存为 JSON 格式：{file_path}")
+                self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}")
 
-                if self.uploaded_video is None:
-                    name_in = None
-                else:
-                    name_in = self.uploaded_video.name
-                res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
-                st.write("识别结果文件已经保存：" + self.saved_log_data)
-                if res:
-                    st.write(f"结果的目标文件已经保存：{res}")
+                if self.export_format == "CSV":
+                    self.saved_log_data += ".csv"
+                    self.logTable.save_to_csv(self.saved_log_data)
+                    st.write(f"识别结果文件已经保存为 CSV 格式：{self.saved_log_data}")
+                elif self.export_format == "Excel":
+                    self.saved_log_data += ".xlsx"
+                    self.logTable.save_to_excel(self.saved_log_data)
+                    st.write(f"识别结果文件已经保存为 Excel 格式：{self.saved_log_data}")
+                elif self.export_format == "JSON":
+                    self.saved_log_data += ".json"
+                    self.logTable.save_to_json(self.saved_log_data)
+                    st.write(f"识别结果文件已经保存为 JSON 格式：{self.saved_log_data}")
+
                 self.logTable.clear_data()
-            st.write("历史日志")
+            st.header("📜 历史日志")
             # 显示所有结果记录的空白表格
             self.log_table_placeholder = st.empty()
             self.logTable.update_table(self.log_table_placeholder)
