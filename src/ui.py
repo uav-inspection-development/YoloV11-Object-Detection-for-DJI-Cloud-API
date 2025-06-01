@@ -1,39 +1,40 @@
 import sys
 import os
-import subprocess
 import argparse
+import streamlit.web.cli as stcli
 from check_license import check_license
 from QtFusion.path import abs_path
-
 
 # 设置环境变量以避免 OpenMP 错误
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["ENABLE_OAUTH"] = "FALSE"
 
-
 def run_streamlit(script_path):
     """
-    使用当前 Python 环境运行 Streamlit 脚本。
-
+    使用 streamlit.web.cli 模块运行 Streamlit 脚本。
     Args:
         script_path (str): 要运行的脚本路径
-        client_id (str): OAuth2 client ID
-        client_secret (str): OAuth2 client secret
-
     Returns:
         None
     """
-    # 获取当前 Python 解释器的路径
-    python_path = sys.executable
-
-    # 构建运行命令
-    command = f'"{python_path}" -m streamlit run "{script_path}"'
-
-    # 执行命令
-    result = subprocess.run(command, shell=True)
-    if result.returncode != 0:
-        print("Streamlit 脚本运行出错。")
-
+    # 保存原始命令行参数
+    original_argv = sys.argv.copy()
+    
+    try:
+        # 设置 streamlit 运行参数
+        sys.argv = [
+            "streamlit",
+            "run",
+            script_path,
+            "--global.developmentMode=false",
+        ]
+        # 执行 streamlit CLI
+        stcli.main()
+    except Exception as e:
+        print(f"Streamlit 脚本运行出错: {e}")
+    finally:
+        # 恢复原始命令行参数
+        sys.argv = original_argv
 
 if __name__ == "__main__":
     # 使用 argparse 解析命令行参数
@@ -50,7 +51,6 @@ if __name__ == "__main__":
 
     # 将 SECRET_KEY 转换为字节
     secret_key = args.secret_key.encode()
-
     check_license(secret_key, args.license_file, args.bind_info_file)
 
     # 设置环境变量以传递 OAuth2 配置
@@ -62,14 +62,11 @@ if __name__ == "__main__":
     if args.run_mode == "streamlit":
         # 指定 Streamlit 脚本路径
         script_path = abs_path("web.py")
-
         # 运行 Streamlit 脚本
         run_streamlit(script_path)
-
     elif args.run_mode == "api":
         # 运行 Flask API
         from api_server import socketio, app
         socketio.run(app, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True)
-
     else:
         print(f"Invalid RUN_MODE: {args.run_mode}. Please use 'streamlit' or 'api'.")

@@ -132,7 +132,7 @@ requirements.txt              # List of dependencies
 
 ### Training the Model
 
-1. Place the dataset in the project `datasets` directory.
+1. **Place the dataset in the project `datasets` directory.**
 
 2. **Run the Training Script Using Gradio Interface**:
 
