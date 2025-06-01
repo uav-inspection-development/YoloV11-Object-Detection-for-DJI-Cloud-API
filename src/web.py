@@ -533,9 +533,11 @@ class Detection_UI:
             st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
         elif self.input_source == "图片文件":
             self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            st.sidebar.write(f"📂 已上传图片数量: {len(self.uploaded_file)}")
             st.sidebar.caption("💡 提示: 请选择图片并点击'开始运行'按钮，进行图片检测！")
         elif self.input_source == "视频文件":
             self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi", "mov"], accept_multiple_files=True)
+            st.sidebar.write(f"📂 已上传视频数量: {len(self.uploaded_video)}")
             st.sidebar.caption("💡 请选择视频并点击'开始运行'按钮，进行视频检测！")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
@@ -616,7 +618,7 @@ class Detection_UI:
             st.sidebar.caption("💡 提示: 使用滑动条调整图像畸变系数前，用户需要上传畸变后的图片。")
 
         # Apply distortion adjustment using the slider value
-        if self.uploaded_file is not None:
+        if self.uploaded_file:
             if isinstance(self.uploaded_file, list):  # Handle multiple file uploads
                 for uploaded_file in self.uploaded_file:
                     source_img = uploaded_file.read()
@@ -875,7 +877,7 @@ class Detection_UI:
         处理上传的图片文件。
         """
         # 如果上传了图片文件
-        if self.uploaded_file is not None:
+        if self.uploaded_file:
             # output/image/xxx.jpg
 
             self.logTable.clear_frames()
@@ -993,7 +995,7 @@ class Detection_UI:
         """
         处理上传的视频文件。
         """
-        if self.uploaded_video is not None:
+        if self.uploaded_video:
             # output/video_name/video/xxx.avi
 
             # 处理上传的视频
