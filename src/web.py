@@ -8,8 +8,6 @@ import numpy as np
 import streamlit as st
 from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
-from PIL import Image
-
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
