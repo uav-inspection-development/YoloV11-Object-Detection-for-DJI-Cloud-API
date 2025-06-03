@@ -27,12 +27,12 @@ Visible_type = {
     'zw': "脏污",
     'yyzd_zw': "遮挡_脏污",
     'ns': "鸟粪",
-    'ygfs_yyzd': "阳光反射_遮挡",
     'yyzd_ns': "遮挡_鸟粪",
     'zw_ns': "脏污_鸟粪",
     'gfbzjbx': "光伏板组件变形",
     'gfbqs': "光伏板缺失",
-    'mbsl': "面板碎裂"
+    'mbsl': "面板碎裂",
+    'snow': "积雪"
 }
 
 Other_type = {
@@ -41,7 +41,8 @@ Other_type = {
 }
 
 Segmentation_type = {
-    'solar_panel': "太阳能板"           # Solar panel
+    'component': "单组件",           # Solar panel
+    'string': "组串"              # String of solar panels
 }
 
 EL_class_colors = {
@@ -71,12 +72,12 @@ Visible_class_colors = {
     "zw": (128, 128, 128),               # Gray
     "yyzd_zw": (0, 128, 255),            # Orange
     "ns": (255, 0, 0),                   # Blue
-    "ygfs_yyzd": (0, 255, 255),        # Yellow
     "yyzd_ns": (128, 0, 128),            # Purple
     "zw_ns": (255, 0, 255),            # Magenta
     "gfbzjbx": (0, 0, 255),          # Red
     "gfbqs": (0, 128, 128),           # Teal
-    "mbsl": (128, 255, 128)            # Light Green
+    "mbsl": (128, 255, 128),            # Light Green
+    "snow": (255, 255, 255)            # White
 }
 
 Other_class_colors = {
@@ -85,5 +86,6 @@ Other_class_colors = {
 }
 
 Segmentation_class_colors = {
-    "solar_panel": (0, 255, 0)                # Green for solar panels
+    "component": (0, 255, 0),                # Green for single solar panels
+    "string": (0, 0, 255)                      # Blue for strings
 }
