@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from flask import Flask, request, jsonify, has_request_context
-from flask_socketio import SocketIO, emit, copy_current_request_context
+from flask_socketio import SocketIO, emit
 import numpy as np
 import cv2
 import tempfile
@@ -35,7 +35,7 @@ from auth import verify_token, get_access_token
 #     sys.exit(1)
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins='*')
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
 
 
 def require_oauth_token(func):
@@ -407,7 +407,7 @@ def detect_video(validated_params, files):
 
 @socketio.on('start_stream')
 @require_oauth_token
-@validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes", "enable_pseudo_color", "undistortion_method"])
+# @validate_params(["conf_threshold", "iou_threshold", "model_type", "image_type", "selected_classes", "enable_pseudo_color", "undistortion_method"])
 # FIXME:
 def handle_stream(data):
     """
@@ -451,7 +451,7 @@ def handle_stream(data):
 
         detector = Detection_UI(from_streamlit=False, api_params=params)
 
-        @copy_current_request_context
+
         def stream_loop():
             while cap.isOpened():
                 ret, frame = cap.read()
@@ -464,10 +464,10 @@ def handle_stream(data):
                 _, buffer = cv2.imencode('.jpg', frame)
                 img_b64 = base64.b64encode(buffer).decode('utf-8')
 
-                emit("stream_result", {
+                socketio.emit("stream_result", {
                     "detections": det_info,
                     "image": img_b64
-                }, broadcast=False)
+                })
 
         threading.Thread(target=stream_loop).start()
 
