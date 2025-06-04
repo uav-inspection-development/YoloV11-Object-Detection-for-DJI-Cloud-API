@@ -32,7 +32,8 @@ Visible_type = {
     'gfbzjbx': "光伏板组件变形",
     'gfbqs': "光伏板缺失",
     'mbsl': "面板碎裂",
-    'snow': "积雪"
+    'snow': "积雪",
+    'crack': "隐裂"
 }
 
 Other_type = {
@@ -77,7 +78,8 @@ Visible_class_colors = {
     "gfbzjbx": (0, 0, 255),          # Red
     "gfbqs": (0, 128, 128),           # Teal
     "mbsl": (128, 255, 128),            # Light Green
-    "snow": (255, 255, 255)            # White
+    "snow": (255, 255, 255),            # White
+    "crack": (0, 0, 255),                # Red
 }
 
 Other_class_colors = {
