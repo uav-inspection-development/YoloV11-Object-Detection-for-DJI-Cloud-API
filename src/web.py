@@ -8,8 +8,6 @@ import numpy as np
 import streamlit as st
 from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
-from PIL import Image
-
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
@@ -394,7 +392,7 @@ class Detection_UI:
             available_options = ["红外", "EL隐裂", "可见光", "其他"]
         elif self.model_type == "分割任务":
             self.rectangle_bounding_output = st.sidebar.checkbox("输出矩形边框", value=True)
-            st.sidebar.caption("💡 提示: 分割任务将对所有的光伏板轮廓进行分割，选择输出矩形边框后，将检测矩形边框并输出，否则输出原始边缘，目标类别选择【太阳能板】即可。")
+            st.sidebar.caption("💡 提示: 分割任务将对所有的光伏板轮廓进行分割，选择输出矩形边框后，将检测矩形边框并输出，否则输出原始边缘，目标类别选择【单组件】或【组串】即可。")
             available_options = ["红外", "EL隐裂", "可见光"]
 
         # 添加图像类型选择

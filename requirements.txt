@@ -11,6 +11,7 @@ click
 colorama
 coloredlogs
 contourpy
+cryptography
 cycler
 eventlet
 filelock

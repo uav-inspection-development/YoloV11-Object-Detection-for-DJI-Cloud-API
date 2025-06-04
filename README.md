@@ -112,6 +112,7 @@ src/                          # Source code directory
 tempDir/
 ultralytics/                  # YOLOv8 source code
 util_data/                    # Tools for processing non txt format datasets
+├── encryption.py             # Code encryption tools
 ├── util_dataset_enhance.py   # Dataset enhancement tools
 ├── util_dataset_resize.py    # Dataset resizing tools
 ├── util_dataset_split.py     # Dataset splitting tools
@@ -241,6 +242,39 @@ requirements.txt              # List of dependencies
 
 5. **Select the Image Type**:
     - Choose the image type (**Visible**, **EL**, or **Thermo**) and start detection.
+
+### Generate the executable File
+
+1. **Build the Executable**:
+    - Use the following command to build the executable file for the application:
+    ```shell
+    pyinstaller src/ui.py
+    ```
+    - This will create a standalone executable in the `dist` directory.
+
+2. **Add the required files**:
+    - Ensure that the following files are included in the `dist` directory:
+        - The `fonts/` directory containing the `Arial.ttf` font file.
+        - The `icon/` directory containing the application icon.
+        - The `models/` directory containing the YOLOv8 model files.
+    - Ensure that the following files are included in the `ui` directory:
+        - The `license.dat` file generated earlier.
+
+3. **Encrypt the `web.py` File**:
+    - Use the following command to encrypt the `web.py` file:
+    ```shell
+    python src/encryption.py --input-file src/web.py --output-file src/web_encrypted.py
+    ```
+    - This will create an encrypted version of the `web.py` file named `web_encrypted.py`.
+
+4. **Move the Encrypted File**:
+    - Move the `web_encrypted.py` file to the `src/dist/ui/_internal` directory, renaming it to `web.py`:
+
+5. **Run the Executable**:
+    - After building the executable, navigate to the `dist/ui` directory and run the application using the following command:
+    ```shell
+    ./ui.exe --run-mode=streamlit --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
+    ```
 
 ---
 
