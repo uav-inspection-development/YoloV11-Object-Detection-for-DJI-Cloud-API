@@ -12,6 +12,7 @@ colorama
 coloredlogs
 contourpy
 cycler
+eventlet
 filelock
 flatbuffers
 fonttools
@@ -92,6 +93,7 @@ tzlocal
 urllib3
 validators
 watchdog
+websocket-client
 Werkzeug
 zipp
 timm
