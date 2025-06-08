@@ -16,11 +16,20 @@ os.makedirs(yolo_labels_folder, exist_ok=True)
 
 # 映射类别名称到数字标签
 class_mapping = {
-    "black_cell": 0,
-    "crack": 1,
-    "fragment": 2,
-    "missing_corner": 3,
-    "scratch": 4
+    "crack": 0,
+    "dyrb": 1,
+    "gfbqs": 2,
+    "gfbzjbx": 3,
+    "mbsl": 4,
+    "nf": 5,
+    "ns": 6,
+    "snow": 7,
+    "ygfs": 8,
+    "yyzd": 9,
+    "yyzd_ns": 10,
+    "yyzd_zw": 11,
+    "zw": 12,
+    "zw_ns": 13
 }
 
 # 定义处理一个 XML 文件的函数
