@@ -9,6 +9,14 @@ from QtFusion.path import abs_path
 from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
 from scipy.optimize import minimize
+import io
+
+
+class LocalFileObj(io.BytesIO):
+    def __init__(self, file_path):
+        with open(file_path, "rb") as f:
+            super().__init__(f.read())
+        self.name = os.path.basename(file_path)
 
 def save_uploaded_file(uploaded_file):
     """

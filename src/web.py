@@ -16,6 +16,9 @@ from utils import is_black_and_white, save_uploaded_file, concat_results, load_d
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
+import tkinter as tk
+from tkinter import filedialog
+from utils import LocalFileObj
 
 
 class Detection_UI:
@@ -506,7 +509,10 @@ class Detection_UI:
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("📹 输入源识别设置")
         # 选择输入源类型：无输入，摄像头或 RTSP/RTMP 流
-        self.input_source = st.sidebar.radio("选择输入源", ["图片文件", "视频文件", "摄像头", "RTSP/RTMP流"])
+        self.input_source = st.sidebar.radio("选择输入源", ["图片文件", "图片文件夹", "视频文件", "视频文件夹", "摄像头", "RTSP/RTMP流"])
+
+        if "file_key" not in st.session_state:
+            st.session_state["file_key"] = str(random.random())
 
         if self.input_source == "摄像头":
             # 选择摄像头的下拉菜单
@@ -517,13 +523,109 @@ class Detection_UI:
             self.rtsp_input_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
             st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
         elif self.input_source == "图片文件":
-            self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True, key=st.session_state["file_key"])
             st.sidebar.write(f"📂 已上传图片数量: {len(self.uploaded_file)}")
             st.sidebar.caption("💡 提示: 请选择图片并点击'开始运行'按钮，进行图片检测！")
+        elif self.input_source == "图片文件夹":
+            default_types = ["jpg", "jpeg", "png"]
+            image_types = st.sidebar.multiselect(
+                "选择图片类型", 
+                options=["jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp"], 
+                default=default_types
+            )
+
+            # Tkinter文件夹选择器按钮
+            if st.sidebar.button("选择图片文件夹"):
+                root = tk.Tk()
+                root.withdraw()
+                root.wm_attributes('-topmost', 1)
+                folder_path = filedialog.askdirectory(master=root)
+                root.destroy()
+                if folder_path:
+                    st.session_state['image_folder_path'] = folder_path
+
+            folder_path = st.sidebar.text_input(
+                "输入图片文件夹路径", 
+                value=st.session_state.get('image_folder_path', ''), 
+                placeholder="例如：D:/images"
+            )
+            image_files = []
+            if folder_path and os.path.isdir(folder_path):
+                exts = tuple(f".{ext.lower()}" for ext in image_types)
+                for root_dir, _, files in os.walk(folder_path):
+                    for file in files:
+                        if file.lower().endswith(exts):
+                            image_files.append(os.path.join(root_dir, file))
+                st.sidebar.write(f"📂 共找到图片数量: {len(image_files)}")
+                # 转为文件对象
+                self.uploaded_file = [LocalFileObj(f) for f in image_files]
+            else:
+                st.sidebar.caption("💡 提示: 选择或输入本地图片文件夹路径，自动递归查找所有图片。")
+                self.uploaded_file = []
         elif self.input_source == "视频文件":
-            self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi", "mov"], accept_multiple_files=True)
+            self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi", "mov"], accept_multiple_files=True, key=st.session_state["file_key"])
             st.sidebar.write(f"📂 已上传视频数量: {len(self.uploaded_video)}")
             st.sidebar.caption("💡 请选择视频并点击'开始运行'按钮，进行视频检测！")
+        elif self.input_source == "视频文件夹":
+            default_video_types = ["mp4", "avi", "mov"]
+            video_types = st.sidebar.multiselect(
+                "选择视频类型",
+                options=["mp4", "avi", "mov", "mkv", "flv", "wmv"],
+                default=default_video_types
+            )
+            # Tkinter文件夹选择器按钮
+            if st.sidebar.button("选择视频文件夹"):
+                root = tk.Tk()
+                root.withdraw()
+                root.wm_attributes('-topmost', 1)
+                folder_path = filedialog.askdirectory(master=root)
+                root.destroy()
+                if folder_path:
+                    st.session_state['video_folder_path'] = folder_path
+
+            folder_path = st.sidebar.text_input(
+                "输入视频文件夹路径",
+                value=st.session_state.get('video_folder_path', ''),
+                placeholder="例如：D:/videos"
+            )
+            video_files = []
+            if folder_path and os.path.isdir(folder_path):
+                exts = tuple(f".{ext.lower()}" for ext in video_types)
+                for root_dir, _, files in os.walk(folder_path):
+                    for file in files:
+                        if file.lower().endswith(exts):
+                            video_files.append(os.path.join(root_dir, file))
+                st.sidebar.write(f"📂 共找到视频数量: {len(video_files)}")
+                # 转为文件对象
+                self.uploaded_video = [LocalFileObj(f) for f in video_files]
+            else:
+                st.sidebar.caption("💡 提示: 选择或输入本地视频文件夹路径，自动递归查找所有视频。")
+                self.uploaded_video = []
+
+        # 清空按钮
+        if st.sidebar.button("清空已上传文件"):
+            self.uploaded_file = None
+            self.uploaded_video = None
+
+            # 清空 file_uploader 的 key 以强制刷新组件
+            st.session_state["file_key"] = str(random.random())
+
+            # 清理与 file_uploader 有关的 session state
+            for key in list(st.session_state.keys()):
+                if key.startswith("file_uploader"):
+                    del st.session_state[key]
+
+            # 清空文件夹路径（图片/视频）
+            if 'image_folder_path' in st.session_state:
+                del st.session_state['image_folder_path']
+            if 'video_folder_path' in st.session_state:
+                del st.session_state['video_folder_path']
+
+            # 显式设置文件对象为空（用于 LocalFileObj 列表）
+            self.uploaded_file = []
+            self.uploaded_video = []
+
+            st.sidebar.success("已清空所有上传的文件！")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
             # 添加视频输出和 RTSP 输出的启用复选框
