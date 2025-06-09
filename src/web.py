@@ -108,6 +108,7 @@ class Detection_UI:
         self.enable_keystone_correction = False  # 启用梯形校正
         self.rot_angle_x = 0  # 垂直旋转角度
         self.rot_angle_y = 0  # 水平旋转角度
+        self.keystone_scale = 1.0  # 缩放比例
 
         # 初始化检测结果相关的变量
         self.detection_result = None
@@ -232,6 +233,7 @@ class Detection_UI:
         if self.enable_keystone_correction:
             self.rot_angle_x = float(self.api_params.get("rot_angle_x", 0))
             self.rot_angle_y = float(self.api_params.get("rot_angle_y", 0))
+            self.keystone_scale = float(self.api_params.get("keystone_scale", 1.0))
 
         # 设置类别标签
         if self.model_type == "分割任务":
@@ -645,9 +647,10 @@ class Detection_UI:
         # 添加梯形校正选项
         self.enable_keystone_correction = st.sidebar.checkbox("启用梯形校正", value=False)
         if self.enable_keystone_correction:
-            # 滑动条调整水平和垂直旋转角度
+            # 滑动条调整水平和垂直旋转角度，以及缩放比例
             self.rot_angle_x = st.sidebar.slider("垂直旋转角度（绕X轴）", min_value=-90, max_value=90, value=0, step=1)
             self.rot_angle_y = st.sidebar.slider("水平旋转角度（绕Y轴）", min_value=-90, max_value=90, value=0, step=1)
+            self.keystone_scale = st.sidebar.slider("缩放比例", min_value=0.5, max_value=2.0, value=1.0, step=0.01)
         st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。")
         
         # 添加图像畸变校正选项
@@ -717,7 +720,7 @@ class Detection_UI:
                         converted_image = image_ini.copy()
 
                     if self.enable_keystone_correction:
-                        corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                        corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
                     else:
                         corrected_image = converted_image.copy()
 
@@ -741,7 +744,7 @@ class Detection_UI:
                     converted_image = image_ini.copy()
 
                 if self.enable_keystone_correction:
-                    corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                    corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
                 else:
                     corrected_image = converted_image.copy()
 
@@ -896,7 +899,7 @@ class Detection_UI:
 
                     # 梯形校正
                     if self.enable_keystone_correction:
-                        frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                        frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
                     # 调节摄像头的分辨率
                     # 调整图像尺寸
                     frame = cv2.resize(frame, (self.new_width, self.new_height))
@@ -995,7 +998,7 @@ class Detection_UI:
 
                     # 梯形校正
                     if self.enable_keystone_correction:
-                        image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                        image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                     # 检查图像是否为黑白图像
                     is_bw = is_black_and_white(image_ini)
@@ -1046,7 +1049,7 @@ class Detection_UI:
 
                 # 梯形校正
                 if self.enable_keystone_correction:
-                    image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                    image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                 # 检查图像是否为黑白图像
                 is_bw = is_black_and_white(image_ini)
@@ -1146,7 +1149,7 @@ class Detection_UI:
                                     frame = auto_undistort_image(frame, self.image_k1)
                                 # 梯形校正
                                 if self.enable_keystone_correction:
-                                    frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                                    frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                                 # 检查是否为黑白图像
                                 is_bw = is_black_and_white(frame)
@@ -1273,7 +1276,7 @@ class Detection_UI:
 
                             # 梯形校正
                             if self.enable_keystone_correction:
-                                frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y)
+                                frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                             # 检查是否为黑白图像
                             is_bw = is_black_and_white(frame)

@@ -411,13 +411,14 @@ def auto_undistort_image(img, k1):
     return undistorted
 
 
-def rotate_image(img, angle_x, angle_y):
+def rotate_image(img, angle_x, angle_y, zoom_factor=1.0):
     """
-    对图像进行旋转变换。
+    对图像进行旋转变换并添加缩放功能。
     参数：
         img (numpy.ndarray): 输入的图像。
         angle_x (float): 绕X轴旋转的角度（单位：度）。
         angle_y (float): 绕Y轴旋转的角度（单位：度）。
+        zoom_factor (float): 缩放因子。大于1表示放大，小于1表示缩小。
     返回：
         numpy.ndarray: 旋转变换后的图像。
     """
@@ -467,4 +468,17 @@ def rotate_image(img, angle_x, angle_y):
 
     # 应用变换
     result = cv2.warpPerspective(img, H_corrected, (w, h), flags=cv2.INTER_LINEAR)
+
+    # 缩放处理
+    if zoom_factor > 1.0:  # 放大
+        new_w, new_h = int(w / zoom_factor), int(h / zoom_factor)
+        x1, y1 = (w - new_w) // 2, (h - new_h) // 2
+        x2, y2 = x1 + new_w, y1 + new_h
+        result = result[y1:y2, x1:x2]
+    elif zoom_factor < 1.0:  # 缩小
+        new_w, new_h = int(w * zoom_factor), int(h * zoom_factor)
+        result = cv2.resize(result, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        pad_w, pad_h = (w - new_w) // 2, (h - new_h) // 2
+        result = cv2.copyMakeBorder(result, pad_h, pad_h, pad_w, pad_w, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+
     return result
