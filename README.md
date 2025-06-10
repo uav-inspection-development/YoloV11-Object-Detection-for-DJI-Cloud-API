@@ -311,7 +311,7 @@ Detect objects in a single image.
     ],
     "enable_pseudo_color": false,
     "undistortion_method": "不去除",
-    "enable_keystone_correction": false
+    "enable_rotate_correction": false
 }
 ```
 
@@ -388,7 +388,7 @@ Detect objects in a single video.
     ],
     "enable_pseudo_color": false,
     "undistortion_method": "不去除",
-    "enable_keystone_correction": false
+    "enable_rotate_correction": false
 }
 ```
 
