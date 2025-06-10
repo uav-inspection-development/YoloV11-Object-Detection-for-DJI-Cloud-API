@@ -302,12 +302,49 @@ class Detection_UI:
             unsafe_allow_html=True
         )
 
+    def show_about_section(self):
+        """
+        在 Streamlit UI 的右上角显示关于部分。
+        """
+        with st.sidebar.expander("📖 关于", expanded=False):
+            st.markdown("""
+                ## 关于本应用
+                本应用旨在检测光伏组件的故障，包括：
+                - 可见光故障
+                - 红外热故障
+                - EL隐裂
+                - 其他异常（如异物入侵）
+
+                ### 功能特点：
+                - 使用摄像头或 RTSP/RTMP 流进行实时检测
+                - 批量处理图片和视频
+                - 高级图像校正技术（例如：畸变校正、梯形校正）
+                - 支持多种格式导出检测结果（CSV、Excel、JSON、Word）
+
+                ### 使用技术：
+                - **Streamlit** 用于用户界面
+                - **OpenCV** 用于图像处理
+                - **YOLOv11** 用于目标检测
+                - **NumPy** 用于数值计算
+
+                ### 作者：
+                由 Phillweston 开发。
+
+                ### 联系方式：
+                如有疑问或需要支持，请联系：lrt2443655975@gmail.com
+            """)
+
     def setup_sidebar(self):
         """
         设置 Streamlit 侧边栏。
 
         在侧边栏中配置模型设置、摄像头选择以及识别项目设置等选项。
         """
+        st.sidebar.title("🔧 设置菜单")
+
+        # Add the About section to the sidebar
+        self.show_about_section()
+
         # 添加显示设置
         st.sidebar.header("🖥️ 显示设置")
 
