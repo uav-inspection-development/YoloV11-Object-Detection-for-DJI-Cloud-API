@@ -338,7 +338,7 @@ class Detection_UI:
             self.csv_output_path += os.sep
 
         st.sidebar.header("📤 日志导出格式设置")
-        self.export_format = st.sidebar.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], index=0)
+        self.export_format = st.sidebar.selectbox("选择导出格式", ["CSV", "Excel", "JSON", "Word"], index=0)
         st.sidebar.caption(f"💡 提示: {self.export_format} 文件将导出至 {self.csv_output_path} 路径。")
 
         # 根据用户选择的导出格式设置文件后缀
@@ -348,6 +348,8 @@ class Detection_UI:
             file_suffix = ".xlsx"
         elif self.export_format == "JSON":
             file_suffix = ".json"
+        elif self.export_format == "Word":
+            file_suffix = ".docx"
         else:
             file_suffix = ".txt"
 
@@ -1638,6 +1640,11 @@ class Detection_UI:
                     self.saved_log_data += ".json"
                     self.logTable.save_to_json(self.saved_log_data)
                     st.write(f"识别结果文件已经保存为 JSON 格式：{self.saved_log_data}")
+                elif self.export_format == "Word":
+                    self.saved_log_data += ".docx"
+                    # TODO: 实现 Word 导出功能
+                    self.logTable.save_to_word(self.saved_log_data)
+                    st.write(f"识别结果文件已经保存为 Word 格式：{self.saved_log_data}")
 
                 self.logTable.clear_data()
             st.header("📜 历史日志")
