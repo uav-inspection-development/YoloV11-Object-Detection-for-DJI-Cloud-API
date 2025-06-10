@@ -605,7 +605,7 @@ class Detection_UI:
                 self.uploaded_video = []
 
         # 清空按钮
-        if st.sidebar.button("清空已上传文件"):
+        if st.sidebar.button("🗑️ 清空已上传文件"):
             self.uploaded_file = None
             self.uploaded_video = None
 
@@ -626,6 +626,9 @@ class Detection_UI:
             # 显式设置文件对象为空（用于 LocalFileObj 列表）
             self.uploaded_file = []
             self.uploaded_video = []
+
+            # 重新运行 Streamlit 应用以更新状态
+            st.rerun()
 
             st.sidebar.success("已清空所有上传的文件！")
 
@@ -761,7 +764,6 @@ class Detection_UI:
             st.sidebar.warning("💡 请先上传图像以调整畸变系数。")
 
         st.sidebar.header("📁 输出文件路径设置")
-        # FIXME:
         self.output_path = st.sidebar.text_input("输出文件路径", value=abs_path("../output", path_type="current"), placeholder="例如：../output 或 D:/videos")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
@@ -777,23 +779,22 @@ class Detection_UI:
         """
         根据用户选择的输入源（摄像头、图片文件、视频文件或RTSP/RTMP流），处理并显示检测结果。
         """
+        # 新增：检测结果缓存
+        st.session_state['saved_images_ini'] = []
+        st.session_state['saved_images'] = []
+        st.session_state['saved_names'] = []
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             self._process_stream()
         elif self.input_source == "图片文件":
-            # Reset file pointer for uploaded files
-            if isinstance(self.uploaded_file, list):  # Multiple files
-                for uploaded_file in self.uploaded_file:
-                    uploaded_file.seek(0)  # Reset file pointer for each file
-            elif self.uploaded_file:  # Single file
-                self.uploaded_file.seek(0)  # Reset file pointer
+            # 确保上传文件为列表
+            files = self.uploaded_file if isinstance(self.uploaded_file, list) else [self.uploaded_file]
+            for f in files:
+                if f: f.seek(0)
             self._process_image_input()
         elif self.input_source == "视频文件":
-            # Reset file pointer for uploaded videos
-            if isinstance(self.uploaded_video, list):  # Multiple videos
-                for uploaded_video in self.uploaded_video:
-                    uploaded_video.seek(0)  # Reset file pointer for each video
-            elif self.uploaded_video:  # Single video
-                self.uploaded_video.seek(0)  # Reset file pointer
+            files = self.uploaded_video if isinstance(self.uploaded_video, list) else [self.uploaded_video]
+            for f in files:
+                if f: f.seek(0)
             self._process_video_input()
         else:
             st.warning("请选择有效的输入源！")
@@ -1026,11 +1027,14 @@ class Detection_UI:
                         self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {uploaded_file.name}")
                         self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_file.name}")
 
-                    self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)))
+                    self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)), uploaded_file.name)
                     # 更新进度条
                     progress_percentage = int(((idx + 1) / len(self.uploaded_file)) * 100)
                     self.progress_bar.progress(progress_percentage)
 
+                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
+                st.session_state['saved_images'] = self.logTable.saved_images
+                st.session_state['saved_names'] = self.logTable.saved_names
                 st.success("批量图片检测完成！")
 
             else:
@@ -1076,9 +1080,12 @@ class Detection_UI:
                     self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {self.uploaded_file.name}")
                     self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_file.name}")
 
-                self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)))
+                self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)), self.uploaded_file.name)
                 self.progress_bar.progress(100)
 
+                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
+                st.session_state['saved_images'] = self.logTable.saved_images
+                st.session_state['saved_names'] = self.logTable.saved_names
                 st.success("单张图片检测完成！")
 
             self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
@@ -1188,7 +1195,7 @@ class Detection_UI:
                                         self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {uploaded_video.name}")
                                         self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_video.name}")
 
-                                    self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)))
+                                    self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)), uploaded_video.name + f"_{current_frame}")
 
                                     # 更新进度条
                                     progress_percentage = int(((current_frame + 1) / total_frames) * 100)
@@ -1225,6 +1232,9 @@ class Detection_UI:
                     batch_progress = int(((idx + 1) / len(self.uploaded_video)) * 100)
                     self.progress_bar.progress(batch_progress)
 
+                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
+                st.session_state['saved_images'] = self.logTable.saved_images
+                st.session_state['saved_names'] = self.logTable.saved_names
                 st.success("批量视频检测完成！")
             else:
                 video_file = self.uploaded_video
@@ -1322,7 +1332,7 @@ class Detection_UI:
                                     self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {self.uploaded_video.name}")
                                     self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_video.name}")
 
-                                self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)))
+                                self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)), self.uploaded_video.name + f"_{current_frame}")
 
                                 # 更新进度条
                                 if total_length > 0:
@@ -1356,6 +1366,9 @@ class Detection_UI:
                     print(tfile.name + ' 临时文件可以删除')
                     # os.remove(tfile.name)
 
+                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
+                st.session_state['saved_images'] = self.logTable.saved_images
+                st.session_state['saved_names'] = self.logTable.saved_names
                 st.success("单个视频检测完成！")
         else:
             st.warning("请上传视频文件！")
@@ -1370,34 +1383,38 @@ class Detection_UI:
         根据用户选择的帧ID，显示该帧的检测结果和图像。
         """
         # 确保已经保存了检测结果
-        if len(self.logTable.saved_results) > 0:
-            frame = self.logTable.saved_images_ini[-1]  # 获取最近一帧的图像
-            image = frame  # 将其设为当前图像
+        if len(self.logTable.saved_results) > frame_id:
+            frame = self.logTable.saved_images_ini[frame_id]  # 获取指定帧的初始图像
+            image = frame.copy()  # 创建图像副本以避免修改原始图像
 
-            # 遍历所有保存的检测结果
-            for i, detInfo in enumerate(self.logTable.saved_results):
-                if frame_id != -1:
-                    # 如果指定了帧ID，只处理该帧的结果
-                    if frame_id != i:
-                        continue
+            detection_results = self.logTable.saved_results[frame_id]  # 获取指定帧的所有检测结果
+            disp_res = ResultLogger()  # 创建结果记录器
 
-                if len(detInfo) > 0:
-                    name, chinese_name, bbox, conf, use_time, cls_id = detInfo  # 获取检测信息
-                    label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
+            if detection_results:
+                for detInfo in detection_results:  # 遍历当前帧的所有检测结果
+                    if isinstance(detInfo, list) and len(detInfo) == 6:  # 验证结构
+                        name, chinese_name, bbox, conf, use_time, cls_id = detInfo
+                        label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
 
-                    disp_res = ResultLogger()  # 创建结果记录器
-                    res = disp_res.concat_results(name, chinese_name, bbox, str(round(conf, 2)), str(use_time))  # 合并结果
-                    self.table_placeholder.table(res)  # 在表格中显示结果
+                        # 合并结果到表格
+                        disp_res.concat_results(name, chinese_name, bbox, str(round(conf, 2)), str(use_time))
 
-                    # 如果有保存的初始图像
-                    if len(self.logTable.saved_images_ini) > 0:
-                        if len(self.colors) < cls_id:
+                        # 如果有保存的初始图像
+                        if len(self.colors) <= cls_id:
                             # 拓展颜色列表以适应当前类别ID
                             self.colors.extend(
                                 [[random.randint(0, 255) for _ in range(3)] for _ in range(cls_id + 1 - len(self.colors))]
                             )
-                        image = drawRectBox(image, bbox, alpha=0.2, addText=label,
-                                            color=self.colors[cls_id])  # 绘制检测框和标签
+                        image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])  # 绘制检测框和标签
+                    else:
+                        print(f"Unexpected detInfo structure: {detInfo}")
+                        continue
+
+                # 在表格中显示所有检测结果
+                self.table_placeholder.table(disp_res.results_df)
+            else:
+                # 如果没有检测结果，显示空表格
+                self.table_placeholder.table(pd.DataFrame(columns=["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)"]))
 
             # 调整图像尺寸
             resized_image = cv2.resize(image, (self.new_width, self.new_height))
@@ -1557,6 +1574,15 @@ class Detection_UI:
             """,
             unsafe_allow_html=True
         )
+
+        # 初始化日志表格
+        if 'saved_images_ini' not in st.session_state:
+            st.session_state['saved_images_ini'] = []
+        if 'saved_images' not in st.session_state:
+            st.session_state['saved_images'] = []
+        if 'saved_names' not in st.session_state:
+            st.session_state['saved_names'] = []
+
         # st.title(self.title) # 显示系统标题
         st.write("--------")
         st.write("本系统可以检测光伏面板可见光故障、红外热故障、EL隐裂故障以及其他异物入侵等问题。")
@@ -1596,7 +1622,7 @@ class Detection_UI:
 
             # 创建一个导出结果的按钮
             st.write("---------------------")
-            if st.button("导出结果"):
+            if st.button("📤 导出结果"):
                 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
                 self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}")
 
@@ -1641,7 +1667,7 @@ class Detection_UI:
         # self.toggle_comboBox(-1)
         with col1:
             st.write("")
-            run_button = st.button("开始检测")
+            run_button = st.button("🚀 开始检测")
             self.close_placeholder = st.empty()
             if run_button:
                 self.process_camera_or_file()  # 运行摄像头或文件处理
@@ -1651,6 +1677,50 @@ class Detection_UI:
                     self.image_placeholder.image(load_default_image(), caption="原始画面")
                     if self.display_mode == "对比显示":
                         self.image_placeholder_res.image(load_default_image(), caption="识别画面")
+
+            # ====== 新增：图片和视频切换显示功能 ======
+            # 优先显示图片切换
+            if hasattr(self.logTable, "saved_images_ini") and len(self.logTable.saved_images_ini) > 0:
+                total_imgs = len(st.session_state['saved_images_ini'])
+                if 'image_play_index' not in st.session_state or st.session_state['image_play_index'] >= total_imgs:
+                    st.session_state['image_play_index'] = total_imgs - 1
+                col_prev, col_next = st.columns([1, 1])
+                with col_prev:
+                    if st.button("⬅️ 上一张图片", key="prev_image"):
+                        if st.session_state['image_play_index'] > 0:  # Prevent going below the first image
+                            st.session_state['image_play_index'] -= 1
+                with col_next:
+                    if st.button("下一张图片 ➡️", key="next_image"):
+                        if st.session_state['image_play_index'] < total_imgs - 1:  # Prevent going beyond the last image
+                            st.session_state['image_play_index'] += 1
+                idx = st.session_state['image_play_index']
+                framecopy = self.logTable.saved_images_ini[idx]
+                detected_img = self.logTable.saved_images[idx] if hasattr(self.logTable, "saved_images") and len(self.logTable.saved_images) > idx else framecopy
+                img_name = self.logTable.saved_names[idx] if hasattr(self.logTable, "saved_names") and len(self.logTable.saved_names) > idx else f"图片{idx+1}"
+                resized_image = cv2.resize(detected_img, (self.new_width, self.new_height))
+                resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                if self.display_mode == "叠加显示":
+                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"图片显示: {img_name}")
+                else:
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {img_name}")
+                    self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {img_name}")
+                # 更新检测结果表格
+                if hasattr(self.logTable, "saved_results") and len(self.logTable.saved_results) > idx:
+                    detection_results = self.logTable.saved_results[idx]  # 获取当前图片的所有检测结果
+                    if detection_results:
+                        disp_res = ResultLogger()
+                        for detInfo in detection_results:  # 遍历当前图片的所有检测结果
+                            name, chinese_name, bbox, aim_frame_area, use_time, cls_id = detInfo
+                            disp_res.concat_results(name, chinese_name, bbox, str(aim_frame_area), str(use_time))
+                        self.table_placeholder.table(disp_res.results_df)  # 显示当前图片的所有检测结果
+                    else:
+                        # 如果没有检测结果，显示空表格
+                        self.table_placeholder.table(concat_results("None", "[0, 0, 0, 0]", "0.00", "0.00s"))
+            else:
+                # 如果没有保存的图像，则显示默认图像
+                self.image_placeholder.image(load_default_image(), caption="原始画面")
+                if self.display_mode == "对比显示" and self.image_placeholder_res:
+                    self.image_placeholder_res.image(load_default_image(), caption="识别画面")
 
 
 # 实例化并运行应用

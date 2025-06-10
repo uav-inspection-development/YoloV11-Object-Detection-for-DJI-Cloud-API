@@ -76,11 +76,12 @@ class LogTable:
         self.saved_target_images = []
         self.saved_images_ini = []
         self.saved_results = []
+        self.saved_names = []
 
         self.columns = ['文件路径', '识别结果', '类型', '位置(pixel)', '面积(pixel)', '时间(s)']
         self.data = pd.DataFrame(columns=self.columns)
 
-    def add_frames(self, image, detInfo, img_ini):
+    def add_frames(self, image, detInfo, img_ini, img_name=None):
         """
         将检测到的图像和检测信息添加到列表中。
 
@@ -91,7 +92,8 @@ class LogTable:
         """
         self.saved_images.append(image)
         self.saved_images_ini.append(img_ini)
-        self.saved_results = detInfo
+        self.saved_results.append(detInfo)
+        self.saved_names.append(img_name)
         if detInfo:
             self.saved_target_images.append(image)
         # print('____')
@@ -106,6 +108,7 @@ class LogTable:
         self.saved_images_ini = []
         self.saved_results = []
         self.saved_target_images = []
+        self.saved_names = []
 
     def save_frames_file(self, fps=30, video_name='save', video_time=None, output_path='output/frame/'):
         """
