@@ -100,11 +100,11 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
             f"任务名称: {task_name}\n"
             f"最佳模型路径: {best_model_path}\n"
             f"最后模型路径: {last_model_path}\n"
-            f"训练指标:\n"
-            f"  - 最终训练损失: {results.metrics['train_loss']:.4f}\n"
-            f"  - 最终验证损失: {results.metrics['val_loss']:.4f}\n"
-            f"  - mAP@50: {results.metrics['mAP_50']:.4f}\n"
-            f"  - mAP@50-95: {results.metrics['mAP_50_95']:.4f}\n"
+            # f"训练指标:\n"
+            # f"  - 最终训练损失: {results.metrics['train_loss']:.4f}\n"
+            # f"  - 最终验证损失: {results.metrics['val_loss']:.4f}\n"
+            # f"  - mAP@50: {results.metrics['mAP_50']:.4f}\n"
+            # f"  - mAP@50-95: {results.metrics['mAP_50_95']:.4f}\n"
         )
     except Exception as e:
         return f"检测任务训练失败: {str(e)}"  # 返回错误信息
