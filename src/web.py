@@ -5,6 +5,7 @@ import os
 import cv2
 import json
 import numpy as np
+import pandas as pd
 import streamlit as st
 from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
@@ -139,6 +140,7 @@ class Detection_UI:
         self.fps_placeholder = None  # FPS显示区域
         self.target_count_placeholder = None  # 目标计数显示区域
         self.detection_time_placeholder = None  # 检测时间显示区域
+        self.selectbox_placeholder = None
 
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
@@ -164,6 +166,15 @@ class Detection_UI:
         self.logTable = LogTable(self.saved_log_data)
         self.model = Web_Detector()
         self.colors = []
+
+        if 'current_frame_count' not in st.session_state:
+            st.session_state['current_frame_count'] = 0
+        if 'current_fps' not in st.session_state:
+            st.session_state['current_fps'] = 0
+        if 'current_target_count' not in st.session_state:
+            st.session_state['current_target_count'] = 0
+        if 'current_detection_time' not in st.session_state:
+            st.session_state['current_detection_time'] = 0
 
         if self.from_streamlit:
             self.setup_sidebar()  # 初始化侧边栏布局
@@ -871,9 +882,9 @@ class Detection_UI:
         根据用户选择的输入源（摄像头、图片文件、视频文件或RTSP/RTMP流），处理并显示检测结果。
         """
         # 新增：检测结果缓存
-        st.session_state['saved_images_ini'] = []
-        st.session_state['saved_images'] = []
-        st.session_state['saved_names'] = []
+        # st.session_state['saved_images_ini'] = []
+        # st.session_state['saved_images'] = []
+        # st.session_state['saved_names'] = []
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             self._process_stream()
         elif self.input_source == "图片文件":
@@ -1011,13 +1022,19 @@ class Detection_UI:
                         frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
 
                     framecopy = frame.copy()
-                    image, detInfo, _ = self.frame_process(frame, input_type)
+                    image, detInfo, _ = self.frame_process(framecopy, input_type)
+
+                    # 更新检测结果并存储到 st.session_state
+                    st.session_state['current_frame_count'] = current_frame
+                    st.session_state['current_fps'] = self.FPS
+                    st.session_state['current_target_count'] = len(detInfo)
+                    st.session_state['current_detection_time'] = self.detection_time
 
                     # 更新检测结果
-                    self.frame_count_placeholder.metric("📸 当前帧数", current_frame)
-                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
-                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                    self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
+                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
+                    self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
+                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
 
                     # 保存目标结果图片
                     if detInfo:
@@ -1034,14 +1051,14 @@ class Detection_UI:
 
                     # 调整图像尺寸
                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                    resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                    resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
                     if self.display_mode == "叠加显示":
-                        self.image_placeholder.image(resized_image, channels="BGR", caption="视频画面")
+                        self.image_placeholder.image(resized_image, channels="BGR", caption="识别画面")
                     else:
                         self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
                         self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
 
-                    self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)))
+                    self.logTable.add_frames(image, detInfo, frame, input_type + f"_{current_frame}")
 
                     # 更新进度条
                     progress_percentage = int((current_frame / total_frames) * 100)
@@ -1114,26 +1131,31 @@ class Detection_UI:
                         image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
 
                     framecopy = image_ini.copy()
-                    image, detInfo, select_info = self.frame_process(image_ini, uploaded_file.name)
+                    image, detInfo, select_info = self.frame_process(framecopy, uploaded_file.name)
                     save_chinese_image(self.output_path + '/image/' + uploaded_file.name, image)
-                    # self.selectbox_placeholder = st.empty()
-                    # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
+
+                    # 更新检测结果并存储到 st.session_state
+                    st.session_state['current_frame_count'] = idx + 1
+                    st.session_state['current_fps'] = 0
+                    st.session_state['current_target_count'] = len(detInfo)
+                    st.session_state['current_detection_time'] = self.detection_time
 
                     # 更新检测结果
-                    self.frame_count_placeholder.metric("📸 当前图片数", idx+1)
-                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                    self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
+                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
+                    self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
+                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
 
                     # 调整图像尺寸
                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                    resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                    resized_frame = cv2.resize(image_ini, (self.new_width, self.new_height))
                     if self.display_mode == "叠加显示":
-                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"图片显示: {uploaded_file.name}")
+                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_file.name}")
                     else:
                         self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {uploaded_file.name}")
                         self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_file.name}")
 
-                    self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)), uploaded_file.name)
+                    self.logTable.add_frames(image, detInfo, image_ini, uploaded_file.name)
                     # 更新进度条
                     progress_percentage = int(((idx + 1) / len(self.uploaded_file)) * 100)
                     self.progress_bar.progress(progress_percentage)
@@ -1177,31 +1199,39 @@ class Detection_UI:
                     image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
 
                 framecopy = image_ini.copy()
-                image, detInfo, select_info = self.frame_process(image_ini, self.uploaded_file.name)
+                image, detInfo, select_info = self.frame_process(framecopy, self.uploaded_file.name)
                 save_chinese_image(self.output_path + '/image/' + self.uploaded_file.name, image)
-                # self.selectbox_placeholder = st.empty()
-                # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
+
+                # 更新检测结果并存储到 st.session_state
+                st.session_state['current_frame_count'] = 0
+                st.session_state['current_fps'] = 0
+                st.session_state['current_target_count'] = len(detInfo)
+                st.session_state['current_detection_time'] = self.detection_time
 
                 # 更新检测结果
-                self.target_count_placeholder.metric("检测目标数量", len(detInfo))
-                self.detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+                self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
+                self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
+                self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
+                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
 
                 # 调整图像尺寸
                 resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                resized_frame = cv2.resize(image_ini, (self.new_width, self.new_height))
                 if self.display_mode == "叠加显示":
-                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"图片显示: {self.uploaded_file.name}")
+                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_file.name}")
                 else:
                     self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {self.uploaded_file.name}")
                     self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_file.name}")
 
-                self.logTable.add_frames(image, detInfo, cv2.resize(image_ini, (640, 640)), self.uploaded_file.name)
+                self.logTable.add_frames(image, detInfo, image_ini, self.uploaded_file.name)
                 self.progress_bar.progress(100)
 
                 st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
                 st.session_state['saved_images'] = self.logTable.saved_images
                 st.session_state['saved_names'] = self.logTable.saved_names
                 st.success("单张图片检测完成！")
+
+            self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info)
 
             self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
         else:
@@ -1291,13 +1321,19 @@ class Detection_UI:
                                 if current_time < total_length:
                                     current_frame += 1
                                     current_time_str = format_time(current_time)
-                                    image, detInfo, _ = self.frame_process(frame, uploaded_video.name, video_time=current_time_str)
+                                    image, detInfo, _ = self.frame_process(framecopy, uploaded_video.name, video_time=current_time_str)
+
+                                    # 更新检测结果并存储到 st.session_state
+                                    st.session_state['current_frame_count'] = current_frame
+                                    st.session_state['current_fps'] = self.FPS
+                                    st.session_state['current_target_count'] = len(detInfo)
+                                    st.session_state['current_detection_time'] = self.detection_time
 
                                     # 更新检测结果
-                                    self.frame_count_placeholder.metric("📸 当前帧数", current_frame)
-                                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
-                                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                                    self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
+                                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
+                                    self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
+                                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
 
                                     if detInfo:
                                         time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
@@ -1310,14 +1346,14 @@ class Detection_UI:
 
                                     # 调整图像尺寸
                                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                                    resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                                    resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
                                     if self.display_mode == "叠加显示":
-                                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"视频画面: {uploaded_video.name}")
+                                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_video.name}")
                                     else:
                                         self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {uploaded_video.name}")
                                         self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_video.name}")
 
-                                    self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)), uploaded_video.name + f"_{current_frame}")
+                                    self.logTable.add_frames(image, detInfo, frame, uploaded_video.name + f"_{current_frame}")
 
                                     # 更新进度条
                                     progress_percentage = int(((current_frame + 1) / total_frames) * 100)
@@ -1427,13 +1463,19 @@ class Detection_UI:
                             if current_time < total_length:
                                 current_frame += 1
                                 current_time_str = format_time(current_time)
-                                image, detInfo, _ = self.frame_process(frame, self.uploaded_video.name, video_time=current_time_str)
+                                image, detInfo, _ = self.frame_process(framecopy, self.uploaded_video.name, video_time=current_time_str)
+
+                                # 更新检测结果并存储到 st.session_state
+                                st.session_state['current_frame_count'] = current_frame
+                                st.session_state['current_fps'] = self.FPS
+                                st.session_state['current_target_count'] = len(detInfo)
+                                st.session_state['current_detection_time'] = self.detection_time
 
                                 # 更新检测结果
-                                self.frame_count_placeholder.metric("📸 当前帧数", current_frame)
-                                self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
-                                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                                self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
+                                self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
+                                self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
+                                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
 
                                 # 保存目标结果图片
                                 if detInfo:
@@ -1452,14 +1494,14 @@ class Detection_UI:
 
                                 # 调整图像尺寸
                                 resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                                resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
+                                resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
                                 if self.display_mode == "叠加显示":
-                                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"视频画面: {self.uploaded_video.name}")
+                                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_video.name}")
                                 else:
                                     self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {self.uploaded_video.name}")
                                     self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_video.name}")
 
-                                self.logTable.add_frames(image, detInfo, cv2.resize(frame, (640, 640)), self.uploaded_video.name + f"_{current_frame}")
+                                self.logTable.add_frames(image, detInfo, frame, self.uploaded_video.name + f"_{current_frame}")
 
                                 # 更新进度条
                                 if total_length > 0:
@@ -1504,9 +1546,16 @@ class Detection_UI:
         Args:
             frame_id (int): 指定要显示检测结果的帧ID。
 
-        根据用户选择的帧ID，显示该帧的检测结果和图像。
+        根据用户选择的目标过滤选项，显示该帧的检测结果和图像。
         """
-        # 确保已经保存了检测结果
+        if frame_id == -1:  # 显示所有目标
+            if not self.logTable.saved_images_ini:
+                st.warning("没有检测结果可显示！")
+                self.image_placeholder.image(load_default_image(), caption="原始画面")
+                self.table_placeholder.table(pd.DataFrame(columns=["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)"]))
+                return
+            frame_id = 0  # 默认显示第一帧
+
         if len(self.logTable.saved_results) > frame_id:
             frame = self.logTable.saved_images_ini[frame_id]  # 获取指定帧的初始图像
             image = frame.copy()  # 创建图像副本以避免修改原始图像
@@ -1514,27 +1563,36 @@ class Detection_UI:
             detection_results = self.logTable.saved_results[frame_id]  # 获取指定帧的所有检测结果
             disp_res = ResultLogger()  # 创建结果记录器
 
+            # 获取当前选中的目标过滤选项
+            selected_target = st.session_state.get('selectbox_target', "全部目标")
+
             if detection_results:
                 for detInfo in detection_results:  # 遍历当前帧的所有检测结果
                     if isinstance(detInfo, list) and len(detInfo) == 6:  # 验证结构
                         name, chinese_name, bbox, conf, use_time, cls_id = detInfo
-                        label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
+
+                        # 如果选择了目标过滤，跳过不匹配的目标
+                        if selected_target != "全部目标" and selected_target != chinese_name:
+                            continue
+
+                        # label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
 
                         # 合并结果到表格
                         disp_res.concat_results(name, chinese_name, bbox, str(round(conf, 2)), str(use_time))
 
-                        # 如果有保存的初始图像
-                        if len(self.colors) <= cls_id:
-                            # 拓展颜色列表以适应当前类别ID
-                            self.colors.extend(
-                                [[random.randint(0, 255) for _ in range(3)] for _ in range(cls_id + 1 - len(self.colors))]
-                            )
-                        image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])  # 绘制检测框和标签
+                        # 绘制检测框
+                        info = {
+                            'class_name': name,
+                            'bbox': bbox,
+                            'score': conf,
+                            'class_id': cls_id,
+                            'mask': None
+                        }
+                        image, _ = draw_detections(image, info, color=self.colors[cls_id], alpha=0.2)
                     else:
-                        print(f"Unexpected detInfo structure: {detInfo}")
                         continue
 
-                # 在表格中显示所有检测结果
+                # 在表格中显示过滤后的检测结果
                 self.table_placeholder.table(disp_res.results_df)
             else:
                 # 如果没有检测结果，显示空表格
@@ -1544,12 +1602,14 @@ class Detection_UI:
             resized_image = cv2.resize(image, (self.new_width, self.new_height))
             resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
 
+            img_name = self.logTable.saved_names[frame_id]  # 获取指定帧的图像名称
+
             # 根据显示模式显示处理后的图像或原始图像
             if self.display_mode == "叠加显示":
-                self.image_placeholder.image(resized_image, channels="BGR", caption="识别画面")
+                self.image_placeholder.image(resized_image, channels="BGR", caption="识别画面: " + img_name)
             else:
-                self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
-                self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
+                self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面: " + img_name)
+                self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面: " + img_name)
 
     def frame_process(self, image, file_name, video_time=None, is_api=False):
         """
@@ -1625,14 +1685,19 @@ class Detection_UI:
                         self.logTable.add_log_entry(file_name, name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)))
                         # 记录检测信息
                         detInfo.append([name, chinese_name, bbox, int(aim_frame_area), video_time if video_time is not None else str(round(use_time, 2)), cls_id])
-                        # 添加到选择信息列表
-                        select_info.append(name + "-" + str(cnt))
+
+                        # 添加到选择信息列表，避免重复
+                        if chinese_name not in select_info:
+                            select_info.append(chinese_name)
                         cnt += 1
 
                 # 在表格中显示检测结果
                 if not is_api:
                     self.table_placeholder.table(res)
 
+        if not select_info:
+            select_info = ["全部目标"]
+        st.session_state['select_info'] = select_info
         return image, detInfo, select_info
 
     def frame_table_process(self, frame, caption):
@@ -1702,15 +1767,14 @@ class Detection_UI:
         with col1:
             st.header("📷 视频/图片检测系统")
             self.display_mode = st.radio("单/双画面显示设置", ["叠加显示", "对比显示"])
+            self.image_placeholder = st.empty()
+            self.image_placeholder_res = st.empty()
             # 根据显示模式创建用于显示视频画面的空容器
             if self.display_mode == "叠加显示":
-                self.image_placeholder = st.empty()
                 if not self.logTable.saved_images_ini:
                     self.image_placeholder.image(load_default_image(), caption="原始画面")
             else:
                 # "双画面显示"
-                self.image_placeholder = st.empty()
-                self.image_placeholder_res = st.empty()
                 if not self.logTable.saved_images_ini:
                     self.image_placeholder.image(load_default_image(), caption="原始画面")
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
@@ -1725,6 +1789,19 @@ class Detection_UI:
             st.header("🖼️ 当前图片检测结果")
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
+
+            self.selectbox_placeholder = st.empty()
+
+            # 初始化目标过滤选项
+            idx = st.session_state.get('image_play_index', 0)
+
+            detected_targets = st.session_state.get("select_info", ["全部目标"])
+            selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", detected_targets, key='selectbox_target')
+            # 延迟执行 toggle_comboBox
+            if 'last_target' not in st.session_state or st.session_state['last_target'] != selectbox_target:
+                self.selectbox_target = selectbox_target
+                st.session_state['last_target'] = selectbox_target
+                self.toggle_comboBox(idx)
 
             # 创建一个导出结果的按钮
             st.write("---------------------")
@@ -1757,24 +1834,6 @@ class Detection_UI:
 
         # 在第五列设置一个空的停止按钮占位符
 
-        # 在第二列处理目标过滤
-        # with col2:
-        # self.selectbox_placeholder = st.empty()
-        # detected_targets = ["全部目标"] # 初始化目标列表
-        #
-        # 遍历并显示检测结果
-        # for i, info in enumerate(self.logTable.saved_results):
-        # name, bbox, conf, use_time, cls_id = info
-        # detected_targets.append(name + "-" + str(i))
-        # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", detected_targets)
-        #
-        # 处理目标过滤的选择
-        # for i, info in enumerate(self.logTable.saved_results):
-        # name, bbox, conf, use_time, cls_id = info
-        # if self.selectbox_target == name + "-" + str(i):
-        # self.toggle_comboBox(i)
-        # elif self.selectbox_target == "全部目标":
-        # self.toggle_comboBox(-1)
         with col1:
             st.write("")
             run_button = st.button("🚀 开始检测")
@@ -1786,38 +1845,20 @@ class Detection_UI:
                 total_imgs = len(st.session_state['saved_images_ini'])
                 if 'image_play_index' not in st.session_state or st.session_state['image_play_index'] >= total_imgs:
                     st.session_state['image_play_index'] = total_imgs - 1
+
                 col_prev, col_next = st.columns([1, 1])
                 with col_prev:
                     if st.button("⬅️ 上一张图片", key="prev_image"):
-                        if st.session_state['image_play_index'] > 0:  # Prevent going below the first image
+                        if st.session_state['image_play_index'] > 0:
                             st.session_state['image_play_index'] -= 1
                 with col_next:
                     if st.button("下一张图片 ➡️", key="next_image"):
-                        if st.session_state['image_play_index'] < total_imgs - 1:  # Prevent going beyond the last image
+                        if st.session_state['image_play_index'] < total_imgs - 1:
                             st.session_state['image_play_index'] += 1
+
+                # 替换这里的显示和表格更新逻辑，统一调用 toggle_comboBox 处理
                 idx = st.session_state['image_play_index']
-                framecopy = self.logTable.saved_images_ini[idx]
-                detected_img = self.logTable.saved_images[idx] if hasattr(self.logTable, "saved_images") and len(self.logTable.saved_images) > idx else framecopy
-                img_name = self.logTable.saved_names[idx] if hasattr(self.logTable, "saved_names") and len(self.logTable.saved_names) > idx else f"图片{idx+1}"
-                resized_image = cv2.resize(detected_img, (self.new_width, self.new_height))
-                resized_frame = cv2.resize(framecopy, (self.new_width, self.new_height))
-                if self.display_mode == "叠加显示":
-                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"图片显示: {img_name}")
-                else:
-                    self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {img_name}")
-                    self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {img_name}")
-                # 更新检测结果表格
-                if hasattr(self.logTable, "saved_results") and len(self.logTable.saved_results) > idx:
-                    detection_results = self.logTable.saved_results[idx]  # 获取当前图片的所有检测结果
-                    if detection_results:
-                        disp_res = ResultLogger()
-                        for detInfo in detection_results:  # 遍历当前图片的所有检测结果
-                            name, chinese_name, bbox, aim_frame_area, use_time, cls_id = detInfo
-                            disp_res.concat_results(name, chinese_name, bbox, str(aim_frame_area), str(use_time))
-                        self.table_placeholder.table(disp_res.results_df)  # 显示当前图片的所有检测结果
-                    else:
-                        # 如果没有检测结果，显示空表格
-                        self.table_placeholder.table(concat_results("None", "[0, 0, 0, 0]", "0.00", "0.00s"))
+                self.toggle_comboBox(idx)
             else:
                 # 如果没有保存的图像，则显示默认图像
                 self.image_placeholder.image(load_default_image(), caption="原始画面")
@@ -1836,13 +1877,14 @@ class Detection_UI:
             self.detection_time_placeholder = st.empty()
 
         # 初始化默认值
-        self.frame_count_placeholder.metric("📸 当前帧数", "0")
-        self.fps_placeholder.metric("⚡ 帧率 (FPS)", "0")
-        self.target_count_placeholder.metric("🎯 目标数量", "0")
-        self.detection_time_placeholder.metric("⏱️ 检测时间 (秒)", "0.00")
+        self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
+        self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
+        self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
+        self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
 
         if run_button:
             self.process_camera_or_file()  # 运行摄像头或文件处理
+            st.rerun()  # 重新运行以更新界面
 
 # 实例化并运行应用
 if __name__ == "__main__":
