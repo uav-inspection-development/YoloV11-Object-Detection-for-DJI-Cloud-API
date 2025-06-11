@@ -309,6 +309,23 @@ class Detection_UI:
 
         try:
             self.model.load_model(model_path=model_path)
+            # 确保类别排序一致
+            sorted_cls_name = {name: self.cls_name[name] for name in self.model.names if name in self.cls_name}
+            self.cls_name = sorted_cls_name
+
+            # 重新初始化颜色列表，确保顺序与模型类别一致
+            for class_name in self.model.names:
+                if class_name in self.detect_class_color:
+                    # 如果已定义颜色，使用定义的颜色
+                    self.colors.append(self.detect_class_color[class_name])
+                else:
+                    # 如果未定义颜色，填充随机颜色
+                    self.colors.append((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+
+            # 确保颜色列表长度与模型类别一致
+            if len(self.colors) != len(self.model.names):
+                st.warning("⚠️ 警告: 颜色列表长度与模型类别不一致！将使用随机颜色填充。")
+
         except Exception as e:
             print(f"无法加载模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
 
@@ -545,35 +562,70 @@ class Detection_UI:
                 if set(self.model.names) != set(self.available_class_keys):
                     st.sidebar.error("⚠️ 错误: 模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
                 else:
-                    self.colors = [
-                        self.detect_class_color.get(class_name, [random.randint(0, 255) for _ in range(3)])
-                        for class_name in self.model.names
-                    ]
+                    self.colors = [self.detect_class_color.get(class_name, (0, 255, 0)) for class_name in self.cls_name.values()]
         elif model_file_option == "默认":
+            if self.model_type == "检测任务":
+                if self.image_type == "红外":
+                    model_path=abs_path("../weights/yolo11s-thermo.pt", path_type="current")
+                elif self.image_type == "EL隐裂":
+                    model_path=abs_path("../weights/yolo11s-el.pt", path_type="current")
+                elif self.image_type == "可见光":
+                    model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current")
+                else:
+                    model_path=abs_path("../weights/yolo11s.pt", path_type="current")
+            else:
+                if self.image_type == "红外":
+                    model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current")
+                elif self.image_type == "EL隐裂":
+                    model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current")
+                elif self.image_type == "可见光":
+                    model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
+                else:
+                    st.sidebar.error("⚠️ 错误: 不支持的图像类型！")
+
             try:
-                if self.model_type == "检测任务":
-                    if self.image_type == "红外":
-                        self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo.pt", path_type="current"))
-                    elif self.image_type == "EL隐裂":
-                        self.model.load_model(model_path=abs_path("../weights/yolo11s-el.pt", path_type="current"))
-                    elif self.image_type == "可见光":
-                        self.model.load_model(model_path=abs_path("../weights/yolo11s-visible.pt", path_type="current"))
+                self.model.load_model(model_path=model_path)
+                # 确保类别排序一致
+                sorted_cls_name = {name: self.cls_name[name] for name in self.model.names if name in self.cls_name}
+                self.cls_name = sorted_cls_name
+
+                # 重新初始化颜色列表，确保顺序与模型类别一致
+                for class_name in self.model.names:
+                    if class_name in self.detect_class_color:
+                        # 如果已定义颜色，使用定义的颜色
+                        self.colors.append(self.detect_class_color[class_name])
                     else:
-                        self.model.load_model(model_path=abs_path("../weights/yolo11s.pt", path_type="current"))
-                elif self.model_type == "分割任务":
-                    if self.image_type == "红外":
-                        self.model.load_model(model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current"))
-                    elif self.image_type == "EL隐裂":
-                        self.model.load_model(model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current"))
-                    elif self.image_type == "可见光":
-                        self.model.load_model(model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current"))
-                    else:
-                        st.sidebar.error("⚠️ 错误: 不支持的图像类型！")
+                        # 如果未定义颜色，填充随机颜色
+                        self.colors.append((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+
+                # 确保颜色列表长度与模型类别一致
+                if len(self.colors) != len(self.model.names):
+                    st.warning("⚠️ 警告: 颜色列表长度与模型类别不一致！将使用随机颜色填充。")
+
             except Exception as e:
                 st.sidebar.error(f"⚠️ 错误: 无法加载默认模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
-            # 检查模型类别是否与选定类别一致
+
+            # 检查类别是否完全一致
             if set(self.model.names) != set(self.available_class_keys):
-                st.sidebar.error("⚠️ 错误: 模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+                # 如果 chinese_name_list 的类别比模型的类别少，则以 chinese_name_list 为准
+                if len(self.available_class_keys) < len(self.model.names):
+                    self.model.names = [name for name in self.model.names if name in self.available_class_keys]
+                # 如果 chinese_name_list 的类别比模型的类别多，则以模型为准
+                else:
+                    self.available_class_keys = [key for key in self.available_class_keys if key in self.model.names]
+
+                # 重新检查类别是否一致
+                missing_in_model = set(self.available_class_keys) - set(self.model.names)
+                missing_in_selected = set(self.model.names) - set(self.available_class_keys)
+
+                # 输出缺失的类别
+                print(f"模型类别: {self.model.names}")
+                print(f"选定类别: {self.available_class_keys}")
+                print(f"模型中缺失的类别: {missing_in_model}")
+                print(f"选定类别中缺失的类别: {missing_in_selected}")
+
+                # 在 Streamlit 侧边栏显示错误信息
+                st.sidebar.warning(f"⚠️ 警告: 模型类别与选定类别已自动调整！")
             else:
                 # 为模型中的类别重新分配颜色
                 self.colors = [
@@ -1573,9 +1625,17 @@ class Detection_UI:
             selected_target = st.session_state.get('selectbox_target', "全部目标")
 
             if detection_results:
+                cnt = 0  # 用于绘制检测框的计数器
                 for detInfo in detection_results:  # 遍历当前帧的所有检测结果
                     if isinstance(detInfo, list) and len(detInfo) == 6:  # 验证结构
                         name, chinese_name, bbox, conf, use_time, cls_id = detInfo
+
+                        # Ensure cls_id is within bounds
+                        if cls_id >= len(self.colors):
+                            st.warning(f"⚠️ 警告: 检测到的类别索引 {cls_id} 超出颜色列表范围！使用默认颜色。")
+                            color = (255, 0, 0)  # 默认红色
+                        else:
+                            color = self.colors[cls_id]
 
                         # 如果选择了目标过滤，跳过不匹配的目标
                         if selected_target != "全部目标" and selected_target != chinese_name:
@@ -1594,7 +1654,8 @@ class Detection_UI:
                             'class_id': cls_id,
                             'mask': None
                         }
-                        image, _ = draw_detections(image, info, color=self.colors[cls_id], alpha=0.2)
+                        image, _ = draw_detections(image, info, color=color, alpha=0.2, line_number=cnt)
+                        cnt += 1
                     else:
                         continue
 
@@ -1664,6 +1725,13 @@ class Detection_UI:
                 for idx, info in enumerate(det_info):
                     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
 
+                    # Ensure cls_id is within bounds
+                    if cls_id >= len(self.colors):
+                        st.warning(f"⚠️ 警告: 检测到的类别索引 {cls_id} 超出颜色列表范围！使用默认颜色。")
+                        color = (255, 0, 0)  # 默认红色
+                    else:
+                        color = self.colors[cls_id]
+
                     if mask is not None and self.rectangle_bounding_output:
                         # mask: numpy array, shape (H, W), values 0/1 or 0/255
                         mask_bin = (mask > 0).astype(np.uint8)
@@ -1676,10 +1744,9 @@ class Detection_UI:
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
                         if not is_api:
-                            image, aim_frame_area = draw_detections(image, info, color=self.colors[cls_id], alpha=0.5, line_number=cnt)
+                            image, aim_frame_area = draw_detections(image, info, color=color, alpha=0.5, line_number=cnt)
                         else:
                             image, aim_frame_area = draw_detections(image, info, alpha=0.5, line_number=cnt, is_api=True)
-                        # image = drawRectBox(image, bbox, alpha=0.2, addText=label, color=self.colors[cls_id])
 
                         # 获取中文名
                         chinese_name = self.cls_name.get(name, "未知类别")
