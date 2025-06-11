@@ -570,3 +570,33 @@ def auto_keystone_correction(image, min_area=5000, output_path=None):
         cv2.imwrite(output_path, corrected_img)
 
     return corrected_img
+
+def enhance_texture(image, method="clahe"):
+    """
+    Enhance the texture of the input image using the specified method and return the enhanced RGB image.
+
+    Args:
+        image (numpy.ndarray): Input image in BGR format.
+        method (str): Enhancement method, either "CLAHE" or "Histogram Equalization".
+
+    Returns:
+        numpy.ndarray: Enhanced image in RGB format.
+    """
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    if method == "clahe":
+        # Create CLAHE object
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        # Apply CLAHE
+        enhanced_gray = clahe.apply(gray)
+    elif method == "histogram_equalization":
+        # Apply Histogram Equalization
+        enhanced_gray = cv2.equalizeHist(gray)
+    else:
+        raise ValueError("Invalid enhancement method. Choose 'CLAHE' or 'Histogram Equalization'.")
+
+    # Convert the enhanced grayscale image back to RGB format
+    enhanced_rgb = cv2.cvtColor(enhanced_gray, cv2.COLOR_GRAY2BGR)
+
+    return enhanced_rgb

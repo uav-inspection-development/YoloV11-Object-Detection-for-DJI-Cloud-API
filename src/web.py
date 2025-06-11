@@ -12,7 +12,7 @@ from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
-from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image, rotate_image, auto_keystone_correction
+from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image, rotate_image, auto_keystone_correction, enhance_texture
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -111,6 +111,7 @@ class Detection_UI:
         self.rot_angle_y = 0  # 水平旋转角度
         self.keystone_scale = 1.0  # 缩放比例
         self.min_area = 5000  # 自动梯形校正的最小面积
+        self.image_enhancement_method = "不处理"  # 图像增强方法
 
         # 初始化检测结果相关的变量
         self.detection_result = None
@@ -195,6 +196,7 @@ class Detection_UI:
         self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
         self.enable_rotate_correction = self.api_params.get("enable_rotate_correction", False)
         self.enable_auto_keystone_correction = self.api_params.get("enable_auto_keystone_correction", False)
+        self.image_enhancement_method = self.api_params.get("image_enhancement_method", "不处理")
         self.undistortion_method = self.api_params.get("undistortion_method", "不去除")
 
         # 通过API方式上传相机标定文件
@@ -349,7 +351,7 @@ class Detection_UI:
         st.sidebar.header("🖥️ 显示设置")
 
         # 添加固定比例选项
-        aspect_ratio = st.sidebar.selectbox("选择显示比例", ["16:9", "4:3", "自由调整"], index=0)
+        aspect_ratio = st.sidebar.selectbox("选择显示比例", options=["16:9", "4:3", "自由调整"], index=0)
         if aspect_ratio == "16:9":
             ratio = 16 / 9
         elif aspect_ratio == "4:3":
@@ -381,7 +383,7 @@ class Detection_UI:
             self.csv_output_path += os.sep
 
         st.sidebar.header("📤 日志导出格式设置")
-        self.export_format = st.sidebar.selectbox("选择导出格式", ["CSV", "Excel", "JSON", "Word"], index=0)
+        self.export_format = st.sidebar.radio("选择导出格式", options=["Word", "CSV", "Excel", "JSON"], index=0)
         st.sidebar.caption(f"💡 提示: {self.export_format} 文件将导出至 {self.csv_output_path} 路径。")
 
         # 根据用户选择的导出格式设置文件后缀
@@ -433,17 +435,17 @@ class Detection_UI:
         # 设置侧边栏的模型设置部分
         st.sidebar.header("🧠 模型设置")
         # 选择模型类型的下拉菜单
-        self.model_type = st.sidebar.selectbox("选择任务类型", ["检测任务", "分割任务"])
+        self.model_type = st.sidebar.radio("选择任务类型", options=["检测任务", "分割任务"], index=0)
 
         available_options = []
         # 添加提示信息
         if self.model_type == "检测任务":
             st.sidebar.caption("💡 提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。")
-            available_options = ["红外", "EL隐裂", "可见光", "其他"]
+            available_options = ["EL隐裂", "红外", "可见光", "其他"]
         elif self.model_type == "分割任务":
             self.rectangle_bounding_output = st.sidebar.checkbox("输出矩形边框", value=True)
             st.sidebar.caption("💡 提示: 分割任务将对所有的光伏板轮廓进行分割，选择输出矩形边框后，将检测矩形边框并输出，否则输出原始边缘，目标类别选择【单组件】或【组串】即可。")
-            available_options = ["红外", "EL隐裂", "可见光"]
+            available_options = ["EL隐裂", "红外", "可见光"]
 
         # 添加图像类型选择
         st.sidebar.header("🖼️ 图像类型选择")
@@ -501,7 +503,7 @@ class Detection_UI:
 
         # 选择模型文件类型，可以是默认的或者自定义的
         st.sidebar.header("📁 模型文件设置")
-        model_file_option = st.sidebar.radio("模型设置", ["默认", "指定权重文件"])
+        model_file_option = st.sidebar.radio("模型设置", options=["默认", "指定权重文件"], index=0)
         if model_file_option == "指定权重文件":
             # 如果选择自定义模型文件，则提供文件上传器
             model_file = st.sidebar.file_uploader("选择.pt文件", type="pt")
@@ -556,7 +558,7 @@ class Detection_UI:
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("📹 输入源识别设置")
         # 选择输入源类型：无输入，摄像头或 RTSP/RTMP 流
-        self.input_source = st.sidebar.radio("选择输入源", ["图片文件", "图片文件夹", "视频文件", "视频文件夹", "摄像头", "RTSP/RTMP流"])
+        self.input_source = st.sidebar.radio("选择输入源", options=["图片文件", "图片文件夹", "视频文件", "视频文件夹", "摄像头", "RTSP/RTMP流"], index=0)
 
         if "file_key" not in st.session_state:
             st.session_state["file_key"] = str(random.random())
@@ -708,6 +710,14 @@ class Detection_UI:
             self.min_area = st.sidebar.slider("最小面积", min_value=1000, max_value=100000, value=5000, step=100)
         st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。")
 
+        # 添加图像增强选项
+        self.image_enhancement_method = st.sidebar.radio(
+            "选择图像增强方法",
+            options=["不处理", "CLAHE", "Histogram Equalization"],
+            index=0  # 默认选择不处理
+        )
+        st.sidebar.caption("💡 提示: 图像增强可以改善图像的对比度和细节，使检测结果更加准确。")
+
         # 添加图像畸变校正选项
         self.undistortion_method = st.sidebar.radio(
             "选择相机畸变校正类型",
@@ -784,6 +794,13 @@ class Detection_UI:
                     else:
                         corrected_image = corrected_image.copy()
 
+                    if self.image_enhancement_method == "CLAHE":
+                        corrected_image = enhance_texture(corrected_image, method="clahe")
+                    elif self.image_enhancement_method == "Histogram Equalization":
+                        corrected_image = enhance_texture(corrected_image, method="histogram_equalization")
+                    else:
+                        corrected_image = corrected_image.copy()
+
                     if self.undistortion_method == "相机参数计算" and self.camera_matrix is not None and self.dist_coeffs is not None:
                         distorted_image = camera_undistortion(corrected_image, self.camera_matrix, self.dist_coeffs)
                     elif self.undistortion_method == "手动调整参数":
@@ -810,6 +827,13 @@ class Detection_UI:
 
                 if self.enable_auto_keystone_correction:
                     corrected_image = auto_keystone_correction(corrected_image, min_area=self.min_area)
+                else:
+                    corrected_image = corrected_image.copy()
+
+                if self.image_enhancement_method == "CLAHE":
+                    corrected_image = enhance_texture(corrected_image, method="clahe")
+                elif self.image_enhancement_method == "Histogram Equalization":
+                    corrected_image = enhance_texture(corrected_image, method="histogram_equalization")
                 else:
                     corrected_image = corrected_image.copy()
 
@@ -966,6 +990,13 @@ class Detection_UI:
 
                     if self.enable_auto_keystone_correction:
                         frame = auto_keystone_correction(frame, min_area=self.min_area)
+
+                    # 图像增强
+                    if self.image_enhancement_method == "CLAHE":
+                        frame = enhance_texture(frame, method="clahe")
+                    elif self.image_enhancement_method == "Histogram Equalization":
+                        frame = enhance_texture(frame, method="histogram_equalization")
+
                     # 调节摄像头的分辨率
                     # 调整图像尺寸
                     frame = cv2.resize(frame, (self.new_width, self.new_height))
@@ -1069,6 +1100,12 @@ class Detection_UI:
                     if self.enable_auto_keystone_correction:
                         image_ini = auto_keystone_correction(image_ini, min_area=self.min_area)
 
+                    # 图像增强
+                    if self.image_enhancement_method == "CLAHE":
+                        image_ini = enhance_texture(image_ini, method="clahe")
+                    elif self.image_enhancement_method == "Histogram Equalization":
+                        image_ini = enhance_texture(image_ini, method="histogram_equalization")
+
                     # 检查图像是否为黑白图像
                     is_bw = is_black_and_white(image_ini)
                     # 如果启用了伪彩色转换，应用转换
@@ -1125,6 +1162,12 @@ class Detection_UI:
 
                 if self.enable_auto_keystone_correction:
                     image_ini = auto_keystone_correction(image_ini, min_area=self.min_area)     
+
+                # 图像增强
+                if self.image_enhancement_method == "CLAHE":
+                    image_ini = enhance_texture(image_ini, method="clahe")
+                elif self.image_enhancement_method == "Histogram Equalization":
+                    image_ini = enhance_texture(image_ini, method="histogram_equalization")
 
                 # 检查图像是否为黑白图像
                 is_bw = is_black_and_white(image_ini)
@@ -1231,6 +1274,12 @@ class Detection_UI:
 
                                 if self.enable_auto_keystone_correction:
                                     frame = auto_keystone_correction(frame, min_area=self.min_area)
+
+                                # 图像增强
+                                if self.image_enhancement_method == "CLAHE":
+                                    frame = enhance_texture(frame, method="clahe")
+                                elif self.image_enhancement_method == "Histogram Equalization":
+                                    frame = enhance_texture(frame, method="histogram_equalization")
 
                                 # 检查是否为黑白图像
                                 is_bw = is_black_and_white(frame)
@@ -1364,6 +1413,11 @@ class Detection_UI:
 
                             if self.enable_auto_keystone_correction:
                                 frame = auto_keystone_correction(frame, min_area=self.min_area)
+
+                            if self.image_enhancement_method == "CLAHE":
+                                frame = enhance_texture(frame, method="clahe")
+                            elif self.image_enhancement_method == "Histogram Equalization":
+                                frame = enhance_texture(frame, method="histogram_equalization")
 
                             # 检查是否为黑白图像
                             is_bw = is_black_and_white(frame)
