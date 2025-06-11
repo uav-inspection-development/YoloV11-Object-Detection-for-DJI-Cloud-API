@@ -411,13 +411,14 @@ def auto_undistort_image(img, k1):
     return undistorted
 
 
-def rotate_image(img, angle_x, angle_y):
+def rotate_image(img, angle_x, angle_y, zoom_factor=1.0):
     """
-    对图像进行旋转变换。
+    对图像进行旋转变换并添加缩放功能。
     参数：
         img (numpy.ndarray): 输入的图像。
         angle_x (float): 绕X轴旋转的角度（单位：度）。
         angle_y (float): 绕Y轴旋转的角度（单位：度）。
+        zoom_factor (float): 缩放因子。大于1表示放大，小于1表示缩小。
     返回：
         numpy.ndarray: 旋转变换后的图像。
     """
@@ -467,4 +468,135 @@ def rotate_image(img, angle_x, angle_y):
 
     # 应用变换
     result = cv2.warpPerspective(img, H_corrected, (w, h), flags=cv2.INTER_LINEAR)
+
+    # 缩放处理
+    if zoom_factor > 1.0:  # 放大
+        new_w, new_h = int(w / zoom_factor), int(h / zoom_factor)
+        x1, y1 = (w - new_w) // 2, (h - new_h) // 2
+        x2, y2 = x1 + new_w, y1 + new_h
+        result = result[y1:y2, x1:x2]
+    elif zoom_factor < 1.0:  # 缩小
+        new_w, new_h = int(w * zoom_factor), int(h * zoom_factor)
+        result = cv2.resize(result, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        pad_w, pad_h = (w - new_w) // 2, (h - new_h) // 2
+        result = cv2.copyMakeBorder(result, pad_h, pad_h, pad_w, pad_w, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+
     return result
+
+
+def get_detected_boundaries(image, min_area=5000):
+    """
+    Returns the detected boundaries as a list of coordinates.
+
+    Args:
+        image (numpy.ndarray): Input image array.
+        min_area (int): Minimum area threshold for contours.
+
+    Returns:
+        list: A list of detected boundaries, where each boundary is represented as a list of coordinates.
+    """
+    if image is None or not isinstance(image, np.ndarray):
+        raise ValueError("Invalid image input. Expected a numpy.ndarray.")
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply median blur to remove noise
+    denoised = cv2.medianBlur(gray, 5)
+
+    # Apply adaptive thresholding
+    adaptive_thresh = cv2.adaptiveThreshold(
+        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, blockSize=11, C=2
+    )
+
+    # Perform dilation to connect edges
+    kernel = np.ones((3, 3), np.uint8)
+    dilated = cv2.dilate(adaptive_thresh, kernel, iterations=2)
+
+    # Find contours
+    contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    boundaries = []
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area > min_area:
+            epsilon = 0.02 * cv2.arcLength(cnt, True)
+            approx = cv2.approxPolyDP(cnt, epsilon, True)
+            if len(approx) == 4:  # Detect rectangular boundaries
+                boundaries.append(approx.reshape(-1, 2).tolist())
+
+    return boundaries
+
+
+def auto_keystone_correction(image, min_area=5000, output_path=None):
+    """
+    Performs keystone correction on the detected boundary.
+
+    Args:
+        image (numpy.ndarray): Input image array.
+        min_area (int): Minimum area threshold for contours.
+        output_path (str): Path to save the corrected image. If None, the image is not saved.
+
+    Returns:
+        numpy.ndarray: Keystone-corrected image.
+    """
+    if image is None or not isinstance(image, np.ndarray):
+        raise ValueError("Invalid image input. Expected a numpy.ndarray.")
+
+    # Get detected boundaries
+    boundaries = get_detected_boundaries(image, min_area)
+    if not boundaries:
+        raise ValueError("No valid boundaries detected for keystone correction.")
+
+    # Use the first detected boundary for correction
+    boundary = np.array(boundaries[0], dtype=np.float32)
+
+    # Define the target rectangle (e.g., a straight rectangle)
+    h, w = image.shape[:2]
+    target_rect = np.array([
+        [0, 0],
+        [w - 1, 0],
+        [w - 1, h - 1],
+        [0, h - 1]
+    ], dtype=np.float32)
+
+    # Compute the perspective transformation matrix
+    M = cv2.getPerspectiveTransform(boundary, target_rect)
+
+    # Apply the perspective transformation
+    corrected_img = cv2.warpPerspective(image, M, (w, h))
+
+    # Save the corrected image if output_path is provided
+    if output_path:
+        cv2.imwrite(output_path, corrected_img)
+
+    return corrected_img
+
+def enhance_texture(image, method="clahe"):
+    """
+    Enhance the texture of the input image using the specified method and return the enhanced RGB image.
+
+    Args:
+        image (numpy.ndarray): Input image in BGR format.
+        method (str): Enhancement method, either "CLAHE" or "Histogram Equalization".
+
+    Returns:
+        numpy.ndarray: Enhanced image in RGB format.
+    """
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    if method == "clahe":
+        # Create CLAHE object
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        # Apply CLAHE
+        enhanced_gray = clahe.apply(gray)
+    elif method == "histogram_equalization":
+        # Apply Histogram Equalization
+        enhanced_gray = cv2.equalizeHist(gray)
+    else:
+        raise ValueError("Invalid enhancement method. Choose 'CLAHE' or 'Histogram Equalization'.")
+
+    # Convert the enhanced grayscale image back to RGB format
+    enhanced_rgb = cv2.cvtColor(enhanced_gray, cv2.COLOR_GRAY2BGR)
+
+    return enhanced_rgb

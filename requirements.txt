@@ -61,6 +61,7 @@ PySide6
 PySide6-Addons
 PySide6-Essentials
 python-dateutil
+python-docx
 pytz
 PyYAML
 QtFusion

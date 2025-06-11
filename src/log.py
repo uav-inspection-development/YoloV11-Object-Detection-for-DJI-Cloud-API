@@ -6,6 +6,9 @@ from QtFusion.path import abs_path
 from PIL import Image
 import numpy as np
 from datetime import datetime
+from docx import Document
+from docx.shared import Inches
+from io import BytesIO
 
 def save_chinese_image(file_path, image_array):
     """
@@ -76,11 +79,12 @@ class LogTable:
         self.saved_target_images = []
         self.saved_images_ini = []
         self.saved_results = []
+        self.saved_names = []
 
         self.columns = ['文件路径', '识别结果', '类型', '位置(pixel)', '面积(pixel)', '时间(s)']
         self.data = pd.DataFrame(columns=self.columns)
 
-    def add_frames(self, image, detInfo, img_ini):
+    def add_frames(self, image, detInfo, img_ini, img_name=None):
         """
         将检测到的图像和检测信息添加到列表中。
 
@@ -91,7 +95,8 @@ class LogTable:
         """
         self.saved_images.append(image)
         self.saved_images_ini.append(img_ini)
-        self.saved_results = detInfo
+        self.saved_results.append(detInfo)
+        self.saved_names.append(img_name)
         if detInfo:
             self.saved_target_images.append(image)
         # print('____')
@@ -106,6 +111,7 @@ class LogTable:
         self.saved_images_ini = []
         self.saved_results = []
         self.saved_target_images = []
+        self.saved_names = []
 
     def save_frames_file(self, fps=30, video_name='save', video_time=None, output_path='output/frame/'):
         """
@@ -246,6 +252,61 @@ class LogTable:
         """
         # 将DataFrame保存到JSON文件
         self.data.to_json(json_file_path, orient='records', lines=True, force_ascii=False)
+
+    def save_to_word(self, word_file_path):
+        """
+        将检测结果保存到 Word 文件。
+
+        Args:
+            word_file_path (str): Word 文件的路径。
+        """
+        try:
+            # 创建一个 Word 文档
+            doc = Document()
+            doc.add_heading('检测结果报告', level=1)
+
+            # 遍历每张图片的检测结果
+            for idx, (image_ini, image_detected, detection_results, img_name) in enumerate(
+                zip(self.saved_images_ini, self.saved_images, self.saved_results, self.saved_names)
+            ):
+                # 添加图片标题，使用图片名称
+                doc.add_heading(f'图片 {idx + 1}: {img_name}', level=2)
+
+                # 添加原图到 Word 文档
+                doc.add_paragraph('原始图像:')
+                original_image_stream = BytesIO()
+                Image.fromarray(cv2.cvtColor(image_ini, cv2.COLOR_BGR2RGB)).save(original_image_stream, format='PNG')
+                original_image_stream.seek(0)
+                doc.add_picture(original_image_stream, width=Inches(4))
+
+                # 添加识别后的图片到 Word 文档
+                doc.add_paragraph('识别后的图像:')
+                detected_image_stream = BytesIO()
+                Image.fromarray(cv2.cvtColor(image_detected, cv2.COLOR_BGR2RGB)).save(detected_image_stream, format='PNG')
+                detected_image_stream.seek(0)
+                doc.add_picture(detected_image_stream, width=Inches(4))
+
+                # 添加检测结果表格
+                doc.add_paragraph('检测结果信息:')
+                table = doc.add_table(rows=1, cols=6)
+                table.style = 'Table Grid'
+                headers = ["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)", "类别ID"]
+                for i, header in enumerate(headers):
+                    table.cell(0, i).text = header
+
+                # 填充检测结果
+                for detInfo in detection_results:
+                    if isinstance(detInfo, list) and len(detInfo) == 6:
+                        row_cells = table.add_row().cells
+                        for i, value in enumerate(detInfo):
+                            row_cells[i].text = str(value)
+
+            # 保存 Word 文件
+            doc.save(word_file_path)
+            print(f"检测结果已保存到 Word 文件: {word_file_path}")
+
+        except Exception as e:
+            print(f"保存到 Word 文件失败: {str(e)}")
 
     def update_table(self, log_table_placeholder):
         """
