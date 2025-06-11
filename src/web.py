@@ -135,6 +135,11 @@ class Detection_UI:
         self.progress_bar = None  # 用于显示的进度条
         self.export_format = 'CSV'  # 导出格式
 
+        self.frame_count_placeholder = None  # 帧计数显示区域
+        self.fps_placeholder = None  # FPS显示区域
+        self.target_count_placeholder = None  # 目标计数显示区域
+        self.detection_time_placeholder = None  # 检测时间显示区域
+
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
 
@@ -929,8 +934,6 @@ class Detection_UI:
         current_frame = 0
         self.progress_bar.progress(0)  # 初始化进度条
 
-        frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
-
         try:
 
             cap = cv2.VideoCapture(input_source)
@@ -1011,10 +1014,10 @@ class Detection_UI:
                     image, detInfo, _ = self.frame_process(frame, input_type)
 
                     # 更新检测结果
-                    frame_count_placeholder.metric("📸 当前帧数", current_frame)
-                    fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
-                    target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                    detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                    self.frame_count_placeholder.metric("📸 当前帧数", current_frame)
+                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
+                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                     # 保存目标结果图片
                     if detInfo:
@@ -1074,8 +1077,6 @@ class Detection_UI:
             self.logTable.clear_frames()
             self.progress_bar.progress(0)
 
-            frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
-
             # 检查是否上传了多个文件
             if isinstance(self.uploaded_file, list):
                 # 批量处理上传的图片
@@ -1119,9 +1120,9 @@ class Detection_UI:
                     # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
                     # 更新检测结果
-                    frame_count_placeholder.metric("📸 当前图片数", idx+1)
-                    target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                    detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                    self.frame_count_placeholder.metric("📸 当前图片数", idx+1)
+                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                     # 调整图像尺寸
                     resized_image = cv2.resize(image, (self.new_width, self.new_height))
@@ -1182,8 +1183,8 @@ class Detection_UI:
                 # self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info, key="22113")
 
                 # 更新检测结果
-                target_count_placeholder.metric("检测目标数量", len(detInfo))
-                detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
+                self.target_count_placeholder.metric("检测目标数量", len(detInfo))
+                self.detection_time_placeholder.metric("检测用时 (秒)", self.detection_time)
 
                 # 调整图像尺寸
                 resized_image = cv2.resize(image, (self.new_width, self.new_height))
@@ -1218,8 +1219,6 @@ class Detection_UI:
             self.progress_bar.progress(0)
 
             self.close_flag = self.close_placeholder.button(label="停止")
-
-            frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder = self.real_time_dashboard()
 
             # 检查是否上传了多个视频文件
             if isinstance(self.uploaded_video, list):
@@ -1295,10 +1294,10 @@ class Detection_UI:
                                     image, detInfo, _ = self.frame_process(frame, uploaded_video.name, video_time=current_time_str)
 
                                     # 更新检测结果
-                                    frame_count_placeholder.metric("📸 当前帧数", current_frame)
-                                    fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
-                                    target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                                    detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                                    self.frame_count_placeholder.metric("📸 当前帧数", current_frame)
+                                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
+                                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                                     if detInfo:
                                         time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
@@ -1322,10 +1321,7 @@ class Detection_UI:
 
                                     # 更新进度条
                                     progress_percentage = int(((current_frame + 1) / total_frames) * 100)
-                                    try:
-                                        self.progress_bar.progress(progress_percentage)
-                                    except:
-                                        pass
+                                    self.progress_bar.progress(progress_percentage)
 
                                     current_frame += 1
                             else:
@@ -1434,10 +1430,10 @@ class Detection_UI:
                                 image, detInfo, _ = self.frame_process(frame, self.uploaded_video.name, video_time=current_time_str)
 
                                 # 更新检测结果
-                                frame_count_placeholder.metric("📸 当前帧数", current_frame)
-                                fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
-                                target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                                detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                                self.frame_count_placeholder.metric("📸 当前帧数", current_frame)
+                                self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", self.FPS)
+                                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
 
                                 # 保存目标结果图片
                                 if detInfo:
@@ -1468,10 +1464,7 @@ class Detection_UI:
                                 # 更新进度条
                                 if total_length > 0:
                                     progress_percentage = int(((current_frame + 1) / total_frames) * 100)
-                                    try:
-                                        self.progress_bar.progress(progress_percentage)
-                                    except:
-                                        pass
+                                    self.progress_bar.progress(progress_percentage)
 
                                 current_frame += 1
                         else:
@@ -1642,24 +1635,6 @@ class Detection_UI:
 
         return image, detInfo, select_info
 
-    def real_time_dashboard(self):
-        """
-        显示实时监控仪表盘，包括帧数、帧率、目标数量和检测时间等信息。
-        """
-        st.header("📊 实时监控仪表盘")
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            frame_count_placeholder = st.metric("📸 当前帧数", "0")
-        with col2:
-            fps_placeholder = st.metric("⚡ 帧率 (FPS)", "0")
-        with col3:
-            target_count_placeholder = st.metric("🎯 目标数量", "0")
-        with col4:
-            detection_time_placeholder = st.metric("⏱️ 检测时间 (秒)", "0.00")
-
-        return frame_count_placeholder, fps_placeholder, target_count_placeholder, detection_time_placeholder
-
     def frame_table_process(self, frame, caption):
         """
         处理并显示视频帧的检测结果。
@@ -1771,7 +1746,6 @@ class Detection_UI:
                     st.write(f"识别结果文件已经保存为 JSON 格式：{self.saved_log_data}")
                 elif self.export_format == "Word":
                     self.saved_log_data += ".docx"
-                    # TODO: 实现 Word 导出功能
                     self.logTable.save_to_word(self.saved_log_data)
                     st.write(f"识别结果文件已经保存为 Word 格式：{self.saved_log_data}")
 
@@ -1805,14 +1779,6 @@ class Detection_UI:
             st.write("")
             run_button = st.button("🚀 开始检测")
             self.close_placeholder = st.empty()
-            if run_button:
-                self.process_camera_or_file()  # 运行摄像头或文件处理
-            else:
-                # 如果没有保存的图像，则显示默认图像
-                if not self.logTable.saved_images_ini:
-                    self.image_placeholder.image(load_default_image(), caption="原始画面")
-                    if self.display_mode == "对比显示":
-                        self.image_placeholder_res.image(load_default_image(), caption="识别画面")
 
             # ====== 新增：图片和视频切换显示功能 ======
             # 优先显示图片切换
@@ -1858,6 +1824,25 @@ class Detection_UI:
                 if self.display_mode == "对比显示" and self.image_placeholder_res:
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
 
+        st.header("📊 实时监控仪表盘")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            self.frame_count_placeholder = st.empty()
+        with col2:
+            self.fps_placeholder = st.empty()
+        with col3:
+            self.target_count_placeholder = st.empty()
+        with col4:
+            self.detection_time_placeholder = st.empty()
+
+        # 初始化默认值
+        self.frame_count_placeholder.metric("📸 当前帧数", "0")
+        self.fps_placeholder.metric("⚡ 帧率 (FPS)", "0")
+        self.target_count_placeholder.metric("🎯 目标数量", "0")
+        self.detection_time_placeholder.metric("⏱️ 检测时间 (秒)", "0.00")
+
+        if run_button:
+            self.process_camera_or_file()  # 运行摄像头或文件处理
 
 # 实例化并运行应用
 if __name__ == "__main__":
