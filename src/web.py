@@ -176,6 +176,16 @@ class Detection_UI:
         if 'current_detection_time' not in st.session_state:
             st.session_state['current_detection_time'] = 0
 
+        if 'saved_images_ini' not in st.session_state:
+            # 初始化保存的原始图像列表
+            st.session_state['saved_images_ini'] = []
+        if 'saved_images' not in st.session_state:
+            # 初始化保存的结果图像列表
+            st.session_state['saved_images'] = []
+        if 'saved_names' not in st.session_state:
+            # 初始化保存的图像名称列表
+            st.session_state['saved_names'] = []
+
         if self.from_streamlit:
             self.setup_sidebar()  # 初始化侧边栏布局
         else:
@@ -881,10 +891,6 @@ class Detection_UI:
         """
         根据用户选择的输入源（摄像头、图片文件、视频文件或RTSP/RTMP流），处理并显示检测结果。
         """
-        # 新增：检测结果缓存
-        # st.session_state['saved_images_ini'] = []
-        # st.session_state['saved_images'] = []
-        # st.session_state['saved_names'] = []
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             self._process_stream()
         elif self.input_source == "图片文件":
@@ -1745,14 +1751,6 @@ class Detection_UI:
             """,
             unsafe_allow_html=True
         )
-
-        # 初始化日志表格
-        if 'saved_images_ini' not in st.session_state:
-            st.session_state['saved_images_ini'] = []
-        if 'saved_images' not in st.session_state:
-            st.session_state['saved_images'] = []
-        if 'saved_names' not in st.session_state:
-            st.session_state['saved_names'] = []
 
         # st.title(self.title) # 显示系统标题
         st.write("--------")
