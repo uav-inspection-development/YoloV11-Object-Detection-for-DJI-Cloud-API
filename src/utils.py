@@ -545,7 +545,8 @@ def auto_keystone_correction(image, min_area=5000, output_path=None):
     # Get detected boundaries
     boundaries = get_detected_boundaries(image, min_area)
     if not boundaries:
-        raise ValueError("No valid boundaries detected for keystone correction.")
+        print("No valid boundaries detected for keystone correction.")
+        return image
 
     # Use the first detected boundary for correction
     boundary = np.array(boundaries[0], dtype=np.float32)

@@ -75,6 +75,7 @@ This project provides a comprehensive solution for detecting solar panel anomali
 ```plaintext
 demo_test/                    # Directory for demo test scripts
 ├── demo_test_camera.py       # Demo of testing camera
+├── demo_test_contour.py      # Demo of testing contour
 ├── demo_test_image.py        # Demo of testing image
 ├── demo_test_video.py        # Demo of testing video
 example/
