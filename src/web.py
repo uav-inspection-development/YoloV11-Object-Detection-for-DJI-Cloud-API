@@ -786,7 +786,7 @@ class Detection_UI:
         if self.enable_auto_keystone_correction:
             # 滑动条调整最小面积
             self.min_area = st.sidebar.slider("最小面积", min_value=1000, max_value=100000, value=5000, step=100)
-        st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。")
+        st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
 
         # 添加图像增强选项
         self.image_enhancement_method = st.sidebar.radio(
@@ -848,7 +848,7 @@ class Detection_UI:
         elif self.undistortion_method == "手动调整参数":
             # Add slider for distortion coefficient
             self.image_k1 = st.sidebar.slider("调整畸变系数 (k1)", min_value=-0.5, max_value=0.5, value=0.0, step=0.01)
-            st.sidebar.caption("💡 提示: 使用滑动条调整图像畸变系数前，用户需要上传畸变后的图片。")
+            st.sidebar.caption("💡 提示: 畸变系数用于描述镜头的径向畸变。畸变系数大于0：桶形畸变，图像边缘向外扩展；畸变系数小于0：枕形畸变，图像边缘向内收缩。")
 
         # Apply distortion adjustment using the slider value
         if self.uploaded_file:
