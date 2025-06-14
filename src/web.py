@@ -111,7 +111,7 @@ class Detection_UI:
         self.rot_angle_x = 0  # 垂直旋转角度
         self.rot_angle_y = 0  # 水平旋转角度
         self.keystone_scale = 1.0  # 缩放比例
-        self.min_area = 5000  # 自动梯形校正的最小面积
+        self.scale_factor = 0.1  # 自动梯形校正的最小面积比例
         self.image_enhancement_method = "不处理"  # 图像增强方法
 
         # 初始化检测结果相关的变量
@@ -267,7 +267,7 @@ class Detection_UI:
             self.keystone_scale = float(self.api_params.get("keystone_scale", 1.0))
 
         if self.enable_auto_keystone_correction:
-            self.min_area = float(self.api_params.get("min_area", 5000))
+            self.scale_factor = float(self.api_params.get("scale_factor", 0.1))
 
         # 设置类别标签
         if self.model_type == "分割任务":
@@ -784,8 +784,8 @@ class Detection_UI:
         # 添加梯形校正选项
         self.enable_auto_keystone_correction = st.sidebar.checkbox("启用自动梯形校正", value=False)
         if self.enable_auto_keystone_correction:
-            # 滑动条调整最小面积
-            self.min_area = st.sidebar.slider("最小面积", min_value=1000, max_value=100000, value=5000, step=100)
+            # 滑动条调整最小面积比例
+            self.scale_factor = st.sidebar.slider("最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
         st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
 
         # 添加图像增强选项
@@ -868,7 +868,7 @@ class Detection_UI:
                         corrected_image = converted_image.copy()
 
                     if self.enable_auto_keystone_correction:
-                        corrected_image = auto_keystone_correction(corrected_image, min_area=self.min_area)
+                        corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor)
                     else:
                         corrected_image = corrected_image.copy()
 
@@ -904,7 +904,7 @@ class Detection_UI:
                     corrected_image = converted_image.copy()
 
                 if self.enable_auto_keystone_correction:
-                    corrected_image = auto_keystone_correction(corrected_image, min_area=self.min_area)
+                    corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor)
                 else:
                     corrected_image = corrected_image.copy()
 
@@ -1061,7 +1061,7 @@ class Detection_UI:
                         frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                     if self.enable_auto_keystone_correction:
-                        frame = auto_keystone_correction(frame, min_area=self.min_area)
+                        frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
 
                     # 图像增强
                     if self.image_enhancement_method == "CLAHE":
@@ -1174,7 +1174,7 @@ class Detection_UI:
                         image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                     if self.enable_auto_keystone_correction:
-                        image_ini = auto_keystone_correction(image_ini, min_area=self.min_area)
+                        image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor)
 
                     # 图像增强
                     if self.image_enhancement_method == "CLAHE":
@@ -1242,7 +1242,7 @@ class Detection_UI:
                     image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                 if self.enable_auto_keystone_correction:
-                    image_ini = auto_keystone_correction(image_ini, min_area=self.min_area)     
+                    image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor)     
 
                 # 图像增强
                 if self.image_enhancement_method == "CLAHE":
@@ -1360,7 +1360,7 @@ class Detection_UI:
                                     frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                                 if self.enable_auto_keystone_correction:
-                                    frame = auto_keystone_correction(frame, min_area=self.min_area)
+                                    frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
 
                                 # 图像增强
                                 if self.image_enhancement_method == "CLAHE":
@@ -1502,7 +1502,7 @@ class Detection_UI:
                                 frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                             if self.enable_auto_keystone_correction:
-                                frame = auto_keystone_correction(frame, min_area=self.min_area)
+                                frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
 
                             if self.image_enhancement_method == "CLAHE":
                                 frame = enhance_texture(frame, method="clahe")

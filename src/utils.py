@@ -484,93 +484,80 @@ def rotate_image(img, angle_x, angle_y, zoom_factor=1.0):
     return result
 
 
-def get_detected_boundaries(image, min_area=5000):
+def order_points(pts):
     """
-    Returns the detected boundaries as a list of coordinates.
+    对四边形四个点进行排序：左上、右上、右下、左下。
+    """
+    rect = np.zeros((4, 2), dtype="float32")
+    s = pts.sum(axis=1)
+    diff = np.diff(pts, axis=1)
+    rect[0] = pts[np.argmin(s)]      # top-left
+    rect[2] = pts[np.argmax(s)]      # bottom-right
+    rect[1] = pts[np.argmin(diff)]   # top-right
+    rect[3] = pts[np.argmax(diff)]   # bottom-left
+    return rect
+
+
+def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
+    """
+    自动梯形矫正，支持多个相邻区域合并处理。
 
     Args:
-        image (numpy.ndarray): Input image array.
-        min_area (int): Minimum area threshold for contours.
+        image (numpy.ndarray): 输入图像。
+        scale_factor (float): 有效区域最小面积占比。
+        output_path (str): 可选，输出保存路径。
 
     Returns:
-        list: A list of detected boundaries, where each boundary is represented as a list of coordinates.
+        numpy.ndarray: 矫正后的图像。
     """
-    if image is None or not isinstance(image, np.ndarray):
-        raise ValueError("Invalid image input. Expected a numpy.ndarray.")
-
-    # Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    _, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    # Apply median blur to remove noise
-    denoised = cv2.medianBlur(gray, 5)
+    # 查找轮廓
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    h, w = image.shape[:2]
+    min_area = h * w * scale_factor
 
-    # Apply adaptive thresholding
-    adaptive_thresh = cv2.adaptiveThreshold(
-        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, blockSize=11, C=2
-    )
-
-    # Perform dilation to connect edges
-    kernel = np.ones((3, 3), np.uint8)
-    dilated = cv2.dilate(adaptive_thresh, kernel, iterations=2)
-
-    # Find contours
-    contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    boundaries = []
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area > min_area:
-            epsilon = 0.02 * cv2.arcLength(cnt, True)
-            approx = cv2.approxPolyDP(cnt, epsilon, True)
-            if len(approx) == 4:  # Detect rectangular boundaries
-                boundaries.append(approx.reshape(-1, 2).tolist())
-
-    return boundaries
-
-
-def auto_keystone_correction(image, min_area=5000, output_path=None):
-    """
-    Performs keystone correction on the detected boundary.
-
-    Args:
-        image (numpy.ndarray): Input image array.
-        min_area (int): Minimum area threshold for contours.
-        output_path (str): Path to save the corrected image. If None, the image is not saved.
-
-    Returns:
-        numpy.ndarray: Keystone-corrected image.
-    """
-    if image is None or not isinstance(image, np.ndarray):
-        raise ValueError("Invalid image input. Expected a numpy.ndarray.")
-
-    # Get detected boundaries
-    boundaries = get_detected_boundaries(image, min_area)
-    if not boundaries:
-        print("No valid boundaries detected for keystone correction.")
+    # 过滤出所有满足面积的轮廓
+    valid_cnts = [cnt for cnt in contours if cv2.contourArea(cnt) >= min_area]
+    if not valid_cnts:
+        print("[警告] 未检测到有效边界，返回原图")
         return image
 
-    # Use the first detected boundary for correction
-    boundary = np.array(boundaries[0], dtype=np.float32)
+    # 将多个轮廓合并为一个大轮廓（联合）
+    merged = np.vstack(valid_cnts)
 
-    # Define the target rectangle (e.g., a straight rectangle)
-    h, w = image.shape[:2]
-    target_rect = np.array([
+    # 使用 minAreaRect 获取包围合并轮廓的最小矩形
+    rect = cv2.minAreaRect(merged)
+    box = cv2.boxPoints(rect)
+    box = order_points(box)
+
+    # 计算目标宽高（保持比例）
+    (tl, tr, br, bl) = box
+    widthA = np.linalg.norm(br - bl)
+    widthB = np.linalg.norm(tr - tl)
+    heightA = np.linalg.norm(tr - br)
+    heightB = np.linalg.norm(tl - bl)
+
+    maxWidth = int(max(widthA, widthB))
+    maxHeight = int(max(heightA, heightB))
+
+    dst_pts = np.array([
         [0, 0],
-        [w - 1, 0],
-        [w - 1, h - 1],
-        [0, h - 1]
-    ], dtype=np.float32)
+        [maxWidth - 1, 0],
+        [maxWidth - 1, maxHeight - 1],
+        [0, maxHeight - 1]
+    ], dtype="float32")
 
-    # Compute the perspective transformation matrix
-    M = cv2.getPerspectiveTransform(boundary, target_rect)
+    # 透视变换
+    M = cv2.getPerspectiveTransform(box, dst_pts)
+    corrected = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
 
-    # Apply the perspective transformation
-    corrected_img = cv2.warpPerspective(image, M, (w, h))
-
-    # Save the corrected image if output_path is provided
     if output_path:
-        cv2.imwrite(output_path, corrected_img)
+        cv2.imwrite(output_path, corrected)
 
-    return corrected_img
+    return corrected
 
 def enhance_texture(image, method="clahe"):
     """
