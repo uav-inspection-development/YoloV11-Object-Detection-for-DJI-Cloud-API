@@ -525,13 +525,18 @@ def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
         print("[警告] 未检测到有效边界，返回原图")
         return image
 
-    # 将多个轮廓合并为一个大轮廓（联合）
-    merged = np.vstack(valid_cnts)
+    # 找到面积最大的轮廓
+    largest_cnt = max(valid_cnts, key=cv2.contourArea)
 
-    # 使用 minAreaRect 获取包围合并轮廓的最小矩形
-    rect = cv2.minAreaRect(merged)
-    box = cv2.boxPoints(rect)
-    box = order_points(box)
+    # 使用 approxPolyDP 获取逼近的四边形
+    epsilon = 0.02 * cv2.arcLength(largest_cnt, True)
+    approx = cv2.approxPolyDP(largest_cnt, epsilon, True)
+    if len(approx) == 4:  # 如果逼近结果是四边形
+        box = approx.reshape(4, 2)
+        box = order_points(box)
+    else:
+        print("[警告] 未检测到梯形，返回原图")
+        return image
 
     # 计算目标宽高（保持比例）
     (tl, tr, br, bl) = box
