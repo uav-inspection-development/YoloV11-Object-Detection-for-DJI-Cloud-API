@@ -61,18 +61,58 @@ def run_streamlit(script_path):
         # 恢复原始命令行参数
         sys.argv = original_argv
 
+def streamlit_login_page():
+    """
+    Streamlit 登录页面，用户输入必要的参数以启动应用。
+    用户输入的参数将保存在 session_state 中，以便后续使用。
+    """
+    st.title("用户登录")
+    secret_key = st.text_input("Secret Key", type="password")
+    license_file = st.text_input("License File", value="license.dat")
+    bind_info_file = st.text_input("Bind Info File", value="bind_info.json")
+    run_mode = st.selectbox("Run Mode", ["streamlit", "api"])
+    oauth2_introspect_url = st.text_input("OAuth2 introspect URL", value="https://your-auth-server.com/oauth2/introspect")
+    oauth2_token_url = st.text_input("OAuth2 token URL", value="https://your-auth-server.com/oauth2/token")
+    client_id = st.text_input("Client ID", value="your-client-id")
+    client_secret = st.text_input("Client Secret", type="password", value="your-client-secret")
+    login_btn = st.button("登录并启动")
+
+    if login_btn:
+        if not secret_key:
+            st.error("Secret Key 不能为空")
+            return None
+        st.session_state['login_params'] = {
+            "secret_key": secret_key,
+            "license_file": license_file,
+            "bind_info_file": bind_info_file,
+            "run_mode": run_mode,
+            "oauth2_introspect_url": oauth2_introspect_url,
+            "oauth2_token_url": oauth2_token_url,
+            "client_id": client_id,
+            "client_secret": client_secret
+        }
+        st.success("参数已保存，请刷新页面或重启应用。")
+        st.experimental_rerun()
+
 if __name__ == "__main__":
-    # 使用 argparse 解析命令行参数
-    parser = argparse.ArgumentParser(description="Run the application in different modes.")
-    parser.add_argument("--secret-key", required=True, help="Secret key for license encryption/decryption.")
-    parser.add_argument("--license-file", default="license.dat", help="Path to the license file.")
-    parser.add_argument("--bind-info-file", default="bind_info.json", help="Path to the bind info file.")
-    parser.add_argument("--run-mode", default="api", choices=["streamlit", "api"], help="Mode to run the application (streamlit or api).")
-    parser.add_argument("--oauth2-introspect-url", default="https://your-auth-server.com/oauth2/introspect", help="OAuth2 introspection URL.")
-    parser.add_argument("--oauth2-token-url", default="https://your-auth-server.com/oauth2/token", help="OAuth2 token endpoint URL.")
-    parser.add_argument("--client-id", default="your-client-id", help="OAuth2 client ID.")
-    parser.add_argument("--client-secret", default="your-client-secret", help="OAuth2 client secret.")
-    args = parser.parse_args()
+    # 检查是否有命令行参数，否则进入登录页
+    if len(sys.argv) == 1 or "streamlit" in sys.argv[0]:
+        if 'login_params' not in st.session_state:
+            streamlit_login_page()
+            st.stop()
+        args = argparse.Namespace(**st.session_state['login_params'])
+    else:
+        # 使用 argparse 解析命令行参数
+        parser = argparse.ArgumentParser(description="Run the application in different modes.")
+        parser.add_argument("--secret-key", required=True, help="Secret key for license encryption/decryption.")
+        parser.add_argument("--license-file", default="license.dat", help="Path to the license file.")
+        parser.add_argument("--bind-info-file", default="bind_info.json", help="Path to the bind info file.")
+        parser.add_argument("--run-mode", default="api", choices=["streamlit", "api"], help="Mode to run the application (streamlit or api).")
+        parser.add_argument("--oauth2-introspect-url", default="https://your-auth-server.com/oauth2/introspect", help="OAuth2 introspection URL.")
+        parser.add_argument("--oauth2-token-url", default="https://your-auth-server.com/oauth2/token", help="OAuth2 token endpoint URL.")
+        parser.add_argument("--client-id", default="your-client-id", help="OAuth2 client ID.")
+        parser.add_argument("--client-secret", default="your-client-secret", help="OAuth2 client secret.")
+        args = parser.parse_args()
 
     # 将 SECRET_KEY 转换为字节
     secret_key = args.secret_key.encode()
