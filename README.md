@@ -314,6 +314,7 @@ Detect objects in a single image.
     "undistortion_method": "不去除",
     "enable_rotate_correction": false,
     "enable_auto_keystone_correction": false,
+    "enable_background_fill": false,
     "image_enhancement_method": "不处理",
 }
 ```
@@ -393,6 +394,7 @@ Detect objects in a single video.
     "undistortion_method": "不去除",
     "enable_rotate_correction": false,
     "enable_auto_keystone_correction": false,
+    "enable_background_fill": false,
     "image_enhancement_method": "不处理",
 }
 ```
