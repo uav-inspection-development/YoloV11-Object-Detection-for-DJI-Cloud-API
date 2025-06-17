@@ -265,6 +265,16 @@ class LogTable:
             doc = Document()
             doc.add_heading('检测结果报告', level=1)
 
+            # 添加首页信息
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            total_images = len(self.saved_images)
+            doc.add_paragraph(f"报告生成日期：{now}")
+            doc.add_paragraph(f"包含图片数量：{total_images}")
+            doc.add_paragraph("")  # 空行分隔
+
+            # 插入分页符
+            doc.add_page_break()
+
             # 遍历每张图片的检测结果
             for idx, (image_ini, image_detected, detection_results, img_name) in enumerate(
                 zip(self.saved_images_ini, self.saved_images, self.saved_results, self.saved_names)
