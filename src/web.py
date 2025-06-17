@@ -13,7 +13,7 @@ from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
 from ui_style import def_css_html
-from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image, rotate_image, auto_keystone_correction, enhance_texture
+from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image, rotate_image, auto_keystone_correction, enhance_texture, fill_largest_polygon_white
 import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -108,6 +108,7 @@ class Detection_UI:
         self.image_brightness = 0.0
         self.enable_rotate_correction = False  # 启用旋转校正
         self.enable_auto_keystone_correction = False  # 启用自动梯形校正
+        self.enable_background_fill = False  # 启用背景填充
         self.rot_angle_x = 0  # 垂直旋转角度
         self.rot_angle_y = 0  # 水平旋转角度
         self.keystone_scale = 1.0  # 缩放比例
@@ -222,6 +223,7 @@ class Detection_UI:
         self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
         self.enable_rotate_correction = self.api_params.get("enable_rotate_correction", False)
         self.enable_auto_keystone_correction = self.api_params.get("enable_auto_keystone_correction", False)
+        self.enable_background_fill = self.api_params.get("enable_background_fill", False)
         self.image_enhancement_method = self.api_params.get("image_enhancement_method", "不处理")
         self.undistortion_method = self.api_params.get("undistortion_method", "不去除")
 
@@ -267,6 +269,9 @@ class Detection_UI:
             self.keystone_scale = float(self.api_params.get("keystone_scale", 1.0))
 
         if self.enable_auto_keystone_correction:
+            self.scale_factor = float(self.api_params.get("scale_factor", 0.1))
+        
+        if self.enable_background_fill:
             self.scale_factor = float(self.api_params.get("scale_factor", 0.1))
 
         # 设置类别标签
@@ -788,6 +793,14 @@ class Detection_UI:
             self.scale_factor = st.sidebar.slider("最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
         st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
 
+        # 添加背景填充选项
+        self.enable_background_fill = st.sidebar.checkbox("启用自动梯形校正", value=False)
+        if self.enable_background_fill:
+            # 滑动条调整最小面积比例
+            self.scale_factor = st.sidebar.slider("最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
+        # TODO:
+        st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
+
         # 添加图像增强选项
         self.image_enhancement_method = st.sidebar.radio(
             "选择图像增强方法",
@@ -872,6 +885,11 @@ class Detection_UI:
                     else:
                         corrected_image = corrected_image.copy()
 
+                    if self.enable_background_fill:
+                        corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor)
+                    else:
+                        corrected_image = corrected_image.copy()
+
                     if self.image_enhancement_method == "CLAHE":
                         corrected_image = enhance_texture(corrected_image, method="clahe")
                     elif self.image_enhancement_method == "Histogram Equalization":
@@ -905,6 +923,11 @@ class Detection_UI:
 
                 if self.enable_auto_keystone_correction:
                     corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor)
+                else:
+                    corrected_image = corrected_image.copy()
+
+                if self.enable_background_fill:
+                    corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor)
                 else:
                     corrected_image = corrected_image.copy()
 
@@ -1063,6 +1086,9 @@ class Detection_UI:
                     if self.enable_auto_keystone_correction:
                         frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
 
+                    if self.enable_background_fill:
+                        frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor)
+
                     # 图像增强
                     if self.image_enhancement_method == "CLAHE":
                         frame = enhance_texture(frame, method="clahe")
@@ -1176,6 +1202,9 @@ class Detection_UI:
                     if self.enable_auto_keystone_correction:
                         image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor)
 
+                    if self.enable_background_fill:
+                        image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor)
+
                     # 图像增强
                     if self.image_enhancement_method == "CLAHE":
                         image_ini = enhance_texture(image_ini, method="clahe")
@@ -1242,7 +1271,10 @@ class Detection_UI:
                     image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                 if self.enable_auto_keystone_correction:
-                    image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor)     
+                    image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor)
+
+                if self.enable_background_fill:
+                    image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor)
 
                 # 图像增强
                 if self.image_enhancement_method == "CLAHE":
@@ -1361,6 +1393,9 @@ class Detection_UI:
 
                                 if self.enable_auto_keystone_correction:
                                     frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
+
+                                if self.enable_background_fill:
+                                    frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor)
 
                                 # 图像增强
                                 if self.image_enhancement_method == "CLAHE":
@@ -1503,6 +1538,9 @@ class Detection_UI:
 
                             if self.enable_auto_keystone_correction:
                                 frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
+
+                            if self.enable_background_fill:
+                                frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor)
 
                             if self.image_enhancement_method == "CLAHE":
                                 frame = enhance_texture(frame, method="clahe")

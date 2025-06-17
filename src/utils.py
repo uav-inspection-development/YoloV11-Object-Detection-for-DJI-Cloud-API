@@ -498,17 +498,16 @@ def order_points(pts):
     return rect
 
 
-def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
+def find_largest_valid_contour(image, scale_factor=0.1):
     """
-    自动梯形矫正，支持多个相邻区域合并处理。
+    查找面积最大的有效轮廓。
 
     Args:
         image (numpy.ndarray): 输入图像。
         scale_factor (float): 有效区域最小面积占比。
-        output_path (str): 可选，输出保存路径。
 
     Returns:
-        numpy.ndarray: 矫正后的图像。
+        np.ndarray or None: 面积最大的有效轮廓点集，若无则返回 None。
     """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -522,11 +521,26 @@ def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
     # 过滤出所有满足面积的轮廓
     valid_cnts = [cnt for cnt in contours if cv2.contourArea(cnt) >= min_area]
     if not valid_cnts:
+        return None
+    largest_cnt = max(valid_cnts, key=cv2.contourArea)
+    return largest_cnt
+
+def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
+    """
+    自动梯形矫正，支持多个相邻区域合并处理。
+
+    Args:
+        image (numpy.ndarray): 输入图像。
+        scale_factor (float): 有效区域最小面积占比。
+        output_path (str): 可选，输出保存路径。
+
+    Returns:
+        numpy.ndarray: 矫正后的图像。
+    """
+    largest_cnt = find_largest_valid_contour(image, scale_factor)
+    if largest_cnt is None:
         print("[警告] 未检测到有效边界，返回原图")
         return image
-
-    # 找到面积最大的轮廓
-    largest_cnt = max(valid_cnts, key=cv2.contourArea)
 
     # 使用 approxPolyDP 获取逼近的四边形
     epsilon = 0.02 * cv2.arcLength(largest_cnt, True)
@@ -563,6 +577,30 @@ def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
         cv2.imwrite(output_path, corrected)
 
     return corrected
+
+
+def fill_largest_polygon_white(image, scale_factor=0.1):
+    """
+    检测最大有效轮廓并将其外部区域填充为白色。
+
+    Args:
+        image (numpy.ndarray): 输入图像 (BGR)。
+        scale_factor (float): 有效区域最小面积占比。
+
+    Returns:
+        numpy.ndarray: 填充后的图像。
+    """
+    largest_cnt = find_largest_valid_contour(image, scale_factor)
+    if largest_cnt is None:
+        print("[警告] 未检测到有效边界，返回原图")
+        return image
+    polygon_points = largest_cnt.reshape(-1, 2)
+    mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    cv2.fillPoly(mask, [polygon_points.astype(np.int32)], 255)
+    white_bg = np.ones_like(image, dtype=np.uint8) * 255
+    result = np.where(mask[..., None] == 255, image, white_bg)
+    return result
+
 
 def enhance_texture(image, method="clahe"):
     """
