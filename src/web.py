@@ -112,7 +112,8 @@ class Detection_UI:
         self.rot_angle_x = 0  # 垂直旋转角度
         self.rot_angle_y = 0  # 水平旋转角度
         self.keystone_scale = 1.0  # 缩放比例
-        self.scale_factor = 0.1  # 自动梯形校正的最小面积比例
+        self.scale_factor_keystone = 0.1  # 自动梯形校正的最小面积比例
+        self.scale_factor_fill = 0.1  # 背景填充的最小面积比例
         self.image_enhancement_method = "不处理"  # 图像增强方法
 
         # 初始化检测结果相关的变量
@@ -269,10 +270,10 @@ class Detection_UI:
             self.keystone_scale = float(self.api_params.get("keystone_scale", 1.0))
 
         if self.enable_auto_keystone_correction:
-            self.scale_factor = float(self.api_params.get("scale_factor", 0.1))
+            self.scale_factor_keystone = float(self.api_params.get("scale_factor_keystone", 0.1))
         
         if self.enable_background_fill:
-            self.scale_factor = float(self.api_params.get("scale_factor", 0.1))
+            self.scale_factor_fill = float(self.api_params.get("scale_factor_fill", 0.1))
 
         # 设置类别标签
         if self.model_type == "分割任务":
@@ -790,14 +791,14 @@ class Detection_UI:
         self.enable_auto_keystone_correction = st.sidebar.checkbox("启用自动梯形校正", value=False)
         if self.enable_auto_keystone_correction:
             # 滑动条调整最小面积比例
-            self.scale_factor = st.sidebar.slider("最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
+            self.scale_factor_keystone = st.sidebar.slider("梯形校正轮廓检测最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
         st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
 
         # 添加背景填充选项
-        self.enable_background_fill = st.sidebar.checkbox("启用自动梯形校正", value=False)
+        self.enable_background_fill = st.sidebar.checkbox("启用自动背景填充", value=False)
         if self.enable_background_fill:
             # 滑动条调整最小面积比例
-            self.scale_factor = st.sidebar.slider("最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
+            self.scale_factor_fill = st.sidebar.slider("背景填充轮廓检测最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
         # TODO:
         st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
 
@@ -881,12 +882,12 @@ class Detection_UI:
                         corrected_image = converted_image.copy()
 
                     if self.enable_auto_keystone_correction:
-                        corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor)
+                        corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor_keystone)
                     else:
                         corrected_image = corrected_image.copy()
 
                     if self.enable_background_fill:
-                        corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor)
+                        corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor_fill)
                     else:
                         corrected_image = corrected_image.copy()
 
@@ -922,12 +923,12 @@ class Detection_UI:
                     corrected_image = converted_image.copy()
 
                 if self.enable_auto_keystone_correction:
-                    corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor)
+                    corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor_keystone)
                 else:
                     corrected_image = corrected_image.copy()
 
                 if self.enable_background_fill:
-                    corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor)
+                    corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor_fill)
                 else:
                     corrected_image = corrected_image.copy()
 
@@ -1084,10 +1085,10 @@ class Detection_UI:
                         frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                     if self.enable_auto_keystone_correction:
-                        frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
+                        frame = auto_keystone_correction(frame, scale_factor=self.scale_factor_keystone)
 
                     if self.enable_background_fill:
-                        frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor)
+                        frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor_fill)
 
                     # 图像增强
                     if self.image_enhancement_method == "CLAHE":
@@ -1200,10 +1201,10 @@ class Detection_UI:
                         image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                     if self.enable_auto_keystone_correction:
-                        image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor)
+                        image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor_keystone)
 
                     if self.enable_background_fill:
-                        image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor)
+                        image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor_fill)
 
                     # 图像增强
                     if self.image_enhancement_method == "CLAHE":
@@ -1271,10 +1272,10 @@ class Detection_UI:
                     image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                 if self.enable_auto_keystone_correction:
-                    image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor)
+                    image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor_keystone)
 
                 if self.enable_background_fill:
-                    image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor)
+                    image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor_fill)
 
                 # 图像增强
                 if self.image_enhancement_method == "CLAHE":
@@ -1392,10 +1393,10 @@ class Detection_UI:
                                     frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                                 if self.enable_auto_keystone_correction:
-                                    frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
+                                    frame = auto_keystone_correction(frame, scale_factor=self.scale_factor_keystone)
 
                                 if self.enable_background_fill:
-                                    frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor)
+                                    frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor_fill)
 
                                 # 图像增强
                                 if self.image_enhancement_method == "CLAHE":
@@ -1537,10 +1538,10 @@ class Detection_UI:
                                 frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
 
                             if self.enable_auto_keystone_correction:
-                                frame = auto_keystone_correction(frame, scale_factor=self.scale_factor)
+                                frame = auto_keystone_correction(frame, scale_factor=self.scale_factor_keystone)
 
                             if self.enable_background_fill:
-                                frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor)
+                                frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor_fill)
 
                             if self.image_enhancement_method == "CLAHE":
                                 frame = enhance_texture(frame, method="clahe")
