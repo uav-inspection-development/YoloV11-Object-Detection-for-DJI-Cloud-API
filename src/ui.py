@@ -10,7 +10,6 @@ import cv2
 import json
 import numpy as np
 import streamlit as st
-from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
 from log import ResultLogger, LogTable
 from model import Web_Detector
@@ -23,11 +22,11 @@ from auth import verify_token, get_access_token
 import IMcore
 import efficientnet_pytorch
 from check_license import check_license
-from QtFusion.path import abs_path
 import numpy
 import IMcore
 import cryptography
 import _cffi_backend
+from web import Detection_UI
 
 
 # 设置环境变量以避免 OpenMP 错误
@@ -39,32 +38,25 @@ def run_streamlit(script_path):
     使用 streamlit.web.cli 模块运行 Streamlit 脚本。
     Args:
         script_path (str): 要运行的脚本路径
-    Returns:
-        None
     """
-    # 保存原始命令行参数
     original_argv = sys.argv.copy()
-    
+
     try:
-        # 设置 streamlit 运行参数
         sys.argv = [
             "streamlit",
             "run",
             script_path,
             "--global.developmentMode=false",
         ]
-        # 执行 streamlit CLI
         stcli.main()
     except Exception as e:
         print(f"Streamlit 脚本运行出错: {e}")
     finally:
-        # 恢复原始命令行参数
         sys.argv = original_argv
 
 def streamlit_login_page():
     """
-    Streamlit 登录页面，用户输入必要的参数以启动应用。
-    用户输入的参数将保存在 session_state 中，以便后续使用。
+    用户登录页：输入参数并保存到 session_state
     """
     st.title("用户登录")
     secret_key = st.text_input("Secret Key", type="password")
@@ -75,12 +67,13 @@ def streamlit_login_page():
     oauth2_token_url = st.text_input("OAuth2 token URL", value="https://your-auth-server.com/oauth2/token")
     client_id = st.text_input("Client ID", value="your-client-id")
     client_secret = st.text_input("Client Secret", type="password", value="your-client-secret")
+
     login_btn = st.button("登录并启动")
 
     if login_btn:
         if not secret_key:
             st.error("Secret Key 不能为空")
-            return None
+            return
         st.session_state['login_params'] = {
             "secret_key": secret_key,
             "license_file": license_file,
@@ -91,16 +84,21 @@ def streamlit_login_page():
             "client_id": client_id,
             "client_secret": client_secret
         }
-        st.success("参数已保存，请刷新页面或重启应用。")
-        st.experimental_rerun()
+        st.success("参数已保存，正在启动主程序...")
+        time.sleep(1)
+        st.rerun()
 
 if __name__ == "__main__":
-    # 检查是否有命令行参数，否则进入登录页
-    if len(sys.argv) == 1 or "streamlit" in sys.argv[0]:
+    # 判断是否通过 streamlit run 启动
+    if len(sys.argv) == 1 or "streamlit" in sys.argv[0].lower():
+        # Web 模式
         if 'login_params' not in st.session_state:
             streamlit_login_page()
             st.stop()
+
+        # 将 session_state 转为 argparse.Namespace
         args = argparse.Namespace(**st.session_state['login_params'])
+
     else:
         # 使用 argparse 解析命令行参数
         parser = argparse.ArgumentParser(description="Run the application in different modes.")
@@ -124,11 +122,11 @@ if __name__ == "__main__":
     os.environ["CLIENT_ID"] = args.client_id
     os.environ["CLIENT_SECRET"] = args.client_secret
 
+    # 启动对应应用模式
     if args.run_mode == "streamlit":
-        # 指定 Streamlit 脚本路径
-        script_path = abs_path("web.py")
-        # 运行 Streamlit 脚本
-        run_streamlit(script_path)
+        # 启动 Streamlit 应用
+        app = Detection_UI(from_streamlit=True)
+        app.setupMainWindow()
     elif args.run_mode == "api":
         # 运行 Flask API
         from api_server import socketio, app
