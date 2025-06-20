@@ -396,6 +396,14 @@ class Detection_UI:
         # Add the About section to the sidebar
         self.show_about_section()
 
+        # 添加登录设置
+        st.sidebar.header("🔒 登陆设置")
+        if st.sidebar.button("🚪 退出登陆"):
+            st.session_state.clear()
+            if os.path.exists("login_cache.json"):
+                os.remove("login_cache.json")
+            st.rerun()
+
         # 添加显示设置
         st.sidebar.header("🖥️ 显示设置")
 

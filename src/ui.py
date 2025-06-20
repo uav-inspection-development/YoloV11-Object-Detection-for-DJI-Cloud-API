@@ -74,7 +74,8 @@ def streamlit_login_page():
         if not secret_key:
             st.error("Secret Key 不能为空")
             return
-        st.session_state['login_params'] = {
+
+        login_data = {
             "secret_key": secret_key,
             "license_file": license_file,
             "bind_info_file": bind_info_file,
@@ -84,6 +85,14 @@ def streamlit_login_page():
             "client_id": client_id,
             "client_secret": client_secret
         }
+
+        # 保存到 session_state 和本地缓存文件
+        st.session_state['login_params'] = login_data
+        st.session_state['logged_in'] = True
+
+        with open("login_cache.json", "w", encoding="utf-8") as f:
+            json.dump(login_data, f)
+
         st.success("参数已保存，正在启动主程序...")
         time.sleep(1)
         st.rerun()
@@ -92,11 +101,26 @@ if __name__ == "__main__":
     # 判断是否通过 streamlit run 启动
     if len(sys.argv) == 1 or "streamlit" in sys.argv[0].lower():
         # Web 模式
-        if 'login_params' not in st.session_state:
-            streamlit_login_page()
-            st.stop()
+        if 'logged_in' not in st.session_state:
+            st.session_state['logged_in'] = False
 
-        # 将 session_state 转为 argparse.Namespace
+        # 自动读取本地缓存文件
+        if not st.session_state['logged_in']:
+            if os.path.exists("login_cache.json"):
+                try:
+                    with open("login_cache.json", "r", encoding="utf-8") as f:
+                        cached = json.load(f)
+                    st.session_state['login_params'] = cached
+                    st.session_state['logged_in'] = True
+                except Exception as e:
+                    st.error(f"读取缓存失败：{e}")
+                    streamlit_login_page()
+                    st.stop()
+            else:
+                streamlit_login_page()
+                st.stop()
+
+        # 构造 args
         args = argparse.Namespace(**st.session_state['login_params'])
 
     else:
