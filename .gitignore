@@ -1,6 +1,7 @@
 # License generated files
 license.dat
 bind_info.json
+login_cache.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -208,7 +208,13 @@ requirements.txt              # List of dependencies
 
     After running this command, the encrypted license file will be saved to the specified path.
 
-2. **Run the Detection Interface**:
+2. **Run the Detection Interface with Login Interface**:
+
+    ```shell
+    python src/ui.py
+    ```
+
+3. **Run the Detection Interface with Command Line**:
 
     ```shell
     python src/ui.py --run-mode=$RUN_MODE --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
@@ -223,7 +229,7 @@ requirements.txt              # List of dependencies
     - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/1)).
     - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/2)).
 
-3. **Run the Detection API Endpoints**:
+4. **Run the Detection API Endpoints**:
 
     ```shell
     python src/ui.py --run-mode=api --oauth2-introspect-url=$OAUTH2_INTROSPECT_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
@@ -238,10 +244,10 @@ requirements.txt              # List of dependencies
     - `--license-file`: Path to the license file (default: [license.dat](http://_vscodecontentref_/3)).
     - `--bind-info-file`: Path to the bind info file (default: [bind_info.json](http://_vscodecontentref_/4)).
 
-4. **Load the `best.pt` Weight File**:
+5. **Load the `best.pt` Weight File**:
     - Open the detection interface and load the trained weight file (`best.pt`).
 
-5. **Select the Image Type**:
+6. **Select the Image Type**:
     - Choose the image type (**Visible**, **EL**, or **Thermo**) and start detection.
 
 ### Generate the executable File
@@ -264,7 +270,7 @@ requirements.txt              # List of dependencies
 3. **Encrypt the `web.py` File**:
     - Use the following command to encrypt the `web.py` file:
     ```shell
-    python src/encryption.py --input-file src/web.py --output-file src/web_encrypted.py
+    python utils_data/encryption.py --input-file src/web.py --output-file src/web_encrypted.py
     ```
     - This will create an encrypted version of the `web.py` file named `web_encrypted.py`.
 

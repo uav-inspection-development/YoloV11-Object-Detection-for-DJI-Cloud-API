@@ -22,6 +22,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.2] - 2025-06-21
+### Added
+- [Feature] Description of new features added.
+- [Enhancement] Improvements to existing features.
+
+### Changed
+- [Update] Description of changes to existing functionality.
+
+### Fixed
+- N/A
+
+### Removed
+- N/A
+
+---
+
 ## [1.0.1] - 2025-06-17
 ### Added
 - [Feature] Add the background white fill feature.
