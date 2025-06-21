@@ -20,6 +20,7 @@ from auth import verify_token, get_access_token
 import tkinter as tk
 from tkinter import filedialog
 from utils import LocalFileObj
+import base64
 
 
 class Detection_UI:
@@ -84,6 +85,21 @@ class Detection_UI:
         if self.from_streamlit:
             self.setup_page()  # 初始化页面布局
             def_css_html()  # 应用 CSS 样式
+
+        # Define the path to the logo
+        logo_path = abs_path("../icon/logo.jpg", path_type="current")
+
+        # Check if the logo file exists
+        if os.path.exists(logo_path):
+            # Use markdown to center the image
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <img src="data:image/jpeg;base64,{base64.b64encode(open(logo_path, "rb").read()).decode()}" width="500">
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
         # 初始化检测相关的配置参数
         self.model_type = "检测任务"
@@ -339,10 +355,10 @@ class Detection_UI:
         """
         设置 Streamlit 页面标题和布局。
         """
-        # 设置页面布局为宽布局
+        # TODO: 设置页面布局为宽布局
         st.set_page_config(
             page_title=self.title,
-            page_icon="REC",
+            page_icon=abs_path("../icon/icon.jpg", path_type="current"),
             initial_sidebar_state="expanded",
             layout="wide"
         )
@@ -807,7 +823,6 @@ class Detection_UI:
         if self.enable_background_fill:
             # 滑动条调整最小面积比例
             self.scale_factor_fill = st.sidebar.slider("背景填充轮廓检测最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
-        # TODO:
         st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
 
         # 添加图像增强选项
