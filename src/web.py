@@ -676,7 +676,7 @@ class Detection_UI:
             )
 
             # Tkinter文件夹选择器按钮
-            if st.sidebar.button("选择图片文件夹"):
+            if st.sidebar.button("📂 选择图片文件夹"):
                 root = tk.Tk()
                 root.withdraw()
                 root.wm_attributes('-topmost', 1)
@@ -977,13 +977,13 @@ class Detection_UI:
         """
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             self._process_stream()
-        elif self.input_source == "图片文件":
+        elif self.input_source == "图片文件" or self.input_source == "图片文件夹":
             # 确保上传文件为列表
             files = self.uploaded_file if isinstance(self.uploaded_file, list) else [self.uploaded_file]
             for f in files:
                 if f: f.seek(0)
             self._process_image_input()
-        elif self.input_source == "视频文件":
+        elif self.input_source == "视频文件" or self.input_source == "视频文件夹":
             files = self.uploaded_video if isinstance(self.uploaded_video, list) else [self.uploaded_video]
             for f in files:
                 if f: f.seek(0)
