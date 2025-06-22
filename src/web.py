@@ -355,14 +355,6 @@ class Detection_UI:
         """
         设置 Streamlit 页面标题和布局。
         """
-        # TODO: 设置页面布局为宽布局
-        st.set_page_config(
-            page_title=self.title,
-            page_icon=abs_path("../icon/icon.jpg", path_type="current"),
-            initial_sidebar_state="expanded",
-            layout="wide"
-        )
-
         # 居中显示标题
         st.markdown(
             f'<h1 style="text-align: center;">{self.title}</h1>',

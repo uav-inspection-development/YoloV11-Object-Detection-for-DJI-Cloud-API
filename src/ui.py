@@ -1,32 +1,13 @@
 import sys
 import os
 import argparse
-import streamlit.web.cli as stcli
-import random
-import tempfile
 import time
 import os
-import cv2
 import json
-import numpy as np
 import streamlit as st
-from QtFusion.utils import drawRectBox
-from log import ResultLogger, LogTable
-from model import Web_Detector
-from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
-from ui_style import def_css_html
-from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image, rotate_image
-import tempfile
-from datetime import datetime
-from auth import verify_token, get_access_token
-import IMcore
-import efficientnet_pytorch
 from check_license import check_license
-import numpy
-import IMcore
-import cryptography
-import _cffi_backend
 from web import Detection_UI
+from QtFusion.path import abs_path
 
 
 # 设置环境变量以避免 OpenMP 错误
@@ -84,6 +65,14 @@ def streamlit_login_page():
         st.rerun()
 
 if __name__ == "__main__":
+    # 设置页面布局为宽布局
+    st.set_page_config(
+        page_title="光伏云组件检测系统",
+        page_icon=abs_path("../icon/icon.jpg", path_type="current"),
+        initial_sidebar_state="expanded",
+        layout="wide"
+    )
+
     # 判断是否通过 streamlit run 启动
     if len(sys.argv) == 1:
         # Web 模式
@@ -124,7 +113,30 @@ if __name__ == "__main__":
 
     # 将 SECRET_KEY 转换为字节
     secret_key = args.secret_key.encode()
-    check_license(secret_key, args.license_file, args.bind_info_file)
+    ret, message = check_license(secret_key, args.license_file, args.bind_info_file)
+    # 使用 st.empty() 创建占位符
+    message_placeholder = st.empty()
+
+    if ret == 0:
+        if len(sys.argv) == 1:
+            # 在占位符中显示成功消息
+            message_placeholder.success(f"Success: {message}")
+            # 等待 3 秒后清除消息
+            time.sleep(3)
+            message_placeholder.empty()
+        else:
+            print(f"Success: {message}")
+    else:
+        if len(sys.argv) == 1:
+            # 在占位符中显示错误消息
+            message_placeholder.error(f"Error: {message}")
+            # 等待 3 秒后清除消息
+            time.sleep(3)
+            message_placeholder.empty()
+            st.stop()
+        else:
+            print(f"Error: {message}")
+            sys.exit(1)
 
     # 设置环境变量以传递 OAuth2 配置
     os.environ["OAUTH2_INTROSPECT_URL"] = args.oauth2_introspect_url

@@ -61,24 +61,29 @@ def check_license(secret_key: bytes, license_file: str, bind_info_file: str):
     """
     if not os.path.exists(license_file):
         print(f"Error: {license_file} not found.")
-        sys.exit(1)
+        return -1,  "License file not found"
     try:
         license_data = read_license(license_file, secret_key)
     except Exception as e:
         print(f"Error reading {license_file}:", str(e))
-        sys.exit(1)
+        return -1, "License file is corrupted or invalid"
     fingerprint = get_device_fingerprint()
     if license_data.get("bound_fingerprint") is None:
         license_data["bound_fingerprint"] = fingerprint
         write_license(license_data, license_file, secret_key)
         write_bind_info(fingerprint, bind_info_file)
         print("License successfully bound to this device.")
+        return 0, "License successfully bound to this device"
     elif license_data["bound_fingerprint"] != fingerprint:
         print("Error: License is bound to another device!")
-        sys.exit(1)
+        return -1, "License is bound to another device"
     elif os.path.exists(bind_info_file):
         if read_bind_info(bind_info_file) != fingerprint:
             print("Error: Device fingerprint mismatch!")
-            sys.exit(1)
+            return -1, "Device fingerprint mismatch"
+        else:
+            print("License is already bound to this device.")
+            return 0, "License checked successfully, already bound to this device"
     else:
         write_bind_info(fingerprint, bind_info_file)
+        return 0, "License successfully bound to this device"
