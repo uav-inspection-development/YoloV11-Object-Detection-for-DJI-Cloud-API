@@ -33,26 +33,6 @@ from web import Detection_UI
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["ENABLE_OAUTH"] = "FALSE"
 
-def run_streamlit(script_path):
-    """
-    使用 streamlit.web.cli 模块运行 Streamlit 脚本。
-    Args:
-        script_path (str): 要运行的脚本路径
-    """
-    original_argv = sys.argv.copy()
-
-    try:
-        sys.argv = [
-            "streamlit",
-            "run",
-            script_path,
-            "--global.developmentMode=false",
-        ]
-        stcli.main()
-    except Exception as e:
-        print(f"Streamlit 脚本运行出错: {e}")
-    finally:
-        sys.argv = original_argv
 
 def streamlit_login_page():
     """
@@ -105,7 +85,7 @@ def streamlit_login_page():
 
 if __name__ == "__main__":
     # 判断是否通过 streamlit run 启动
-    if len(sys.argv) == 1 or "streamlit" in sys.argv[0].lower():
+    if len(sys.argv) == 1:
         # Web 模式
         if 'logged_in' not in st.session_state:
             st.session_state['logged_in'] = False
