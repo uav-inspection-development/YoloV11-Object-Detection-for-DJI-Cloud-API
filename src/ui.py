@@ -74,6 +74,12 @@ def streamlit_login_page():
         if not secret_key:
             st.error("Secret Key 不能为空")
             return
+        if not license_file:
+            st.error("License File 不能为空")
+            return
+        if not bind_info_file:
+            st.error("Bind Info File 不能为空")
+            return
 
         login_data = {
             "secret_key": secret_key,

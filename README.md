@@ -211,8 +211,10 @@ requirements.txt              # List of dependencies
 2. **Run the Detection Interface with Login Interface**:
 
     ```shell
-    python src/ui.py
+    streamlit run src/ui.py
     ```
+
+    After running this command, the streamlit login interface will be launched in your browser. Input the required parameters to log in.
 
 3. **Run the Detection Interface with Command Line**:
 
