@@ -263,14 +263,15 @@ class LogTable:
         try:
             # 创建一个 Word 文档
             doc = Document()
-            doc.add_heading('检测结果报告', level=1)
+            doc.add_heading('检测结果报告', level=1).alignment = 1  # 标题居中
 
-            # 添加首页信息
+            # 添加首页信息并居中
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             total_images = len(self.saved_images)
-            doc.add_paragraph(f"报告生成日期：{now}")
-            doc.add_paragraph(f"包含图片数量：{total_images}")
-            doc.add_paragraph("")  # 空行分隔
+            doc.add_paragraph().add_run("\n").bold = True  # 添加空行
+            doc.add_paragraph(f"报告生成日期：{now}").paragraph_format.alignment = 1  # 居中
+            doc.add_paragraph(f"包含图片数量：{total_images}").paragraph_format.alignment = 1  # 居中
+            doc.add_paragraph("\n").paragraph_format.alignment = 1  # 添加空行
 
             # 插入分页符
             doc.add_page_break()
@@ -279,25 +280,32 @@ class LogTable:
             for idx, (image_ini, image_detected, detection_results, img_name) in enumerate(
                 zip(self.saved_images_ini, self.saved_images, self.saved_results, self.saved_names)
             ):
-                # 添加图片标题，使用图片名称
-                doc.add_heading(f'图片 {idx + 1}: {img_name}', level=2)
+                # 添加图片标题，使用标题字体并居中
+                title = doc.add_heading(f'图片 {idx + 1}: {img_name}', level=2)
+                title.alignment = 1  # 居中
 
-                # 添加原图到 Word 文档
-                doc.add_paragraph('原始图像:')
+                # 创建一个表格用于左右放置图片
+                table = doc.add_table(rows=1, cols=2)
+                table.autofit = True
+
+                # 左侧放置原始图像
+                cell_left = table.cell(0, 0)
+                cell_left.paragraphs[0].add_run('原始图像:').bold = True
                 original_image_stream = BytesIO()
                 Image.fromarray(cv2.cvtColor(image_ini, cv2.COLOR_BGR2RGB)).save(original_image_stream, format='PNG')
                 original_image_stream.seek(0)
-                doc.add_picture(original_image_stream, width=Inches(4))
+                cell_left.add_paragraph().add_run().add_picture(original_image_stream, width=Inches(3))
 
-                # 添加识别后的图片到 Word 文档
-                doc.add_paragraph('识别后的图像:')
+                # 右侧放置识别后的图像
+                cell_right = table.cell(0, 1)
+                cell_right.paragraphs[0].add_run('识别后的图像:').bold = True
                 detected_image_stream = BytesIO()
                 Image.fromarray(cv2.cvtColor(image_detected, cv2.COLOR_BGR2RGB)).save(detected_image_stream, format='PNG')
                 detected_image_stream.seek(0)
-                doc.add_picture(detected_image_stream, width=Inches(4))
+                cell_right.add_paragraph().add_run().add_picture(detected_image_stream, width=Inches(3))
 
                 # 添加检测结果表格
-                doc.add_paragraph('检测结果信息:')
+                doc.add_paragraph('检测结果信息:').paragraph_format.alignment = 1  # 居中
                 table = doc.add_table(rows=1, cols=6)
                 table.style = 'Table Grid'
                 headers = ["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)", "类别ID"]
@@ -310,6 +318,9 @@ class LogTable:
                         row_cells = table.add_row().cells
                         for i, value in enumerate(detInfo):
                             row_cells[i].text = str(value)
+
+                # 添加段落间距
+                doc.add_paragraph("\n")
 
             # 保存 Word 文件
             doc.save(word_file_path)
