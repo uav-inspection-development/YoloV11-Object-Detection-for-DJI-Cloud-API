@@ -110,7 +110,6 @@ src/                          # Source code directory
 ├── ui_style.py               # Custom CSS and HTML styles for Streamlit app
 ├── utils.py                  # Utility functions for preprocessing and postprocessing
 ├── web.py                    # Web interface for detection
-tempDir/
 ultralytics/                  # YOLOv8 source code
 util_data/                    # Tools for processing non txt format datasets
 ├── encryption.py             # Code encryption tools
@@ -123,9 +122,17 @@ util_data/                    # Tools for processing non txt format datasets
 models/                       # Contains model definitions
 runs/                         # Stores training results and weights
 weights/                      # YOLO pre training weights for various versions
+.gitignore                    # Git ignore file
+AGENTS.md                     # Agent configuration for OpenAI Codex
+CHANGELOG.md                  # Change log for project updates
+CONTRIBUTING.md               # Contribution guidelines for the project
 docker-compose.yml            # Docker Compose file for containerized deployment
 Dockerfile                    # Dockerfile for building the application image
+LICENSE                       # License file for the project
+main.py                       # Main entry point for the application
+README.md                     # Project overview and setup instructions
 requirements.txt              # List of dependencies
+User_Manual.md                # User manual for the application
 ```
 
 ---
@@ -211,7 +218,7 @@ requirements.txt              # List of dependencies
 2. **Run the Detection Interface with Login Interface**:
 
     ```shell
-    streamlit run src/ui.py
+    python main.py
     ```
 
     After running this command, the streamlit login interface will be launched in your browser. Input the required parameters to log in.
@@ -219,7 +226,7 @@ requirements.txt              # List of dependencies
 3. **Run the Detection Interface with Command Line**:
 
     ```shell
-    python src/ui.py --run-mode=$RUN_MODE --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
+    python main.py --run-mode=$RUN_MODE --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
     ```
 
     **Explanation of Arguments**:
@@ -234,7 +241,7 @@ requirements.txt              # List of dependencies
 4. **Run the Detection API Endpoints**:
 
     ```shell
-    python src/ui.py --run-mode=api --oauth2-introspect-url=$OAUTH2_INTROSPECT_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
+    python main.py --run-mode=api --oauth2-introspect-url=$OAUTH2_INTROSPECT_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
     ```
 
     **Explanation of Arguments**:
@@ -257,7 +264,7 @@ requirements.txt              # List of dependencies
 1. **Build the Executable**:
     - Use the following command to build the executable file for the application:
     ```shell
-    pyinstaller src/ui.py
+    pyinstaller main.py
     ```
     - This will create a standalone executable in the `dist` directory.
 
@@ -269,20 +276,20 @@ requirements.txt              # List of dependencies
     - Ensure that the following files are included in the `ui` directory:
         - The `license.dat` file generated earlier.
 
-3. **Encrypt the `web.py` File**:
-    - Use the following command to encrypt the `web.py` file:
+3. **Encrypt the `ui.py` File**:
+    - Use the following command to encrypt the `ui.py` file:
     ```shell
-    python utils_data/encryption.py --input-file src/web.py --output-file src/web_encrypted.py
+    python utils_data/encryption.py --input-file src/ui.py --output-file src/ui_encrypted.py
     ```
-    - This will create an encrypted version of the `web.py` file named `web_encrypted.py`.
+    - This will create an encrypted version of the `ui.py` file named `ui_encrypted.py`.
 
 4. **Move the Encrypted File**:
-    - Move the `web_encrypted.py` file to the `src/dist/ui/_internal` directory, renaming it to `web.py`:
+    - Move the `ui_encrypted.py` file to the `src/dist/main/_internal` directory, renaming it to `ui.py`:
 
 5. **Run the Executable**:
-    - After building the executable, navigate to the `dist/ui` directory and run the application using the following command:
+    - After building the executable, navigate to the `dist/main` directory and run the application using the following command:
     ```shell
-    ./ui.exe --run-mode=streamlit --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
+    ./main.exe --run-mode=streamlit --oauth2-token-url=$OAUTH2_TOKEN_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
     ```
 
 ---

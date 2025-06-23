@@ -34,7 +34,7 @@
 #### 2. 准备许可证文件
 运行以下命令生成许可证文件：
 ```bash
-ui.exe --secret-key "0123456789abcdef0123456789abcdef" --license-file "license.dat" --bind-info-file "bind_info.json"
+python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" --license-file "license.dat" --bind-info-file "bind_info.json"
 ```
 
 ---
@@ -42,7 +42,13 @@ ui.exe --secret-key "0123456789abcdef0123456789abcdef" --license-file "license.d
 ### 操作指南
 
 #### 1. 运行检测界面
-运行以下命令启动检测界面：
+
+运行以下命令直接启动检测界面：
+```bash
+ui.exe
+```
+
+运行以下命令使用命令行参数启动检测界面：
 ```bash
 ui.exe --run-mode=streamlit --secret-key "0123456789abcdef0123456789abcdef" --license-file "license.dat" --bind-info-file "bind_info.json"
 ```
