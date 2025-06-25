@@ -322,8 +322,6 @@ class Detection_UI:
         else:
             if self.image_type == "红外":
                 model_path = abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current")
-            elif self.image_type == "EL隐裂":
-                model_path = abs_path("../weights/yolo11s-el-seg.pt", path_type="current")
             elif self.image_type == "可见光":
                 model_path = abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
             else:
@@ -510,7 +508,7 @@ class Detection_UI:
         elif self.model_type == "分割任务":
             self.rectangle_bounding_output = st.sidebar.checkbox("输出矩形边框", value=True)
             st.sidebar.caption("💡 提示: 分割任务将对所有的光伏板轮廓进行分割，选择输出矩形边框后，将检测矩形边框并输出，否则输出原始边缘，目标类别选择【单组件】或【组串】即可。")
-            available_options = ["EL隐裂", "红外", "可见光"]
+            available_options = ["红外", "可见光"]
 
         # 添加图像类型选择
         st.sidebar.header("🖼️ 图像类型选择")
@@ -598,8 +596,6 @@ class Detection_UI:
             else:
                 if self.image_type == "红外":
                     model_path=abs_path("../weights/yolo11s-thermo-seg.pt", path_type="current")
-                elif self.image_type == "EL隐裂":
-                    model_path=abs_path("../weights/yolo11s-el-seg.pt", path_type="current")
                 elif self.image_type == "可见光":
                     model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
                 else:
