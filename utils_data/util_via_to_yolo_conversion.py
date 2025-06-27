@@ -14,6 +14,7 @@ def convert_polygon(points, width, height):
         normalized.extend([x_norm, y_norm])
     return normalized
 
+
 def load_annotations_from_folder(folder, class_id):
     data = {}
     for fname in os.listdir(folder):
@@ -36,15 +37,30 @@ def load_annotations_from_folder(folder, class_id):
             data[image_path] = data.get(image_path, []) + polygons
     return data
 
+
+def generate_data_yaml(output_dir, classes):
+    yaml_path = os.path.join(output_dir, "data.yaml")
+    with open(yaml_path, "w", encoding="utf-8") as f:
+        f.write(f"""train: images/train
+val: images/val
+test: images/test
+
+nc: {len(classes)}
+names: {classes}
+""")
+    print(f"[✓] data.yaml generated at {yaml_path}")
+
+
 def main(input_dir, output_dir):
+    classes = ['component', 'string']
     component_dir = os.path.join(input_dir, "component")
     string_dir = os.path.join(input_dir, "string")
     image_dir = os.path.join(input_dir, "images")
 
     print("[*] Loading annotations...")
 
-    component_anns = load_annotations_from_folder(component_dir, 0)
-    string_anns = load_annotations_from_folder(string_dir, 1)
+    component_anns = load_annotations_from_folder(component_dir, classes.index('component'))
+    string_anns = load_annotations_from_folder(string_dir, classes.index('string'))
 
     all_data = {}
     all_data.update(component_anns)
@@ -93,7 +109,10 @@ def main(input_dir, output_dir):
     print("[*] Saving testing set...")
     save_data(test_images, "test")
 
+    generate_data_yaml(output_dir, classes)
+
     print("[✓] Conversion complete.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert LabelMe-style JSON to YOLOv11 segmentation format")

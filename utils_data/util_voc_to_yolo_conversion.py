@@ -67,6 +67,19 @@ def save_data(subset, subset_name, xml_dir, img_dir, out_dir, classes):
             f.write("\n".join(yolo_lines))
 
 
+def generate_data_yaml(out_dir, classes):
+    yaml_path = os.path.join(out_dir, "data.yaml")
+    with open(yaml_path, "w", encoding="utf-8") as f:
+        f.write(f"""train: images/train
+val: images/val
+test: images/test
+
+nc: {len(classes)}
+names: {classes}
+""")
+    print(f"[✓] data.yaml generated at {yaml_path}")
+
+
 def main(xml_dir, img_dir, out_dir):
     classes = ['yyzd', 'ygfs', 'zw', 'yyzd_zw', 'ns', 'yyzd_ns', 'zw_ns', 'gfbzjbx', 'gfbqs', 'mbsl', 'snow', 'crack']
     xml_files = [f for f in os.listdir(xml_dir) if f.endswith('.xml')]
@@ -87,6 +100,9 @@ def main(xml_dir, img_dir, out_dir):
     save_data(val_images, "val", xml_dir, img_dir, out_dir, classes)
     print("[*] Saving testing set...")
     save_data(test_images, "test", xml_dir, img_dir, out_dir, classes)
+
+    generate_data_yaml(out_dir, classes)
+
     print("[✓] Conversion complete.")
 
 
