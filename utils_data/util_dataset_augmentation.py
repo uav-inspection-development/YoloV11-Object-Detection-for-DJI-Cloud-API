@@ -18,6 +18,7 @@ from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 import yaml
 import shutil
 from pathlib import Path
+import argparse
 
 
 class YOLODataAugmenter:
@@ -413,24 +414,23 @@ class YOLODataAugmenter:
 
 
 def main():
-    # 手动输入数据集路径
-    dataset_path = input("请输入数据集根目录路径（如 D:/data/EL_data ）: ").strip()
-    if not dataset_path:
-        print("数据集路径不能为空！")
-        return
+    parser = argparse.ArgumentParser(description="YOLO 数据增强脚本")
+    parser.add_argument("--dataset_path", required=True, help="数据集根目录路径（如 D:/data/EL_data ）")
+    parser.add_argument("--splits", default="train", help="需要增广的数据集分割，多个用英文逗号分隔，默认只增广train，可选: train,val,test")
+    args = parser.parse_args()
 
-    # 选择需要增广的数据集分割
-    splits = ['train', 'val', 'test']
-    print("可选择需要增广的数据集分割（可多选，用英文逗号分隔，默认只增广train）：")
-    print("选项：train, val, test")
-    splits_input = input("请输入分割名称（如 train,val ）: ").strip()
-    if splits_input:
-        splits = [s.strip() for s in splits_input.split(',') if s.strip() in split_options]
-        if not splits:
-            print("输入无效，默认只增广train。")
-            splits = ['train']
-    else:
+    dataset_path = args.dataset_path
+    splits_input = args.splits
+
+    # 解析 splits
+    split_options = ['train', 'val', 'test']
+    splits = [s.strip() for s in splits_input.split(',') if s.strip() in split_options]
+    if not splits:
+        print("输入无效，默认只增广train。")
         splits = ['train']
+
+    print(f"[*] 数据集路径: {dataset_path}")
+    print(f"[*] 选择的分割: {splits}")
 
     # 创建数据增广器
     augmenter = YOLODataAugmenter(dataset_path)

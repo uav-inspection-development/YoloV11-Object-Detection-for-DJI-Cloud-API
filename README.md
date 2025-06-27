@@ -112,13 +112,13 @@ src/                          # Source code directory
 ├── web.py                    # Web interface for detection
 ultralytics/                  # YOLOv8 source code
 util_data/                    # Tools for processing non txt format datasets
-├── encryption.py             # Code encryption tools
-├── util_dataset_enhance.py   # Dataset enhancement tools
-├── util_dataset_resize.py    # Dataset resizing tools
-├── util_dataset_split.py     # Dataset splitting tools
-├── util_visual.py            # Visualization tools
-├── util_xml_to_txt_seg.py    # XML to TXT segmentation tools
-├── util_xml_to_txt.py        # XML to TXT conversion tools
+├── util_dataset_augmentation.py     # Dataset augmentation tools
+├── util_dataset_get_label_name.py   # Get label names from dataset
+├── util_dataset_manipulation.py     # Dataset resizing tools
+├── util_encryption.py               # Code encryption tools
+├── util_image_visualization.py      # Visualization tools
+├── util_via_to_yolo_conversion.py   # VIA to YOLO format conversion tools
+├── util_voc_to_yolo_conversion.py   # VOC(XML) to YOLO(TXT) conversion tools
 models/                       # Contains model definitions
 runs/                         # Stores training results and weights
 weights/                      # YOLO pre training weights for various versions

@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-
+import argparse
 
 def count_xml_categories(folder_path):
     """
@@ -31,27 +31,31 @@ def count_xml_categories(folder_path):
                     category_counter[category] += 1
 
         except ET.ParseError as e:
-            print(f"解析错误 {filename}: {str(e)}")
+            print(f"[解析错误] {filename}: {str(e)}")
         except Exception as e:
-            print(f"处理 {filename} 时出错: {str(e)}")
+            print(f"[错误] 处理 {filename} 时出错: {str(e)}")
 
     return unique_categories, category_counter
 
-
-if __name__ == "__main__":
-    # 设置包含XML文件的文件夹路径
-    xml_folder = r"E:\project\YoloV11-Object-Detection-for-DJI-Cloud-API\datasets\visiual\可见光xml"
-
+def main(xml_folder):
     # 检查文件夹是否存在
     if not os.path.exists(xml_folder):
-        print(f"错误: 文件夹不存在 - {xml_folder}")
-    else:
-        categories, counter = count_xml_categories(xml_folder)
+        print(f"[错误] 文件夹不存在: {xml_folder}")
+        return
 
-        print("\n找到的类别种类:")
-        print("-" * 30)
-        for i, cat in enumerate(sorted(categories), 1):
-            print(f"{i}. {cat} (出现次数: {counter[cat]})")
+    categories, counter = count_xml_categories(xml_folder)
 
-        print("-" * 30)
-        print(f"总类别数: {len(categories)}")
+    print("\n[*] 找到的类别种类:")
+    print("-" * 30)
+    for i, cat in enumerate(sorted(categories), 1):
+        print(f"{i}. {cat} (出现次数: {counter[cat]})")
+
+    print("-" * 30)
+    print(f"[*] 总类别数: {len(categories)}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="统计VOC XML标签文件中的所有类别")
+    parser.add_argument("--xml_folder", required=True, help="XML文件所在的文件夹路径")
+    args = parser.parse_args()
+
+    main(args.xml_folder)
