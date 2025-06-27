@@ -11,7 +11,7 @@ from ultralytics import YOLO  # 导入YOLO模型
 from QtFusion.path import abs_path
 
 
-def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config='../ultralytics/cfg/models/v11/yolo11.yaml', validate=False):
+def train_det(workers, batch, device, dataset_dir, epochs, img_size, pretrained_model=None, model_config='../ultralytics/cfg/models/v11/yolo11.yaml', validate=False):
     """
     训练检测模型的函数。
 
@@ -19,7 +19,7 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
         workers (int): 用于数据加载的工作线程数。
         batch (int): 训练的批次大小。
         device (str): 用于训练的设备 (例如 '0' 表示 GPU 或 'cpu')。
-        data_name (str): 数据集的名称。
+        dataset_dir (str): 数据集文件夹路径，需包含data.yaml、images、labels等。
         epochs (int): 训练的轮数。
         img_size (int): 训练的图像大小。
         pretrained_model (str, optional): 预训练模型的路径。如果提供，将加载该模型进行训练。默认为 None。
@@ -27,33 +27,31 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
         validate (bool, optional): 是否在每个 epoch 结束时对验证集进行评估。默认为 False。
     """
     try:
-        data_path = abs_path(f'../datasets/{data_name}/{data_name}.yaml', path_type='current')  # 数据集的yaml的绝对路径
+        # 获取data.yaml的绝对路径
+        data_path = abs_path(os.path.join(dataset_dir, "data.yaml"), path_type='current')
         unix_style_path = data_path.replace(os.sep, '/')
 
         # 检查数据集配置文件是否存在
         if not os.path.exists(data_path):
             return f"数据集配置文件未找到: {data_path}. 请确保数据集存在。"
 
-        # 获取目录路径
-        directory_path = os.path.dirname(unix_style_path)
-        # 检查数据集目录是否存在
-        if not os.path.exists(directory_path):
-            return f"数据集目录未找到: {directory_path}. 请确保数据集存在。"
+        # 检查数据集配置文件是否存在
+        if not os.path.exists(data_path):
+            return f"数据集配置文件未找到: {data_path}. 请确保数据集存在。"
 
         # 读取YAML文件，保持原有顺序
         with open(data_path, 'r') as file:
             data = yaml.load(file, Loader=yaml.FullLoader)
-        # 修改path项
+        # 自动修正路径
+        directory_path = os.path.dirname(unix_style_path)
         if 'path' in data:
             data['path'] = directory_path
-            # 将修改后的数据写回YAML文件
             with open(data_path, 'w') as file:
                 yaml.safe_dump(data, file, sort_keys=False)
         if 'train' in data and 'val' in data and 'test' in data:
-            data['train'] = directory_path + '/train'
-            data['val'] = directory_path + '/val'
-            data['test'] = directory_path + '/test'
-            # 将修改后的数据写回YAML文件
+            data['train'] = directory_path + '/images/train'
+            data['val'] = directory_path + '/images/val'
+            data['test'] = directory_path + '/images/test'
             with open(data_path, 'w') as file:
                 yaml.safe_dump(data, file, sort_keys=False)
 
@@ -70,7 +68,7 @@ def train_det(workers, batch, device, data_name, epochs, img_size, pretrained_mo
 
         # 生成当前时间字符串
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        task_name = f'detection_task_{data_name}_{current_time}'
+        task_name = f'detection_task_{os.path.basename(os.path.normpath(dataset_dir))}_{current_time}'
 
         results = model.train(  # 开始训练模型
             data=data_path,  # 指定训练数据的配置文件路径

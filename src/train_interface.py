@@ -48,7 +48,7 @@ def get_pretrained_model_options(base_path="../weights/"):
                 pretrained_model_options.append(absolute_path)
     return pretrained_model_options
 
-def train_interface(task, workers, batch, device, data_name, epochs, img_size, pretrained_model=None, model_config=None, validate=False):
+def train_interface(task, workers, batch, device, dataset_dir, epochs, img_size, pretrained_model=None, model_config=None, validate=False):
     """
     训练接口函数，根据任务类型选择相应的训练函数。
     """
@@ -67,9 +67,9 @@ def train_interface(task, workers, batch, device, data_name, epochs, img_size, p
         pretrained_model = None
 
     if task == "Detection":
-        return train_det(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config, validate)
+        return train_det(workers, batch, device, dataset_dir, epochs, img_size, pretrained_model, model_config, validate)
     elif task == "Segmentation":
-        return train_seg(workers, batch, device, data_name, epochs, img_size, pretrained_model, model_config, validate)
+        return train_seg(workers, batch, device, dataset_dir, epochs, img_size, pretrained_model, model_config, validate)
     else:
         return "无效的任务选择。请选择 'Detection' 或 'Segmentation'。"
 
@@ -92,7 +92,7 @@ def launch_gradio():
             gr.Number(label="工作线程数", value=1, precision=0, info="用于数据加载的工作线程数，默认值为1。"),
             gr.Number(label="批次大小", value=8, precision=0, info="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为8。"),
             gr.Textbox(label="设备 (例如 '0' 表示 GPU 或 'cpu')", value="0" if torch.cuda.is_available() else "cpu", info="用于训练的设备，例如 '0' 表示 GPU 或 'cpu'。"),
-            gr.Textbox(label="数据集名称", value="data", info="数据集的名称，例如 'data'。"),
+            gr.Textbox(label="数据集文件夹路径", value="../datasets/data", info="数据集文件夹的绝对路径，需包含data.yaml、images、labels等。"),
             gr.Number(label="训练轮数", value=200, precision=0, info="训练的轮数，默认值为200。"),
             gr.Number(label="图像大小", value=640, precision=0, info="训练的图像大小，默认值为640。"),
             gr.Dropdown(choices=list(pretrained_model_choices.keys()), label="预训练模型 (可选)", value="None", info="选择预训练模型的路径。如果选择 None，则不使用预训练模型。"),
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     parser.add_argument("--workers", type=int, default=1, help="用于数据加载的工作线程数，默认值为1。")
     parser.add_argument("--batch", type=int, default=8, help="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为8。")
     parser.add_argument("--device", type=str, default="0" if torch.cuda.is_available() else "cpu", help="用于训练的设备 (例如 '0' 表示 GPU 或 'cpu')，默认当前有GPU时为 '0'。")
-    parser.add_argument("--data_name", type=str, default="data", help="数据集的名称，默认值为 'data'。")
+    parser.add_argument("--dataset_dir", type=str, default="../datasets/data", help="数据集文件夹的绝对路径，需包含data.yaml、images、labels等。")
     parser.add_argument("--epochs", type=int, default=200, help="训练的轮数，默认值为200。")
     parser.add_argument("--img_size", type=int, default=640, help="训练的图像大小，默认值为640。")
     parser.add_argument("--pretrained_model", type=str, default=None, help="预训练模型的路径。如果为空，则不使用预训练模型。")
@@ -132,7 +132,7 @@ if __name__ == '__main__':
             args.workers,
             args.batch,
             args.device,
-            args.data_name,
+            args.dataset_dir,
             args.epochs,
             args.img_size,
             args.pretrained_model,
