@@ -89,8 +89,8 @@ def launch_gradio():
         fn=train_interface,
         inputs=[
             gr.Radio(["Detection", "Segmentation"], value="Detection", label="选择任务", info="选择要训练的任务。"),
-            gr.Number(label="工作线程数", value=1, precision=0, info="用于数据加载的工作线程数，默认值为1。"),
-            gr.Number(label="批次大小", value=8, precision=0, info="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为8。"),
+            gr.Number(label="工作线程数", value=8, precision=0, info="用于数据加载的工作线程数，默认值为8。"),
+            gr.Number(label="批次大小", value=32, precision=0, info="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为32。"),
             gr.Textbox(label="设备 (例如 '0' 表示 GPU 或 'cpu')", value="0" if torch.cuda.is_available() else "cpu", info="用于训练的设备，例如 '0' 表示 GPU 或 'cpu'。"),
             gr.Textbox(label="数据集文件夹路径", value="../datasets/data", info="数据集文件夹的绝对路径，需包含data.yaml、images、labels等。"),
             gr.Number(label="训练轮数", value=200, precision=0, info="训练的轮数，默认值为200。"),
@@ -109,8 +109,8 @@ def launch_gradio():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="YOLO 训练界面")
     parser.add_argument("--task", type=str, choices=["Detection", "Segmentation"], default="Detection", help="选择要训练的任务 (Detection 或 Segmentation)。")
-    parser.add_argument("--workers", type=int, default=1, help="用于数据加载的工作线程数，默认值为1。")
-    parser.add_argument("--batch", type=int, default=8, help="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为8。")
+    parser.add_argument("--workers", type=int, default=8, help="用于数据加载的工作线程数，默认值为8。")
+    parser.add_argument("--batch", type=int, default=32, help="训练的批次大小，适当等修改Batchsize，根据电脑等显存/内存设置，如果爆显存可以调低，默认值为32。")
     parser.add_argument("--device", type=str, default="0" if torch.cuda.is_available() else "cpu", help="用于训练的设备 (例如 '0' 表示 GPU 或 'cpu')，默认当前有GPU时为 '0'。")
     parser.add_argument("--dataset_dir", type=str, default="../datasets/data", help="数据集文件夹的绝对路径，需包含data.yaml、images、labels等。")
     parser.add_argument("--epochs", type=int, default=200, help="训练的轮数，默认值为200。")
