@@ -1784,6 +1784,10 @@ class Detection_UI:
 
                     if mask is not None and self.rectangle_bounding_output:
                         # mask: numpy array, shape (H, W), values 0/1 or 0/255
+                        mask = np.array(mask)
+                        # 如果mask有多通道，取第一个通道
+                        if mask.ndim == 3:
+                            mask = mask[..., 0]
                         mask_bin = (mask > 0).astype(np.uint8)
                         contours, _ = cv2.findContours(mask_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                         if contours:
