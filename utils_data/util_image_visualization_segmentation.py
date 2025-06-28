@@ -21,29 +21,30 @@ def draw_labels(image_path, label_path, output_path):
     with open(label_path, 'r') as f:
         labels = [line.strip().split() for line in f.readlines()]
 
+    # 定义类别颜色映射（可根据类别数扩展）
+    color_map = [
+        (0, 0, 255),    # 红
+        (0, 255, 0)     # 绿
+    ]
+
     for label in labels:
-        class_id = label[0]
-        x_center, y_center, bbox_width, bbox_height = map(float, label[1:5])
-        points = np.array(label[5:], dtype=np.float32).reshape(-1, 2)
-
-        x_center = int(x_center * width)
-        y_center = int(y_center * height)
-        bbox_width = int(bbox_width * width)
-        bbox_height = int(bbox_height * height)
-
-        x_min = x_center - bbox_width // 2
-        y_min = y_center - bbox_height // 2
-        x_max = x_center + bbox_width // 2
-        y_max = y_center + bbox_height // 2
-
-        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-
+        class_id = int(label[0])
+        color = color_map[class_id % len(color_map)]
+        # 直接取后面的所有点
+        points = np.array(label[1:], dtype=np.float32).reshape(-1, 2)
         points[:, 0] = (points[:, 0] * width).astype(int)
         points[:, 1] = (points[:, 1] * height).astype(int)
-        points = points.reshape((-1, 1, 2)).astype(np.int32)
-        cv2.polylines(image, [points], isClosed=True, color=(0, 0, 255), thickness=2)
+        points_int = points.astype(np.int32).reshape((-1, 1, 2))
 
-        cv2.putText(image, f"Class {class_id}", (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        # 画多边形
+        cv2.polylines(image, [points_int], isClosed=True, color=color, thickness=2)
+
+        # 计算bbox
+        x_min, y_min = int(points[:, 0].min()), int(points[:, 1].min())
+        x_max, y_max = int(points[:, 0].max()), int(points[:, 1].max())
+        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color, 2)
+
+        cv2.putText(image, f"Class {class_id}", (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     cv2.imwrite(output_path, image)
     print(f"保存绘制后的图像到：{output_path}")

@@ -116,7 +116,8 @@ util_data/                    # Tools for processing non txt format datasets
 ├── util_dataset_get_label_name.py   # Get label names from dataset
 ├── util_dataset_manipulation.py     # Dataset resizing tools
 ├── util_encryption.py               # Code encryption tools
-├── util_image_visualization.py      # Visualization tools
+├── util_image_visualization_detection.py      # Visualization tools
+├── util_image_visualization_segmentation.py      # Visualization tools
 ├── util_via_to_yolo_conversion.py   # VIA to YOLO format conversion tools
 ├── util_voc_to_yolo_conversion.py   # VOC(XML) to YOLO(TXT) conversion tools
 models/                       # Contains model definitions
