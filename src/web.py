@@ -1782,25 +1782,12 @@ class Detection_UI:
                     else:
                         color = self.colors[cls_id]
 
-                    if mask is not None and self.rectangle_bounding_output:
-                        # mask: numpy array, shape (H, W), values 0/1 or 0/255
-                        mask = np.array(mask)
-                        # 如果mask有多通道，取第一个通道
-                        if mask.ndim == 3:
-                            mask = mask[..., 0]
-                        mask_bin = (mask > 0).astype(np.uint8)
-                        contours, _ = cv2.findContours(mask_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                        if contours:
-                            x, y, w, h = cv2.boundingRect(contours[0])
-                            bbox = [x, y, x + w, y + h]
-                            info['bbox'] = bbox  # 更新bbox为矩形框
-
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
                         if not is_api:
-                            image, aim_frame_area = draw_detections(image, info, color=color, alpha=0.5, line_number=cnt)
+                            image, aim_frame_area = draw_detections(image, info, color=color, alpha=0.5, line_number=cnt, rectangle_bbox=self.rectangle_bounding_output)
                         else:
-                            image, aim_frame_area = draw_detections(image, info, alpha=0.5, line_number=cnt, is_api=True)
+                            image, aim_frame_area = draw_detections(image, info, alpha=0.5, line_number=cnt, is_api=True, rectangle_bbox=self.rectangle_bounding_output)
 
                         # 获取中文名
                         chinese_name = self.cls_name.get(name, "未知类别")

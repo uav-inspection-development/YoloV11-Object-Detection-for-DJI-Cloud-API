@@ -174,7 +174,7 @@ def adjust_parameter(image_size, base_size=1000):
     return max_size / base_size
 
 
-def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None, is_api=False):
+def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None, is_api=False, rectangle_bbox=False):
     """
     在图像上绘制检测结果，包括边界框、类别名称和掩码（如果有）
 
@@ -184,6 +184,7 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
         color (tuple): 边界框颜色，默认为红色 (0, 0, 255)
         alpha (float): 透明度参数，默认为 0.2
         line_number (int): 行号，用于在检测框中间绘制行号，默认为 None
+        rectangle_bbox (bool): 是否绘制掩码的最小外接矩形，默认为 False
     """
     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
     adjust_param = adjust_parameter(image.shape[:2])
@@ -204,6 +205,17 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
             cv2.fillPoly(overlay, [mask_points.astype(np.int32)], mask_color)
             image = cv2.addWeighted(overlay, 0.3, image, 0.7, 0)
             cv2.drawContours(image, [mask_points.astype(np.int32)], -1, color=color, thickness=int(8 * adjust_param))
+
+            # 绘制矩形包围框（如果启用）
+            if rectangle_bbox:
+                x, y, w, h = cv2.boundingRect(mask_points.astype(np.int32))
+                cv2.rectangle(
+                    image, 
+                    (x, y), 
+                    (x + w, y + h), 
+                    color=color, 
+                    thickness=int(5 * adjust_param)
+                )
 
             # 计算面积、周长、圆度
             area = cv2.contourArea(mask_points.astype(np.int32))
