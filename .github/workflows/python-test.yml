@@ -195,9 +195,9 @@ jobs:
       run: |
         if [ "${{ needs.test.result }}" == "success" ] && \
            [ "${{ needs.security.result }}" == "success" ] && \
-           [ "${{ needs.build-docs.result }}" == "success" ] && \
-           [ "${{ needs.validate-config.result }}" == "success" ] && \
-           [ "${{ needs.integration-test.result }}" == "success" ]; then
+           [ "${{ needs['build-docs'].result }}" == "success" ] && \
+           [ "${{ needs['validate-config'].result }}" == "success" ] && \
+           [ "${{ needs['integration-test'].result }}" == "success" ]; then
           echo "✅ All checks passed successfully!"
         else
           echo "❌ Some checks failed. Please review the logs."
