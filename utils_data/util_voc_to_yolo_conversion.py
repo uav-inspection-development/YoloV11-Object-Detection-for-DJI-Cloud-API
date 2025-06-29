@@ -4,6 +4,7 @@ from PIL import Image
 import random
 import argparse
 import shutil
+from tqdm import tqdm
 
 
 def convert_voc_to_yolo(xml_file, image_path, classes):
@@ -42,7 +43,7 @@ def save_data(subset, subset_name, xml_dir, img_dir, out_dir, classes):
     os.makedirs(images_out, exist_ok=True)
     os.makedirs(labels_out, exist_ok=True)
 
-    for xml in subset:
+    for xml in tqdm(subset, desc=f"处理{subset_name}集", unit="张"):
         xml_path = os.path.join(xml_dir, xml)
         base_name = os.path.splitext(xml)[0]
 

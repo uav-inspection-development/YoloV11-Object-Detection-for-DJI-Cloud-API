@@ -3,6 +3,7 @@ import cv2
 import re
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 "此脚本需要在数据集转换脚本执行后后执行"
 
@@ -59,7 +60,7 @@ def main(source_folder, target_width=720, target_height=480):
             print(f"图像文件和标签文件数量不一致，跳过子文件夹 '{subfolder}'")
             continue
 
-        for image_file, label_file in zip(image_files, label_files):
+        for image_file, label_file in tqdm(zip(image_files, label_files), total=len(image_files), desc=f"处理{subfolder}集", unit="对"):
             if image_file.stem != label_file.stem:
                 continue
 
@@ -109,8 +110,6 @@ def main(source_folder, target_width=720, target_height=480):
             save_label_path = os.path.join(resized_labels_subfolder, new_label_filename)
             with open(save_label_path, 'w') as f:
                 f.writelines(adjusted_lines)
-
-            print(f"图像和标签调整大小成功: {new_image_filename} → {save_image_path}, {new_label_filename} → {save_label_path}")
 
     print("\n所有图像和标签调整大小完成！")
 

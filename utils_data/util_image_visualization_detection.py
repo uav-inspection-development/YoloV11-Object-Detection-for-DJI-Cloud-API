@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 
 def draw_labels(image_path, label_path, output_path):
@@ -87,7 +88,7 @@ def main(source_folder, output_folder):
         os.makedirs(visualization_subfolder, exist_ok=True)
 
         image_files = list(Path(images_subfolder).glob("*.jpg")) + list(Path(images_subfolder).glob("*.png"))
-        for image_file in image_files:
+        for image_file in tqdm(image_files, desc=f"处理{subfolder}集", unit="张"):
             image_path = str(image_file)
             txt_path = str(Path(labels_subfolder) / f"{image_file.stem}.txt")
             output_path = os.path.join(visualization_subfolder, f"{image_file.stem}_visualized.jpg")

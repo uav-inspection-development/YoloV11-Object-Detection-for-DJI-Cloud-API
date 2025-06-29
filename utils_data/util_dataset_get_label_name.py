@@ -2,6 +2,7 @@ import os
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 import argparse
+from tqdm import tqdm
 
 def count_xml_categories(folder_path):
     """
@@ -12,8 +13,10 @@ def count_xml_categories(folder_path):
     category_counter = defaultdict(int)
     unique_categories = set()
 
+    xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
+
     # 遍历文件夹中的所有XML文件
-    for filename in os.listdir(folder_path):
+    for filename in tqdm(xml_files, desc="统计类别", unit="个"):
         if not filename.endswith('.xml'):
             continue
 

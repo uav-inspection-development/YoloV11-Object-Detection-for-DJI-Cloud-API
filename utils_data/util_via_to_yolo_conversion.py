@@ -4,6 +4,7 @@ import random
 import shutil
 import argparse
 from PIL import Image
+from tqdm import tqdm
 
 
 def convert_polygon(points, width, height):
@@ -36,6 +37,31 @@ def load_annotations_from_folder(folder, class_id):
         if polygons:
             data[image_path] = data.get(image_path, []) + polygons
     return data
+
+
+def save_data(subset, subset_name, image_dir, out_dir, all_data):
+    images_out = os.path.join(out_dir, "images", subset_name)
+    labels_out = os.path.join(out_dir, "labels", subset_name)
+    os.makedirs(images_out, exist_ok=True)
+    os.makedirs(labels_out, exist_ok=True)
+
+    for img_name in tqdm(subset, desc=f"处理{subset_name}集", unit="张"):
+        img_path = os.path.join(image_dir, img_name)
+        out_img_path = os.path.join(images_out, img_name)
+        shutil.copy(img_path, out_img_path)
+
+        img = Image.open(img_path)
+        w, h = img.size
+
+        label_txt = []
+        for obj in all_data[img_name]:
+            norm_poly = convert_polygon(obj["points"], w, h)
+            label_line = f"{obj['label']} " + " ".join(f"{x:.6f}" for x in norm_poly)
+            label_txt.append(label_line)
+
+        label_path = os.path.join(labels_out, os.path.splitext(img_name)[0] + ".txt")
+        with open(label_path, "w") as f:
+            f.write("\n".join(label_txt))
 
 
 def generate_data_yaml(output_dir, classes):
@@ -77,37 +103,13 @@ def main(input_dir, output_dir):
     val_images = all_images[train_end:val_end]
     test_images = all_images[val_end:]
 
-    def save_data(subset, subset_name):
-        images_out = os.path.join(output_dir, "images", subset_name)
-        labels_out = os.path.join(output_dir, "labels", subset_name)
-        os.makedirs(images_out, exist_ok=True)
-        os.makedirs(labels_out, exist_ok=True)
-
-        for img_name in subset:
-            img_path = os.path.join(image_dir, img_name)
-            out_img_path = os.path.join(images_out, img_name)
-            shutil.copy(img_path, out_img_path)
-
-            img = Image.open(img_path)
-            w, h = img.size
-
-            label_txt = []
-            for obj in all_data[img_name]:
-                norm_poly = convert_polygon(obj["points"], w, h)
-                label_line = f"{obj['label']} " + " ".join(f"{x:.6f}" for x in norm_poly)
-                label_txt.append(label_line)
-
-            label_path = os.path.join(labels_out, os.path.splitext(img_name)[0] + ".txt")
-            with open(label_path, "w") as f:
-                f.write("\n".join(label_txt))
-
     print(f"[*] Found {len(all_images)} annotated images.")
     print("[*] Saving training set...")
-    save_data(train_images, "train")
+    save_data(train_images, "train", image_dir, output_dir, all_data)
     print("[*] Saving validation set...")
-    save_data(val_images, "val")
+    save_data(val_images, "val", image_dir, output_dir, all_data)
     print("[*] Saving testing set...")
-    save_data(test_images, "test")
+    save_data(test_images, "test", image_dir, output_dir, all_data)
 
     generate_data_yaml(output_dir, classes)
 

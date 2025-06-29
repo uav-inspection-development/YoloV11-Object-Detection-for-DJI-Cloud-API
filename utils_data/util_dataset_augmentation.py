@@ -19,6 +19,7 @@ import yaml
 import shutil
 from pathlib import Path
 import argparse
+from tqdm import tqdm
 
 
 class YOLODataAugmenter:
@@ -170,10 +171,14 @@ class YOLODataAugmenter:
         
         
         self.dataset_path = Path(dataset_path)
-        self.output_path = Path(output_path) if output_path else self.dataset_path / ".." / "augmented"
+        if output_path:
+            self.output_path = Path(output_path)
+        else:
+            # 在原数据集文件夹名称后面添加 _augmented
+            self.output_path = self.dataset_path.parent / (self.dataset_path.name + "_augmented")
         
         # 读取数据集配置
-        with open(self.dataset_path / "EL_data.yaml", 'r') as f:
+        with open(self.dataset_path / "data.yaml", 'r') as f:
             self.config = yaml.safe_load(f)
         
         # 创建输出目录结构
@@ -316,7 +321,7 @@ class YOLODataAugmenter:
         
         augmented_count = 0
         
-        for img_file in image_files:
+        for img_file in tqdm(image_files, desc=f"处理{split_name}集", unit="张"):
             try:
                 # 读取图片
                 image = cv2.imread(str(img_file))
@@ -416,10 +421,12 @@ class YOLODataAugmenter:
 def main():
     parser = argparse.ArgumentParser(description="YOLO 数据增强脚本")
     parser.add_argument("--dataset_path", required=True, help="数据集根目录路径（如 D:/data/EL_data ）")
-    parser.add_argument("--splits", default="train", help="需要增广的数据集分割，多个用英文逗号分隔，默认只增广train，可选: train,val,test")
+    parser.add_argument("--output_path", default=None, help="输出路径（如 D:/data/EL_data_augmented ，默认在原数据集目录同级创建augmented文件夹）")
+    parser.add_argument("--splits", default="train,val,test", help="需要增广的数据集分割，多个用英文逗号分隔，默认增广全部  ，可选: train,val,test")
     args = parser.parse_args()
 
     dataset_path = args.dataset_path
+    output_path = args.output_path
     splits_input = args.splits
 
     # 解析 splits
@@ -433,7 +440,7 @@ def main():
     print(f"[*] 选择的分割: {splits}")
 
     # 创建数据增广器
-    augmenter = YOLODataAugmenter(dataset_path)
+    augmenter = YOLODataAugmenter(dataset_path, output_path=output_path)
 
     # 运行增广
     augmenter.run_augmentation(splits=splits)
