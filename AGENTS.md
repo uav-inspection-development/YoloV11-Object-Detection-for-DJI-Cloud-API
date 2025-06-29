@@ -81,17 +81,57 @@ When OpenAI Codex helps create a PR, ensure it:
 
 ## Programmatic Checks for OpenAI Codex
 
-Before submitting changes, run:
+Before submitting changes, install development dependencies and run the following checks:
+
+### Installation
 
 ```bash
-# Lint check
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Or use the helper scripts
+# On Linux/Mac:
+make install-dev
+
+# On Windows:
+.\dev.ps1 install-dev
+```
+
+### Code Quality Checks
+
+```bash
+# Lint check with flake8
 flake8 src
 
-# Type check
+# Type check with mypy
 mypy src
 
-# Build check
-python -m build
+# Run tests with coverage
+pytest tests/ --cov=src --cov-report=term-missing
+
+# Format code (optional but recommended)
+black src tests
+isort src tests
+```
+
+### Using Helper Scripts
+
+```bash
+# On Linux/Mac (using Makefile):
+make lint        # Run flake8
+make type-check  # Run mypy
+make test        # Run pytest with coverage
+make format      # Format code with black and isort
+make check       # Run all checks (lint + type-check + test)
+make clean       # Clean cache files
+
+# On Windows (using PowerShell):
+.\dev.ps1 lint        # Run flake8
+.\dev.ps1 type-check  # Run mypy
+.\dev.ps1 test        # Run pytest with coverage
+.\dev.ps1 format      # Format code with black and isort
+.\dev.ps1 check       # Run all checks (lint + type-check + test)
+.\dev.ps1 clean       # Clean cache files
 ```
 
 All checks must pass before merging.

@@ -1,0 +1,41 @@
+[flake8]
+# Maximum line length
+max-line-length = 88
+
+# Exclude directories and files
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .env,
+    build,
+    dist,
+    runs,
+    output,
+    weights,
+    ultralytics,
+    .pytest_cache,
+    .mypy_cache
+
+# Ignore specific error codes
+ignore = 
+    E203,  # whitespace before ':'
+    E501,  # line too long (handled by black)
+    W503,  # line break before binary operator
+    F401,  # imported but unused (for __init__.py files)
+    F811,  # redefined name (common in type checking)
+
+# Files to check
+filename = *.py
+
+# Enable specific checks
+select = E,W,F,C
+
+# Per-file ignores
+per-file-ignores = 
+    __init__.py:F401
+    src/chinese_name_list.py:E501
+    demo_test/*.py:F401,E402
+    utils_data/*.py:E501
