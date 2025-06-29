@@ -22,20 +22,30 @@ This project provides a comprehensive solution for detecting solar panel anomali
 
 ## Environment Deployment Steps
 
-1. Create and activate a Python environment:
+1. **Install System Dependencies (Linux/Ubuntu only)**:
+
+    For Ubuntu/Debian systems, run the automated installer:
+    ```shell
+    chmod +x install_system_deps.sh
+    ./install_system_deps.sh
+    ```
+    
+    Or see [SYSTEM_DEPS.md](SYSTEM_DEPS.md) for manual installation instructions.
+
+2. Create and activate a Python environment:
 
     ```shell
     conda create -n pytorch python=3.12
     conda activate pytorch
     ```
 
-2. Install dependencies:
+3. Install dependencies:
 
     ```shell
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
     ```
 
-3. Install torch and torchvision for CUDA:
+4. Install torch and torchvision for CUDA:
 
     ```shell
     pip install torch==2.3.1+cu121 torchvision==0.18.0+cu121 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
@@ -47,13 +57,13 @@ This project provides a comprehensive solution for detecting solar panel anomali
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
     ```
 
-4. Verify the environment:
+5. Verify the environment:
 
     ```shell
     conda env list
     ```
 
-5. If the following prompt appears:
+6. If the following prompt appears:
 
     ```plaintext
     Downloading https://ultralytics.com/assets/Arial.ttf to 'C:\Users\ad\AppData\Roaming\Ultralytics\Arial.ttf'...

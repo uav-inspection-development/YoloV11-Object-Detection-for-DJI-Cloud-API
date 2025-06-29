@@ -40,7 +40,9 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1
+        # Install system dependencies with error handling
+        chmod +x install_system_deps.sh
+        ./install_system_deps.sh
 
     - name: Install Python dependencies
       run: |
@@ -140,13 +142,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    
     - name: Validate configuration files
       run: |
-        # Check if configuration files are valid
-        python -c "import configparser; c = configparser.ConfigParser(); c.read('.flake8')"
-        python -c "import configparser; c = configparser.ConfigParser(); c.read('mypy.ini')"
-        python -c "import configparser; c = configparser.ConfigParser(); c.read('setup.cfg')"
-        echo "Configuration files validation passed"
+        # Use our custom validator script
+        python tests/validate_config.py
 
   integration-test:
     runs-on: ubuntu-latest
@@ -163,7 +167,9 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1
+        # Install system dependencies with error handling
+        chmod +x install_system_deps.sh
+        ./install_system_deps.sh
     
     - name: Install dependencies
       run: |

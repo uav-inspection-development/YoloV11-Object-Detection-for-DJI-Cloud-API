@@ -1,4 +1,4 @@
-.PHONY: help install install-dev lint type-check test format security check check-all clean
+.PHONY: help install install-dev lint type-check test format security validate check check-all clean
 
 help:
 	@echo "Available commands:"
@@ -9,6 +9,7 @@ help:
 	@echo "  test         Run pytest tests"
 	@echo "  format       Format code with black and isort"
 	@echo "  security     Run security checks (bandit + safety)"
+	@echo "  validate     Validate configuration files"
 	@echo "  check        Run all checks (lint + type-check + test)"
 	@echo "  check-all    Run all checks including security"
 	@echo "  clean        Clean up cache files"
@@ -37,10 +38,13 @@ security:
 	bandit -r src
 	safety check
 
-check: lint type-check test
+validate:
+	python tests/validate_config.py
+
+check: validate lint type-check test
 	@echo "All checks passed!"
 
-check-all: lint type-check test security
+check-all: validate lint type-check test security
 	@echo "All checks including security passed!"
 
 clean:

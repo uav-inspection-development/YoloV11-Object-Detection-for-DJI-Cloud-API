@@ -13,6 +13,7 @@ function Show-Help {
     Write-Host "  test         Run pytest tests" -ForegroundColor Yellow
     Write-Host "  format       Format code with black and isort" -ForegroundColor Yellow
     Write-Host "  security     Run security checks (bandit + safety)" -ForegroundColor Yellow
+    Write-Host "  validate     Validate configuration files" -ForegroundColor Yellow
     Write-Host "  check        Run all checks (lint + type-check + test)" -ForegroundColor Yellow
     Write-Host "  check-all    Run all checks including security" -ForegroundColor Yellow
     Write-Host "  clean        Clean up cache files" -ForegroundColor Yellow
@@ -57,8 +58,16 @@ function Run-Security {
     safety check
 }
 
+function Run-Validation {
+    Write-Host "Validating configuration files..." -ForegroundColor Blue
+    python tests/validate_config.py
+}
+
 function Run-AllChecks {
     Write-Host "Running all checks..." -ForegroundColor Blue
+    Run-Validation
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    
     Run-Lint
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     
@@ -73,6 +82,9 @@ function Run-AllChecks {
 
 function Run-AllChecksWithSecurity {
     Write-Host "Running all checks including security..." -ForegroundColor Blue
+    Run-Validation
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    
     Run-Lint
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     
@@ -109,6 +121,7 @@ switch ($Command.ToLower()) {
     "test" { Run-Tests }
     "format" { Format-Code }
     "security" { Run-Security }
+    "validate" { Run-Validation }
     "check" { Run-AllChecks }
     "check-all" { Run-AllChecksWithSecurity }
     "clean" { Clean-Cache }
