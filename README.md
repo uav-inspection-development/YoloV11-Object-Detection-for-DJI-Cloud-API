@@ -50,6 +50,14 @@ This project provides a comprehensive solution for detecting solar panel anomali
     - It means the configuration file is being downloaded automatically.
     - If a timeout occurs, copy the `Arial.ttf` file from the `fonts` folder to the specified path and rerun the code.
 
+## Testing
+
+Run the test suite with:
+
+```bash
+pytest
+```
+
 ---
 
 ## Features
