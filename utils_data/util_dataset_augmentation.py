@@ -33,19 +33,19 @@ class YOLODataAugmenter:
         """
         # 定义数据增广变换序列 - 针对红外灰阶无人机图像优化
         self.augmentation_list = [
-            # 1. 水平翻转 (适合无人机航拍)
+            # 0. 水平翻转 (适合无人机航拍)
             iaa.Fliplr(1.0),
             
-            # 2. 垂直翻转 (模拟不同飞行方向)
+            # 1. 垂直翻转 (模拟不同飞行方向)
             iaa.Flipud(1.0),
             
-            # 3. 小角度旋转 (模拟无人机姿态变化)
+            # 2. 小角度旋转 (模拟无人机姿态变化)
             iaa.Rotate((-15, 15)),
             
-            # 4. 大角度旋转 (模拟无人机不同方向拍摄)
+            # 3. 大角度旋转 (模拟无人机不同方向拍摄)
             iaa.Rotate((-45, 45)),
             
-            # 5. 仿射变换 (模拟无人机位置变化和透视)
+            # 4. 仿射变换 (模拟无人机位置变化和透视)
             iaa.Affine(
                 scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},  # 缩放
                 translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},  # 平移
@@ -54,31 +54,31 @@ class YOLODataAugmenter:
                 mode='edge'  # 边缘填充模式
             ),
             
-            # 6. 透视变换 (模拟不同高度和角度的航拍)
+            # 5. 透视变换 (模拟不同高度和角度的航拍)
             iaa.PerspectiveTransform(scale=(0.05, 0.15)),
             
-            # 7. 弹性变形 (模拟轻微的图像畸变)
+            # 6. 弹性变形 (模拟轻微的图像畸变)
             iaa.ElasticTransformation(alpha=(0, 30), sigma=5),
             
-            # 8. 红外图像特定的亮度调整 (模拟不同温度环境)
+            # 7. 红外图像特定的亮度调整 (模拟不同温度环境)
             iaa.Sequential([
                 iaa.Multiply((0.6, 1.4)),  # 更大范围的亮度调整
                 iaa.Add((-40, 40))  # 添加偏移值模拟环境温度变化
             ]),
             
-            # 9. 对比度和伽马调整 (增强红外图像细节)
+            # 8. 对比度和伽马调整 (增强红外图像细节)
             iaa.Sequential([
                 iaa.LinearContrast((0.6, 1.4)),  # 对比度调整
                 iaa.GammaContrast((0.7, 1.3))  # 伽马校正
             ]),
             
-            # 10. 高斯噪声 (模拟传感器噪声)
+            # 9. 高斯噪声 (模拟传感器噪声)
             iaa.AdditiveGaussianNoise(scale=(0, 0.05*255)),
             
-            # 11. 高斯模糊 (模拟运动模糊或焦点问题)
+            # 10. 高斯模糊 (模拟运动模糊或焦点问题)
             iaa.GaussianBlur(sigma=(0.5, 1.5)),
             
-            # 12. 复合变换：几何+亮度 (模拟真实拍摄条件)
+            # 11. 复合变换：几何+亮度 (模拟真实拍摄条件)
             iaa.Sequential([
                 iaa.Affine(
                     scale=(0.9, 1.1),
@@ -89,67 +89,69 @@ class YOLODataAugmenter:
                 iaa.LinearContrast((0.9, 1.1))
             ]),
             
-            # 13. 梯形变换 (模拟倾斜角度拍摄)
-            iaa.Sequential([
-                iaa.PiecewiseAffine(scale=(0.01, 0.05)),
-                iaa.Multiply((0.9, 1.1))
-            ]),
+            # 12. 梯形变换 (模拟倾斜角度拍摄)
+            # time consuning, 14s on a single image
+            # iaa.Sequential([
+            #     iaa.PiecewiseAffine(scale=(0.01, 0.05)),
+            #     iaa.Multiply((0.9, 1.1))
+            # ]),
             
-            # 14. 复合几何变换：旋转+透视 (模拟复杂飞行姿态)
+            # 13. 复合几何变换：旋转+透视 (模拟复杂飞行姿态)
             iaa.Sequential([
                 iaa.Rotate((-30, 30)),
                 iaa.PerspectiveTransform(scale=(0.08, 0.12)),
                 iaa.Multiply((0.85, 1.15))
             ]),
             
-            # 15. 非均匀缩放 (模拟不同距离拍摄)
+            # 14. 非均匀缩放 (模拟不同距离拍摄)
             iaa.Affine(
                 scale={"x": (0.7, 1.3), "y": (0.7, 1.3)},
                 mode='reflect'
             ),
             
-            # 16. 桶形/枕形畸变 (模拟镜头畸变)
-            iaa.Sequential([
-                iaa.PiecewiseAffine(scale=(0.02, 0.08)),
-                iaa.LinearContrast((0.8, 1.2))
-            ]),
+            # 15. 桶形/枕形畸变 (模拟镜头畸变)
+            # time consuning, 14s on a single image
+            # iaa.Sequential([
+            #     iaa.PiecewiseAffine(scale=(0.02, 0.08)),
+            #     iaa.LinearContrast((0.8, 1.2))
+            # ]),
             
-            # 17. 红外热像仪特定噪声组合
+            # 16. 红外热像仪特定噪声组合
             iaa.Sequential([
                 iaa.AdditiveGaussianNoise(scale=(0, 0.08*255)),
                 iaa.AdditiveLaplaceNoise(scale=(0, 0.03*255)),
                 iaa.Multiply((0.7, 1.3))
             ]),
             
-            # 18. 大角度旋转+剪切 (模拟极端飞行角度)
+            # 17. 大角度旋转+剪切 (模拟极端飞行角度)
             iaa.Sequential([
                 iaa.Rotate((-60, 60)),
                 iaa.Affine(shear=(-15, 15)),
                 iaa.Multiply((0.8, 1.2))
             ]),
             
-            # 19. 弹性变形+亮度梯度 (模拟大气折射效应)
+            # 18. 弹性变形+亮度梯度 (模拟大气折射效应)
             iaa.Sequential([
                 iaa.ElasticTransformation(alpha=(10, 50), sigma=(3, 7)),
                 iaa.Add((-50, 50)),
                 iaa.LinearContrast((0.7, 1.3))
             ]),
             
-            # 20. 多层次透视变换 (模拟复杂地形航拍)
+            # 19. 多层次透视变换 (模拟复杂地形航拍)
             iaa.Sequential([
                 iaa.PerspectiveTransform(scale=(0.1, 0.2)),
                 iaa.Affine(translate_percent=(-0.15, 0.15)),
                 iaa.GammaContrast((0.6, 1.4))
             ]),
             
-            # 21. 热噪声+对比度增强 (模拟恶劣环境)
+            # 20. 热噪声+对比度增强 (模拟恶劣环境)
             iaa.Sequential([
                 iaa.AdditiveGaussianNoise(scale=(0, 0.1*255)),
                 iaa.SigmoidContrast(gain=(5, 15), cutoff=(0.3, 0.7)),
                 iaa.Add((-30, 30))
             ]),
             
-            # 22. 复合旋转+缩放+平移 (模拟动态飞行)
+            # 21. 复合旋转+缩放+平移 (模拟动态飞行)
             iaa.Sequential([
                 iaa.Affine(
                     scale=(0.6, 1.4),
@@ -160,7 +162,7 @@ class YOLODataAugmenter:
                 iaa.Multiply((0.75, 1.25))
             ]),
             
-            # 23. 超大角度旋转+翻转组合 (模拟全方向拍摄)
+            # 22. 超大角度旋转+翻转组合 (模拟全方向拍摄)
             iaa.Sequential([
                 iaa.Sometimes(0.5, iaa.Fliplr(1.0)),
                 iaa.Sometimes(0.5, iaa.Flipud(1.0)),
@@ -344,8 +346,16 @@ class YOLODataAugmenter:
                 
                 bboxes_on_image = BoundingBoxesOnImage(bboxes, shape=image_rgb.shape)
                 
+                # 随机选择5个变换索引
+                # selected_indices = random.sample(range(len(self.augmentation_list)), 5)
+                # selected_indices = [10]
+                #  time consuming augmentation: 6,9
+
                 # 应用每个变换
                 for i, augmenter in enumerate(self.augmentation_list):
+                    # if i not in selected_indices:
+                    #     continue
+
                     aug_image, aug_bboxes = self.augment_image_and_bbox(
                         image_rgb, bboxes_on_image, augmenter
                     )
