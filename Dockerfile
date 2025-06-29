@@ -20,10 +20,10 @@ RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 # Copy the source code into the container
 COPY src/ ./src
 COPY ultralytics/ ./ultralytics
-COPY datasets/ ./datasets
 COPY weights/ ./weights
-COPY tempDir/ ./tempDir
-COPY output/ ./output
+
+# Create necessary directories
+RUN mkdir -p datasets tempDir output
 
 # Set default environment variables
 ENV RUN_MODE=streamlit
