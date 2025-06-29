@@ -406,7 +406,7 @@ class YOLODataAugmenter:
             aug_config['test'] = './images/test'
         
         # 保存配置文件
-        config_path = self.output_path / "EL_data_augmented.yaml"
+        config_path = self.output_path / "data.yaml"
         with open(config_path, 'w') as f:
             yaml.dump(aug_config, f, default_flow_style=False)
         
