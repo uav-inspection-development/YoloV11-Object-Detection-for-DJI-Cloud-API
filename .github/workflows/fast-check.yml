@@ -1,0 +1,53 @@
+# Fast checks for pull requests - runs only essential tests
+name: Fast Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quick-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 mypy black isort
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+    
+    - name: Quick syntax check
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+    
+    - name: Format check
+      run: |
+        black --check src tests || echo "Code formatting issues found. Run 'black src tests' to fix."
+    
+    - name: Import order check
+      run: |
+        isort --check-only src tests || echo "Import order issues found. Run 'isort src tests' to fix."
+    
+    - name: Basic type check
+      run: |
+        mypy src --ignore-missing-imports || echo "Type checking issues found."

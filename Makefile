@@ -1,4 +1,4 @@
-.PHONY: help install install-dev lint type-check test format check clean
+.PHONY: help install install-dev lint type-check test format security check check-all clean
 
 help:
 	@echo "Available commands:"
@@ -8,7 +8,9 @@ help:
 	@echo "  type-check   Run mypy type checking"
 	@echo "  test         Run pytest tests"
 	@echo "  format       Format code with black and isort"
+	@echo "  security     Run security checks (bandit + safety)"
 	@echo "  check        Run all checks (lint + type-check + test)"
+	@echo "  check-all    Run all checks including security"
 	@echo "  clean        Clean up cache files"
 
 install:
@@ -31,8 +33,15 @@ format:
 	black src tests
 	isort src tests
 
+security:
+	bandit -r src
+	safety check
+
 check: lint type-check test
 	@echo "All checks passed!"
+
+check-all: lint type-check test security
+	@echo "All checks including security passed!"
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

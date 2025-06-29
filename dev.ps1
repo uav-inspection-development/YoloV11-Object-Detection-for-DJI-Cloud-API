@@ -12,7 +12,9 @@ function Show-Help {
     Write-Host "  type-check   Run mypy type checking" -ForegroundColor Yellow
     Write-Host "  test         Run pytest tests" -ForegroundColor Yellow
     Write-Host "  format       Format code with black and isort" -ForegroundColor Yellow
+    Write-Host "  security     Run security checks (bandit + safety)" -ForegroundColor Yellow
     Write-Host "  check        Run all checks (lint + type-check + test)" -ForegroundColor Yellow
+    Write-Host "  check-all    Run all checks including security" -ForegroundColor Yellow
     Write-Host "  clean        Clean up cache files" -ForegroundColor Yellow
 }
 
@@ -46,6 +48,15 @@ function Format-Code {
     isort src tests
 }
 
+function Run-Security {
+    Write-Host "Running security checks..." -ForegroundColor Blue
+    Write-Host "Running bandit security scan..." -ForegroundColor Cyan
+    bandit -r src
+    
+    Write-Host "Checking dependencies for vulnerabilities..." -ForegroundColor Cyan
+    safety check
+}
+
 function Run-AllChecks {
     Write-Host "Running all checks..." -ForegroundColor Blue
     Run-Lint
@@ -58,6 +69,23 @@ function Run-AllChecks {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     
     Write-Host "All checks passed!" -ForegroundColor Green
+}
+
+function Run-AllChecksWithSecurity {
+    Write-Host "Running all checks including security..." -ForegroundColor Blue
+    Run-Lint
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    
+    Run-TypeCheck
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    
+    Run-Tests
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    
+    Run-Security
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    
+    Write-Host "All checks including security passed!" -ForegroundColor Green
 }
 
 function Clean-Cache {
@@ -80,7 +108,9 @@ switch ($Command.ToLower()) {
     "type-check" { Run-TypeCheck }
     "test" { Run-Tests }
     "format" { Format-Code }
+    "security" { Run-Security }
     "check" { Run-AllChecks }
+    "check-all" { Run-AllChecksWithSecurity }
     "clean" { Clean-Cache }
     default { 
         Write-Host "Unknown command: $Command" -ForegroundColor Red
