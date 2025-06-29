@@ -45,12 +45,12 @@ python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" -
 
 运行以下命令直接启动检测界面：
 ```bash
-ui.exe
+main.exe
 ```
 
 运行以下命令使用命令行参数启动检测界面：
 ```bash
-ui.exe --run-mode=streamlit --secret-key "0123456789abcdef0123456789abcdef" --license-file "license.dat" --bind-info-file "bind_info.json"
+main.exe --run-mode=streamlit --secret-key "0123456789abcdef0123456789abcdef" --license-file "license.dat" --bind-info-file "bind_info.json"
 ```
 
 #### 2. 上传图像或视频
