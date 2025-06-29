@@ -1,7 +1,7 @@
 import os
-import cv2
 import re
 import argparse
+import shutil
 from pathlib import Path
 from tqdm import tqdm
 
@@ -24,15 +24,23 @@ def ensure_unique_filename(directory, filename):
     return new_filename
 
 
-def main(source_folder, target_width=720, target_height=480):
+def main(source_folder, output_folder=None):
     if not os.path.exists(source_folder):
         print("指定的源文件夹不存在！")
         exit()
-
-    resized_images_folder = os.path.join(source_folder, "resized_images")
-    resized_labels_folder = os.path.join(source_folder, "resized_labels")
-    os.makedirs(resized_images_folder, exist_ok=True)
-    os.makedirs(resized_labels_folder, exist_ok=True)
+    
+    # 如果没有指定输出文件夹，则在源文件夹同级目录创建带_cleaned后缀的文件夹
+    if output_folder is None:
+        source_folder_name = os.path.basename(os.path.abspath(source_folder))
+        parent_dir = os.path.dirname(os.path.abspath(source_folder))
+        output_folder = os.path.join(parent_dir, f"{source_folder_name}_cleaned")
+    
+    # 创建输出文件夹结构
+    os.makedirs(output_folder, exist_ok=True)
+    output_images_folder = os.path.join(output_folder, "images")
+    output_labels_folder = os.path.join(output_folder, "labels")
+    os.makedirs(output_images_folder, exist_ok=True)
+    os.makedirs(output_labels_folder, exist_ok=True)
 
     subfolders = ["train", "test", "val"]
 
@@ -48,10 +56,11 @@ def main(source_folder, target_width=720, target_height=480):
             print(f"标签子文件夹 '{labels_subfolder}' 不存在，跳过")
             continue
 
-        resized_images_subfolder = os.path.join(resized_images_folder, subfolder)
-        resized_labels_subfolder = os.path.join(resized_labels_folder, subfolder)
-        os.makedirs(resized_images_subfolder, exist_ok=True)
-        os.makedirs(resized_labels_subfolder, exist_ok=True)
+        # 创建输出子文件夹
+        output_images_subfolder = os.path.join(output_images_folder, subfolder)
+        output_labels_subfolder = os.path.join(output_labels_folder, subfolder)
+        os.makedirs(output_images_subfolder, exist_ok=True)
+        os.makedirs(output_labels_subfolder, exist_ok=True)
 
         image_files = list(Path(images_subfolder).glob("*"))
         label_files = list(Path(labels_subfolder).glob("*.txt"))
@@ -67,58 +76,23 @@ def main(source_folder, target_width=720, target_height=480):
             new_image_filename = remove_chinese_chars_and_symbols(image_file.name)
             new_label_filename = remove_chinese_chars_and_symbols(label_file.name)
 
-            new_image_filename = ensure_unique_filename(images_subfolder, new_image_filename)
-            new_label_filename = ensure_unique_filename(labels_subfolder, new_label_filename)
+            new_image_filename = ensure_unique_filename(output_images_subfolder, new_image_filename)
+            new_label_filename = ensure_unique_filename(output_labels_subfolder, new_label_filename)
 
-            new_image_file = os.path.join(images_subfolder, new_image_filename)
-            new_label_file = os.path.join(labels_subfolder, new_label_filename)
+            new_image_file = os.path.join(output_images_subfolder, new_image_filename)
+            new_label_file = os.path.join(output_labels_subfolder, new_label_filename)
 
-            os.rename(image_file, new_image_file)
-            os.rename(label_file, new_label_file)
+            # 复制文件到输出文件夹
+            shutil.copy2(image_file, new_image_file)
+            shutil.copy2(label_file, new_label_file)
 
-            if not os.path.exists(new_image_file):
-                print(f"图像文件不存在: {new_image_file}")
-                continue
-
-            image = cv2.imread(str(new_image_file))
-            if image is None:
-                print(f"无法读取图像文件: {new_image_file}")
-                continue
-
-            resized_image = cv2.resize(image, (target_width, target_height))
-            save_image_path = os.path.join(resized_images_subfolder, new_image_filename)
-            cv2.imwrite(save_image_path, resized_image)
-
-            with open(str(new_label_file), 'r') as f:
-                lines = f.readlines()
-
-            adjusted_lines = []
-            for line in lines:
-                parts = line.strip().split()
-                if len(parts) < 5:
-                    continue
-
-                label = parts[0]
-                x_center = float(parts[1])
-                y_center = float(parts[2])
-                box_width = float(parts[3])
-                box_height = float(parts[4])
-
-                adjusted_line = f"{label} {x_center:.6f} {y_center:.6f} {box_width:.6f} {box_height:.6f}\n"
-                adjusted_lines.append(adjusted_line)
-
-            save_label_path = os.path.join(resized_labels_subfolder, new_label_filename)
-            with open(save_label_path, 'w') as f:
-                f.writelines(adjusted_lines)
-
-    print("\n所有图像和标签调整大小完成！")
+    print(f"\n文件名清理完成！输出文件夹: {output_folder}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Resize YOLO dataset images and labels, and clean file names.")
+    parser = argparse.ArgumentParser(description="Clean file names by removing Chinese characters and symbols from YOLO dataset.")
     parser.add_argument("--source_folder", required=True, help="包含 images 和 labels 文件夹的源文件夹路径")
-    parser.add_argument("--target_width", type=int, default=720, help="目标宽度，默认720")
-    parser.add_argument("--target_height", type=int, default=480, help="目标高度，默认480")
+    parser.add_argument("--output_folder", help="输出文件夹路径（可选，默认在源文件夹下创建cleaned文件夹）")
     args = parser.parse_args()
 
-    main(args.source_folder, args.target_width, args.target_height)
+    main(args.source_folder, args.output_folder)
