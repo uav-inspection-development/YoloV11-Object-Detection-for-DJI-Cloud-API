@@ -25,7 +25,7 @@ This project provides a comprehensive solution for detecting solar panel anomali
 1. Create and activate a Python environment:
 
     ```shell
-    conda create -n pytorch python=3.10
+    conda create -n pytorch python=3.12
     conda activate pytorch
     ```
 
@@ -35,13 +35,25 @@ This project provides a comprehensive solution for detecting solar panel anomali
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
     ```
 
-3. Verify the environment:
+3. Install torch and torchvision for CUDA:
+
+    ```shell
+    pip install torch==2.3.1+cu121 torchvision==0.18.0+cu121 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+    ```
+
+    - If you are using a CPU-only environment, use the following command instead:
+
+    ```shell
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    ```
+
+4. Verify the environment:
 
     ```shell
     conda env list
     ```
 
-4. If the following prompt appears:
+5. If the following prompt appears:
 
     ```plaintext
     Downloading https://ultralytics.com/assets/Arial.ttf to 'C:\Users\ad\AppData\Roaming\Ultralytics\Arial.ttf'...
@@ -280,7 +292,7 @@ User_Manual.md                # User manual for the application
 3. **Encrypt the `ui.py` File**:
     - Use the following command to encrypt the `ui.py` file:
     ```shell
-    python utils_data/encryption.py --input-file src/ui.py --output-file src/ui_encrypted.py
+    python utils_data/util_encryption.py --input-file src/ui.py --output-file src/ui_encrypted.py
     ```
     - This will create an encrypted version of the `ui.py` file named `ui_encrypted.py`.
 
@@ -294,6 +306,51 @@ User_Manual.md                # User manual for the application
     ```
 
 ---
+
+## Supported Detection Types
+
+### Segmentation Tasks
+
+- `component`: Solar panel component detection (单组件).
+- `string`: Solar panel string detection (组串).
+
+### Detection Tasks
+
+#### Visible Light
+
+- `yyzd`: Obstruction detection (遮挡).
+- `ygfs`: Solar panel reflection detection (阳光反射).
+- `zw`: Dirt/contamination detection (脏污).
+- `yyzd_zw`: Obstruction and dirt detection (遮挡_脏污).
+- `ns`: Bird excrement detection (鸟粪).
+- `yyzd_ns`: Obstruction and bird excrement detection (遮挡_鸟粪).
+- `zw_ns`: Dirt and bird excrement detection (脏污_鸟粪).
+- `gfbzjbx`: Solar panel component deformation (光伏板组件变形).
+- `gfbqs`: Solar panel missing detection (光伏板缺失).
+- `mbsl`: Panel cracking detection (面板碎裂).
+- `snow`: Snow accumulation detection (积雪).
+- `crack`: Crack detection (隐裂).
+
+#### Electroluminescence (EL)
+
+- `crack`: Crack detection (隐裂).
+- `missing_corner`: Missing corner detection (缺角).
+- `fragment`: Fragment detection (碎片).
+- `scratch`: Scratch detection (划伤).
+- `black_cell`: Black cell detection (黑片).
+
+#### Thermal (Infrared)
+
+- `dyrb`: Single hot spot detection (单一热斑).
+- `dmjrb`: Large area hot spot detection (大面积热斑).
+- `dyrb_ycdw`: Single hot spot with abnormal low temperature (单一热斑_异常低温).
+- `dmjrb_ycdw`: Large area hot spot with abnormal low temperature (大面积热斑_异常低温).
+- `ycdw`: Abnormal low temperature detection (异常低温).
+- `dyrb_ejgdl`: Single hot spot with diode short circuit (单一热斑_二极管短路).
+- `ejgdl`: Diode short circuit detection (二极管短路).
+- `ygfs`: Solar reflection detection (阳光反射).
+- `gfb_zc_rcx`: Normal photovoltaic panel thermal imaging (光伏板正常热成像).
+- `ejgdl_ycdw`: Diode short circuit with abnormal low temperature (二极管短路_异常低温).
 
 ## API Usage
 
@@ -334,6 +391,21 @@ Detect objects in a single image.
     "image_enhancement_method": "不处理",
 }
 ```
+
+#### Explanation of Parameters
+
+- `image`: The image file to be processed.
+- `conf_threshold`: Confidence threshold for detection (default: 0.5).
+- `iou_threshold`: Intersection over Union threshold for non-max suppression (default: 0.4).
+- `model_type`: Type of model to use for detection (e.g., "检测任务" for detection tasks, "分割任务" for segmentation tasks).
+- `image_type`: Type of image (e.g., "红外" for infrared, "可见光" for visible light, "EL" for electroluminescence).
+- `selected_classes`: List of classes to detect (e.g., ["dyrb", "dmjrb", "dyrb_ycdw", ...]).
+- `enable_pseudo_color`: Whether to apply pseudo-coloring to the image (default: false).
+- `undistortion_method`: Method for undistorting the image (default: "不去除" for no undistortion, "相机参数计算" for camera parameter calculation, "手动调整参数" for reading calibration files).
+- `enable_rotate_correction`: Whether to enable rotation correction (default: false).
+- `enable_auto_keystone_correction`: Whether to enable automatic keystone correction (default: false).
+- `enable_background_fill`: Whether to enable background fill (default: false).
+- `image_enhancement_method`: Method for enhancing the image (default: "不处理" for no enhancement, "CLAHE" for Contrast Limited Adaptive Histogram Equalization, "Histogram Equalization" for histogram equalization).
 
 #### Example
 
@@ -377,6 +449,16 @@ POST http://127.0.0.1:5000/api/detect/image
 }
 ```
 
+#### Explanation of Response Parameters
+
+- `detections`: List of detected objects in the image.
+- `class_id`: ID of the detected class.
+- `extent`: Extent of the detected object.
+- `name`: Name of the detected class.
+- `region`: Bounding box coordinates of the detected object in the format `[x1, y1, x2, y2]`, where `(x1, y1)` is the top-left corner and `(x2, y2)` is the bottom-right corner.
+- `time`: Time taken for detection in seconds.
+- `type`: Type of the detected object (e.g., "gfb_zc_rcx" for normal photovoltaic panel thermal imaging).
+
 ### POST /api/detect/video
 
 Detect objects in a single video.
@@ -415,6 +497,21 @@ Detect objects in a single video.
 }
 ```
 
+#### Explanation of Request Parameters
+
+- `image`: The image file to be processed.
+- `conf_threshold`: Confidence threshold for detection (default: 0.5).
+- `iou_threshold`: Intersection over Union threshold for non-max suppression (default: 0.4).
+- `model_type`: Type of model to use for detection (e.g., "检测任务" for detection tasks, "分割任务" for segmentation tasks).
+- `image_type`: Type of image (e.g., "红外" for infrared, "可见光" for visible light, "EL" for electroluminescence).
+- `selected_classes`: List of classes to detect (e.g., ["dyrb", "dmjrb", "dyrb_ycdw", ...]).
+- `enable_pseudo_color`: Whether to apply pseudo-coloring to the image (default: false).
+- `undistortion_method`: Method for undistorting the image (default: "不去除" for no undistortion, "相机参数计算" for camera parameter calculation, "手动调整参数" for reading calibration files).
+- `enable_rotate_correction`: Whether to enable rotation correction (default: false).
+- `enable_auto_keystone_correction`: Whether to enable automatic keystone correction (default: false).
+- `enable_background_fill`: Whether to enable background fill (default: false).
+- `image_enhancement_method`: Method for enhancing the image (default: "不处理" for no enhancement, "CLAHE" for Contrast Limited Adaptive Histogram Equalization, "Histogram Equalization" for histogram equalization).
+
 #### Example
 
 ```bash
@@ -449,6 +546,18 @@ POST http://127.0.0.1:5000/api/detect/video
     ]
 }
 ```
+
+#### Explanation of Response Parameters
+
+- `results`: List of detection results for each frame in the video.
+- `detections`: List of detected objects in the frame.
+- `class_id`: ID of the detected class.
+- `extent`: Extent of the detected object.
+- `name`: Name of the detected class.
+- `region`: Bounding box coordinates of the detected object in the format `[x1, y1, x2, y2]`, where `(x1, y1)` is the top-left corner and `(x2, y2)` is the bottom-right corner.
+- `time`: Time taken for detection in seconds.
+- `type`: Type of the detected object (e.g., "gfb_zc_rcx" for normal photovoltaic panel thermal imaging).
+- `frame`: Frame number in the video where the detections were made.
 
 ### GET /api/types
 
@@ -524,6 +633,13 @@ GET http://127.0.0.1:5000/api/types
     }
 }
 ```
+
+#### Explanation of Response Parameters
+
+- `分割任务`: List of segmentation tasks and their corresponding classes.
+- `检测任务`: List of detection tasks and their corresponding classes.
+- `chinese_name`: Chinese name of the class.
+- `name`: English name of the class.
 
 ---
 
