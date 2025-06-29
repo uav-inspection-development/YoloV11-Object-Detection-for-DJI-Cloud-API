@@ -133,13 +133,13 @@ python src/train_interface.py --task Detection --workers 4 --batch 8 --device 0 
 ### Running the Detection Interface
 
 ```bash
-python src/ui.py --run-mode=streamlit --secret-key=YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
+python main.py --run-mode=streamlit --secret-key=YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
 ```
 
 ### Running the Detection API
 
 ```bash
-python src/ui.py --run-mode=api --oauth2-introspect-url=$OAUTH2_INTROSPECT_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
+python main.py --run-mode=api --oauth2-introspect-url=$OAUTH2_INTROSPECT_URL --client-id=$CLIENT_ID --client-secret=$CLIENT_SECRET --secret-key=$YOUR_SECRET_KEY --license-file=license.dat --bind-info-file=bind_info.json
 ```
 
 ---
