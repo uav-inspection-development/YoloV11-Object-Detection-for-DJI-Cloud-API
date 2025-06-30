@@ -314,7 +314,7 @@ def detect_image(validated_params, files):
                 ("type", item[0]),
                 ("name", item[1]),
                 ("region", item[2]),
-                ("extent", item[3]),
+                ("area", item[3]),
                 ("time", item[4]),
                 ("class_id", item[5])
             ])
@@ -381,7 +381,7 @@ def detect_video(validated_params, files):
                     ("type", item[0]),
                     ("name", item[1]),
                     ("region", item[2]),
-                    ("extent", item[3]),
+                    ("area", item[3]),
                     ("time", item[4]),
                     ("class_id", item[5])
                 ])
