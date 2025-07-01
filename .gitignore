@@ -170,3 +170,4 @@ tempDir/
 datasets/
 runs/
 output/
+src/git_info.py

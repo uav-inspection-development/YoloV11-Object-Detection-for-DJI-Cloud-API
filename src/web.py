@@ -22,6 +22,19 @@ from tkinter import filedialog
 from utils import LocalFileObj
 import base64
 
+# 尝试导入Git信息
+try:
+    from git_info import format_git_info_for_about, get_version_string
+    GIT_INFO_AVAILABLE = True
+except ImportError:
+    GIT_INFO_AVAILABLE = False
+    
+    def format_git_info_for_about():
+        return "### 📊 版本信息\n未找到Git仓库信息"
+    
+    def get_version_string():
+        return "未知版本"
+
 
 class Detection_UI:
     """
@@ -363,7 +376,10 @@ class Detection_UI:
         """
         在 Streamlit UI 的右上角显示关于部分。
         """
-        with st.sidebar.expander("📖 关于", expanded=False):
+        # 获取版本信息字符串
+        version_string = get_version_string()
+        
+        with st.sidebar.expander(f"📖 关于 ({version_string})", expanded=False):
             st.markdown("""
                 ## 关于本应用
                 本应用旨在检测光伏组件的故障，包括：
@@ -383,7 +399,16 @@ class Detection_UI:
                 - **OpenCV** 用于图像处理
                 - **YOLOv11** 用于目标检测
                 - **NumPy** 用于数值计算
-
+            """)
+            
+            # 显示Git版本信息
+            if GIT_INFO_AVAILABLE:
+                st.markdown("---")
+                git_info_md = format_git_info_for_about()
+                st.markdown(git_info_md)
+            
+            st.markdown("""
+                ---
                 ### 作者：
                 由 Phillweston 开发。
 

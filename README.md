@@ -292,6 +292,37 @@ User_Manual.md                # User manual for the application
 
 ### Generate the executable File
 
+#### Automated Build with Git Information (Recommended)
+
+1. **Build with Git Information**:
+    - Use the automated build script that includes Git commit information:
+    ```shell
+    python build_with_git_info.py
+    ```
+    - This will automatically:
+        - Collect Git repository information (commit hash, author, date, etc.)
+        - Generate `src/git_info.py` with version details
+        - Build `main.py` and other executables using PyInstaller
+        - Clean up temporary files
+
+2. **Build Specific Target**:
+    - To build a specific file with Git information:
+    ```shell
+    # Build main.py with Git info
+    python build_with_git_info.py --target main.py --name "YoloV11-Main"
+    
+    # Build web interface with Git info
+    python build_with_git_info.py --target src/web.py --name "YoloV11-Web"
+    ```
+
+3. **Manual Git Information Collection**:
+    - If you want to collect Git information separately:
+    ```shell
+    python collect_git_info.py --python src/git_info.py
+    ```
+
+#### Traditional Build Method
+
 1. **Build the Executable**:
     - Use the following command to build the executable file for the application:
     ```shell
@@ -681,3 +712,78 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 - Dataset provided by [EL Crack Dataset](https://pan.baidu.com/s/11_Qj8LsRqgpXz4PLqeiE0w?pwd=d1dj).
 - Model training and detection powered by PyTorch and YOLO.
+
+---
+
+## 🔍 Git Version Information Integration
+
+This project includes an advanced Git information integration system that automatically collects and displays version information in the application's "About" section when building with PyInstaller.
+
+### 🚀 Features
+
+- **Automatic Git Information Collection**: Collects commit hash, author, date, message, and repository details
+- **Version Display**: Shows version information in the web application's "About" menu
+- **Build Integration**: Seamlessly integrates with PyInstaller build process
+- **Fallback Support**: Gracefully handles non-Git environments
+
+### 📋 Displayed Information
+
+The "About" menu will show:
+
+- **Version Information**
+  - Version tag (if available)
+  - Commit hash (short form)
+  - Branch name
+
+- **Latest Commit**
+  - Commit message
+  - Author name and email
+  - Commit date
+
+- **Build Information**
+  - Build timestamp
+  - Total commit count
+  - Repository URL
+
+### 🛠 Usage
+
+#### Quick Build (Recommended)
+```shell
+# Build all applications with Git information
+python build_with_git_info.py
+
+# Build specific target
+python build_with_git_info.py --target main.py --name "YoloV11-Web"
+```
+
+#### Manual Process
+```shell
+# Step 1: Collect Git information
+python collect_git_info.py --python src/git_info.py
+
+# Step 2: Build with PyInstaller
+pyinstaller --onefile main.py
+```
+
+#### Testing
+```shell
+# Test the Git integration system
+python tests/test_git_integration.py
+```
+
+### 📁 Related Files
+
+- `collect_git_info.py` - Git information collection script
+- `build_with_git_info.py` - Automated build script with Git integration
+- `src/git_info.py` - Auto-generated Git information module
+- `test_git_integration.py` - Integration test script
+- `GIT_BUILD_GUIDE.md` - Detailed documentation
+
+### 🔧 Benefits
+
+1. **Version Tracking**: Easy identification of application version and source
+2. **Issue Resolution**: Quick access to commit information for debugging
+3. **Release Management**: Clear build information for distribution
+4. **Automated Workflow**: No manual version management required
+
+For detailed information, see [GIT_BUILD_GUIDE.md](GIT_BUILD_GUIDE.md).
