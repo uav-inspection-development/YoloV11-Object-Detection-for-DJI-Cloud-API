@@ -765,8 +765,23 @@ class Detection_UI:
             st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动RTSP/RTMP流检测！")
         elif self.input_source == "图片文件":
             self.uploaded_file = st.sidebar.file_uploader("上传图片", type=["jpg", "png", "jpeg"], accept_multiple_files=True, key=st.session_state["file_key"])
-            st.sidebar.write(f"📂 已上传图片数量: {len(self.uploaded_file)}")
-            st.sidebar.caption("💡 提示: 请选择图片并点击'开始运行'按钮，进行图片检测！")
+            
+            # 显示上传状态和进度
+            if self.uploaded_file:
+                num_files = len(self.uploaded_file)
+                st.sidebar.success(f"📂 已成功上传 {num_files} 张图片")
+                
+                # 显示文件列表
+                with st.sidebar.expander("📋 查看上传的文件", expanded=False):
+                    for i, file in enumerate(self.uploaded_file[:10]):  # 最多显示前10个
+                        file_size = len(file.getvalue()) / 1024  # KB
+                        st.write(f"{i+1}. {file.name} ({file_size:.1f} KB)")
+                    if num_files > 10:
+                        st.write(f"... 还有 {num_files - 10} 个文件")
+            else:
+                st.sidebar.info("📤 请选择图片文件上传")
+                
+            st.sidebar.caption("💡 提示: 请选择图片并点击'开始检测'按钮，进行图片检测！")
         elif self.input_source == "图片文件夹":
             default_types = ["jpg", "jpeg", "png"]
             image_types = st.sidebar.multiselect(
@@ -792,21 +807,75 @@ class Detection_UI:
             )
             image_files = []
             if folder_path and os.path.isdir(folder_path):
+                # 显示扫描进度
+                with st.sidebar:
+                    st.info("🔍 正在扫描文件夹...")
+                    scan_progress = st.progress(0)
+                    
                 exts = tuple(f".{ext.lower()}" for ext in image_types)
-                for root_dir, _, files in os.walk(folder_path):
+                total_dirs = sum([len(dirs) for _, dirs, _ in os.walk(folder_path)]) + 1
+                current_dir = 0
+                
+                for root_dir, dirs, files in os.walk(folder_path):
+                    current_dir += 1
+                    scan_progress.progress(current_dir / total_dirs)
+                    
                     for file in files:
                         if file.lower().endswith(exts):
                             image_files.append(os.path.join(root_dir, file))
-                st.sidebar.write(f"📂 共找到图片数量: {len(image_files)}")
+                
+                scan_progress.progress(1.0)
+                st.sidebar.success(f"✅ 扫描完成！共找到 {len(image_files)} 张图片")
+                
+                # 显示文件夹统计信息
+                if image_files:
+                    with st.sidebar.expander("📊 文件夹统计", expanded=False):
+                        # 按文件类型统计
+                        type_count = {}
+                        for file in image_files:
+                            ext = os.path.splitext(file)[1].lower()
+                            type_count[ext] = type_count.get(ext, 0) + 1
+                        
+                        st.write("按类型统计:")
+                        for ext, count in type_count.items():
+                            st.write(f"  {ext}: {count} 张")
+                        
+                        # 显示前几个文件名
+                        st.write("示例文件:")
+                        for i, file in enumerate(image_files[:5]):
+                            st.write(f"  {i+1}. {os.path.basename(file)}")
+                        if len(image_files) > 5:
+                            st.write(f"  ... 还有 {len(image_files) - 5} 个文件")
+                
                 # 转为文件对象
                 self.uploaded_file = [LocalFileObj(f) for f in image_files]
             else:
+                if folder_path:
+                    st.sidebar.error("❌ 文件夹路径无效")
                 st.sidebar.caption("💡 提示: 选择或输入本地图片文件夹路径，自动递归查找所有图片。")
                 self.uploaded_file = []
         elif self.input_source == "视频文件":
             self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi", "mov"], accept_multiple_files=True, key=st.session_state["file_key"])
-            st.sidebar.write(f"📂 已上传视频数量: {len(self.uploaded_video)}")
-            st.sidebar.caption("💡 请选择视频并点击'开始运行'按钮，进行视频检测！")
+            
+            # 显示上传状态和进度
+            if self.uploaded_video:
+                num_videos = len(self.uploaded_video)
+                st.sidebar.success(f"📹 已成功上传 {num_videos} 个视频文件")
+                
+                # 显示视频列表和信息
+                with st.sidebar.expander("� 查看上传的视频", expanded=False):
+                    total_size = 0
+                    for i, video in enumerate(self.uploaded_video[:5]):  # 最多显示前5个
+                        video_size = len(video.getvalue()) / (1024 * 1024)  # MB
+                        total_size += video_size
+                        st.write(f"{i+1}. {video.name} ({video_size:.1f} MB)")
+                    if num_videos > 5:
+                        st.write(f"... 还有 {num_videos - 5} 个视频")
+                    st.write(f"📊 总大小: {total_size:.1f} MB")
+            else:
+                st.sidebar.info("📤 请选择视频文件上传")
+                
+            st.sidebar.caption("💡 提示: 请选择视频并点击'开始检测'按钮，进行视频检测！")
         elif self.input_source == "视频文件夹":
             default_video_types = ["mp4", "avi", "mov"]
             video_types = st.sidebar.multiselect(
@@ -974,46 +1043,119 @@ class Detection_UI:
         # Apply distortion adjustment using the slider value
         if self.uploaded_file:
             if isinstance(self.uploaded_file, list):  # Handle multiple file uploads
-                for uploaded_file in self.uploaded_file:
-                    source_img = uploaded_file.read()
+                total_files = len(self.uploaded_file)
+                
+                # 初始化侧边栏图片预览索引
+                if 'sidebar_preview_index' not in st.session_state:
+                    st.session_state['sidebar_preview_index'] = 0
+                
+                # 确保索引在有效范围内
+                current_preview_index = min(st.session_state['sidebar_preview_index'], total_files - 1)
+                st.session_state['sidebar_preview_index'] = current_preview_index
+                
+                # 侧边栏图片预览控制
+                st.sidebar.subheader("🖼️ 图片预处理预览")
+                
+                # 图片切换控件
+                preview_col1, preview_col2, preview_col3 = st.sidebar.columns([1, 2, 1])
+                
+                with preview_col1:
+                    if st.button("⬅️", key="sidebar_prev", disabled=(current_preview_index <= 0)):
+                        st.session_state['sidebar_preview_index'] = max(0, current_preview_index - 1)
+                        st.rerun()
+                
+                with preview_col2:
+                    st.write(f"**{current_preview_index + 1} / {total_files}**")
+                
+                with preview_col3:
+                    if st.button("➡️", key="sidebar_next", disabled=(current_preview_index >= total_files - 1)):
+                        st.session_state['sidebar_preview_index'] = min(total_files - 1, current_preview_index + 1)
+                        st.rerun()
+                
+                # 进度条显示
+                progress_value = (current_preview_index + 1) / total_files
+                st.sidebar.progress(progress_value)
+                
+                # 图片选择滑块
+                new_preview_index = st.sidebar.slider(
+                    "选择预览图片", 
+                    min_value=0, 
+                    max_value=total_files - 1, 
+                    value=current_preview_index,
+                    key="sidebar_image_slider"
+                )
+                
+                # 如果滑块值改变，更新索引
+                if new_preview_index != current_preview_index:
+                    st.session_state['sidebar_preview_index'] = new_preview_index
+                    st.rerun()
+                
+                # 显示当前选中的图片
+                uploaded_file = self.uploaded_file[current_preview_index]
+                
+                try:
+                    # 处理当前选中的图片
+                    if hasattr(uploaded_file, 'read'):
+                        uploaded_file.seek(0)
+                        source_img = uploaded_file.read()
+                        file_name = uploaded_file.name
+                    else:
+                        # 处理 LocalFileObj
+                        with open(uploaded_file.name, 'rb') as f:
+                            source_img = f.read()
+                        file_name = os.path.basename(uploaded_file.name)
+                    
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
-                    if self.enable_pseudo_color and is_black_and_white(image_ini):
-                        converted_image = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
+                    
+                    if image_ini is None:
+                        st.sidebar.error(f"❌ 无法解码图片: {file_name}")
                     else:
-                        converted_image = image_ini.copy()
+                        # 应用各种图像处理
+                        if self.enable_pseudo_color and is_black_and_white(image_ini):
+                            converted_image = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
+                        else:
+                            converted_image = image_ini.copy()
 
-                    if self.enable_rotate_correction:
-                        corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
-                    else:
-                        corrected_image = converted_image.copy()
+                        if self.enable_rotate_correction:
+                            corrected_image = rotate_image(converted_image, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
+                        else:
+                            corrected_image = converted_image.copy()
 
-                    if self.enable_auto_keystone_correction:
-                        corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor_keystone)
-                    else:
-                        corrected_image = corrected_image.copy()
+                        if self.enable_auto_keystone_correction:
+                            corrected_image = auto_keystone_correction(corrected_image, scale_factor=self.scale_factor_keystone)
+                        else:
+                            corrected_image = corrected_image.copy()
 
-                    if self.enable_background_fill:
-                        corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor_fill)
-                    else:
-                        corrected_image = corrected_image.copy()
+                        if self.enable_background_fill:
+                            corrected_image = fill_largest_polygon_white(corrected_image, scale_factor=self.scale_factor_fill)
+                        else:
+                            corrected_image = corrected_image.copy()
 
-                    if self.image_enhancement_method == "CLAHE":
-                        corrected_image = enhance_texture(corrected_image, method="clahe")
-                    elif self.image_enhancement_method == "Histogram Equalization":
-                        corrected_image = enhance_texture(corrected_image, method="histogram_equalization")
-                    else:
-                        corrected_image = corrected_image.copy()
+                        if self.image_enhancement_method == "CLAHE":
+                            corrected_image = enhance_texture(corrected_image, method="clahe")
+                        elif self.image_enhancement_method == "Histogram Equalization":
+                            corrected_image = enhance_texture(corrected_image, method="histogram_equalization")
+                        else:
+                            corrected_image = corrected_image.copy()
 
-                    if self.undistortion_method == "相机参数计算" and self.camera_matrix is not None and self.dist_coeffs is not None:
-                        distorted_image = camera_undistortion(corrected_image, self.camera_matrix, self.dist_coeffs)
-                    elif self.undistortion_method == "手动调整参数":
-                        distorted_image = auto_undistort_image(corrected_image, self.image_k1)
-                    else:
-                        distorted_image = corrected_image.copy()
+                        if self.undistortion_method == "相机参数计算" and self.camera_matrix is not None and self.dist_coeffs is not None:
+                            distorted_image = camera_undistortion(corrected_image, self.camera_matrix, self.dist_coeffs)
+                        elif self.undistortion_method == "手动调整参数":
+                            distorted_image = auto_undistort_image(corrected_image, self.image_k1)
+                        else:
+                            distorted_image = corrected_image.copy()
 
-                    # Display original and distorted images for each file
-                    st.sidebar.image([image_ini, distorted_image], caption=[f"原始图像: {uploaded_file.name}", f"调整后的图像: {uploaded_file.name}"], channels="BGR")
+                        # 显示当前图片的处理前后对比
+                        st.sidebar.image([image_ini, distorted_image], caption=[f"原始图像: {file_name}", f"调整后图像: {file_name}"], channels="BGR")
+                        
+                        # 显示图片信息
+                        st.sidebar.caption(f"📄 文件名: {file_name}")
+                        st.sidebar.caption(f"📐 尺寸: {image_ini.shape[1]} × {image_ini.shape[0]}")
+                        
+                except Exception as e:
+                    st.sidebar.error(f"❌ 处理图片时出错: {str(e)}")
+                    
             else:  # Handle single file upload
                 source_img = self.uploaded_file.read()
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
@@ -1883,14 +2025,35 @@ class Detection_UI:
             return
             
         self.logTable.clear_frames()
-        self.progress_bar.progress(0)
+        
+        # 初始化进度显示
+        progress_container = st.container()
+        with progress_container:
+            st.info("🚀 开始图片检测...")
+            overall_progress = st.progress(0)
+            status_text = st.empty()
+            current_image_info = st.empty()
 
         if isinstance(self.uploaded_file, list):
             # 批量处理多张图片
-            st.info(f"开始处理 {len(self.uploaded_file)} 张图片...")
+            total_files = len(self.uploaded_file)
+            status_text.write(f"📋 准备处理 {total_files} 张图片...")
+            
+            # 计算预估时间
+            estimated_time_per_image = 2.0  # 假设每张图片需要2秒
+            estimated_total_time = total_files * estimated_time_per_image
+            status_text.write(f"⏱️ 预计总用时: {estimated_total_time:.1f} 秒")
+            
+            start_time = time.time()
+            successful_count = 0
+            failed_count = 0
             
             for idx, uploaded_file in enumerate(self.uploaded_file):
                 try:
+                    # 更新当前处理信息
+                    current_file_name = uploaded_file.name if hasattr(uploaded_file, 'name') else f"图片_{idx+1}"
+                    current_image_info.info(f"🔄 正在处理: {current_file_name} ({idx+1}/{total_files})")
+                    
                     # 读取图片数据
                     if hasattr(uploaded_file, 'read'):
                         uploaded_file.seek(0)
@@ -1907,7 +2070,8 @@ class Detection_UI:
                     image_ini = cv2.imdecode(file_bytes, 1)
                     
                     if image_ini is None:
-                        st.error(f"无法解码图片: {file_name}")
+                        st.error(f"❌ 无法解码图片: {file_name}")
+                        failed_count += 1
                         continue
                     
                     # 应用图像处理
@@ -1944,13 +2108,33 @@ class Detection_UI:
                     # 添加到日志表
                     self.logTable.add_frames(image, detInfo, processed_image, file_name)
                     
-                    # 更新进度条
-                    progress = int(((idx + 1) / len(self.uploaded_file)) * 100)
-                    self.progress_bar.progress(progress)
+                    successful_count += 1
+                    
+                    # 更新进度条和状态
+                    progress = (idx + 1) / total_files
+                    overall_progress.progress(progress)
+                    
+                    # 计算剩余时间
+                    elapsed_time = time.time() - start_time
+                    if idx > 0:
+                        avg_time_per_image = elapsed_time / (idx + 1)
+                        remaining_images = total_files - (idx + 1)
+                        remaining_time = remaining_images * avg_time_per_image
+                        status_text.success(f"✅ 已完成 {idx+1}/{total_files} 张图片 | 预计剩余时间: {remaining_time:.1f} 秒")
+                    
+                    # 添加短暂延迟以显示进度
+                    time.sleep(0.1)
                     
                 except Exception as e:
-                    st.error(f"处理图片 {file_name if 'file_name' in locals() else '未知'} 时出错: {str(e)}")
+                    st.error(f"❌ 处理图片 {file_name if 'file_name' in locals() else '未知'} 时出错: {str(e)}")
+                    failed_count += 1
                     continue
+            
+            # 完成后的总结
+            total_time = time.time() - start_time
+            current_image_info.success(f"🎉 批量检测完成！")
+            status_text.success(f"📊 处理完成: 成功 {successful_count} 张，失败 {failed_count} 张，总用时 {total_time:.2f} 秒")
+            overall_progress.progress(1.0)
             
             # 立即更新session state以确保UI同步
             st.session_state['saved_images_ini'] = self.logTable.saved_images_ini.copy()
@@ -1974,20 +2158,39 @@ class Detection_UI:
         else:
             # 单张图片处理
             try:
+                # 显示处理状态
+                progress_container = st.container()
+                with progress_container:
+                    st.info("🔄 开始处理单张图片...")
+                    single_progress = st.progress(0)
+                    status_info = st.empty()
+                
+                status_info.write("📁 正在读取图片文件...")
+                single_progress.progress(0.2)
+                
                 source_img = self.uploaded_file.read()
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
                 
                 if image_ini is None:
-                    st.error("无法解码图片文件！")
+                    st.error("❌ 无法解码图片文件！")
                     return
+                
+                status_info.write("🖼️ 正在应用图像处理...")
+                single_progress.progress(0.4)
                 
                 # 应用图像处理
                 processed_image = self.apply_image_processing(image_ini)
                 
+                status_info.write("🤖 正在进行AI检测...")
+                single_progress.progress(0.6)
+                
                 # 进行检测
                 framecopy = processed_image.copy()
                 image, detInfo, select_info = self.frame_process(framecopy, self.uploaded_file.name)
+                
+                status_info.write("💾 正在保存检测结果...")
+                single_progress.progress(0.8)
                 
                 # 保存结果
                 save_chinese_image(self.output_path + '/image/' + self.uploaded_file.name, image)
@@ -2015,7 +2218,9 @@ class Detection_UI:
                 
                 # 添加到日志表
                 self.logTable.add_frames(image, detInfo, processed_image, self.uploaded_file.name)
-                self.progress_bar.progress(100)
+                
+                status_info.write("🔄 正在更新界面...")
+                single_progress.progress(0.9)
                 
                 # 立即更新session state以确保UI同步
                 st.session_state['saved_images_ini'] = self.logTable.saved_images_ini.copy()
@@ -2031,6 +2236,9 @@ class Detection_UI:
                 # 更新历史日志显示
                 if hasattr(self, 'log_table_placeholder'):
                     self.logTable.update_table(self.log_table_placeholder)
+                
+                single_progress.progress(1.0)
+                status_info.success(f"✅ 单张图片检测完成！检测到 {len(detInfo)} 个目标，用时 {self.detection_time:.2f} 秒")
                 
                 st.success("单张图片检测完成！")
                 # 立即刷新页面，让selectbox自动更新
