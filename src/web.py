@@ -28,6 +28,14 @@ from concurrent.futures import ThreadPoolExecutor
 
 # 🚀 性能优化模块导入
 from streamlit_config import optimize_streamlit_performance, setup_image_optimization, add_performance_css
+
+# 📝 命名配置模块导入
+from naming_config import (
+    get_image_type_name, get_task_type_name, get_export_format_name,
+    generate_filename, get_status_message,
+    SIDEBAR_LABELS, BUTTON_TEXTS, UI_LABELS, STATUS_MESSAGES, METRICS_LABELS,
+    SYSTEM_CONFIG, UI_OPTIONS, UI_SELECTORS, get_metric_label
+)
 from image_optimizer import get_image_optimizer, optimize_image_display, process_uploaded_images
 
 
@@ -77,10 +85,10 @@ except ImportError:
     GIT_INFO_AVAILABLE = False
     
     def format_git_info_for_about():
-        return "### 📊 版本信息\n未找到Git仓库信息"
+        return STATUS_MESSAGES["git_info_not_found"]
     
     def get_version_string():
-        return "未知版本"
+        return STATUS_MESSAGES["unknown_version"]
 
 
 class Detection_UI:
@@ -158,7 +166,7 @@ class Detection_UI:
         self.selected_class_ids = None  # 选定的类别索引
 
         # 设置页面标题
-        self.title = "光伏云组件检测系统"
+        self.title = SYSTEM_CONFIG["title"]
         if self.from_streamlit:
             self.setup_page()  # 初始化页面布局
             def_css_html()  # 应用 CSS 样式
@@ -179,10 +187,10 @@ class Detection_UI:
             )
 
         # 初始化检测相关的配置参数
-        self.model_type = "检测任务"
+        self.model_type = SYSTEM_CONFIG["model_type_detection"]
         self.conf_threshold = 0.15  # 默认置信度阈值
         self.iou_threshold = 0.5  # 默认IOU阈值
-        self.image_type = "可见光"  # 图像类型
+        self.image_type = SYSTEM_CONFIG["image_type_visible"]  # 图像类型
 
         # 初始化检测类别相关的配置参数
         self.available_classes = None  # 可用的检测类别
@@ -207,7 +215,7 @@ class Detection_UI:
         self.keystone_scale = 1.0  # 缩放比例
         self.scale_factor_keystone = 0.1  # 自动梯形校正的最小面积比例
         self.scale_factor_fill = 0.1  # 背景填充的最小面积比例
-        self.image_enhancement_method = "不处理"  # 图像增强方法
+        self.image_enhancement_method = SYSTEM_CONFIG["image_enhancement_none"]  # 图像增强方法
 
         # 初始化检测结果相关的变量
         self.detection_result = None
@@ -245,7 +253,7 @@ class Detection_UI:
         self.timenow = 0
 
         # 初始化相机参数
-        self.undistortion_method = "不去除"
+        self.undistortion_method = SYSTEM_CONFIG["undistortion_none"]
         self.camera_matrix = None
         self.dist_coeffs = None
         self.calibration_file = None
@@ -315,18 +323,18 @@ class Detection_UI:
 
         self.conf_threshold = float(self.api_params.get("conf_threshold", 0.15))
         self.iou_threshold = float(self.api_params.get("iou_threshold", 0.25))
-        self.model_type = self.api_params.get("model_type", "检测任务")
-        self.image_type = self.api_params.get("image_type", "可见光")
+        self.model_type = self.api_params.get("model_type", SYSTEM_CONFIG["model_type_detection"])
+        self.image_type = self.api_params.get("image_type", SYSTEM_CONFIG["image_type_visible"])
         self.selected_classes = self.api_params.get("selected_classes", list(Visible_type.keys()))
         self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
         self.enable_rotate_correction = self.api_params.get("enable_rotate_correction", False)
         self.enable_auto_keystone_correction = self.api_params.get("enable_auto_keystone_correction", False)
         self.enable_background_fill = self.api_params.get("enable_background_fill", False)
-        self.image_enhancement_method = self.api_params.get("image_enhancement_method", "不处理")
-        self.undistortion_method = self.api_params.get("undistortion_method", "不去除")
+        self.image_enhancement_method = self.api_params.get("image_enhancement_method", SYSTEM_CONFIG["image_enhancement_none"])
+        self.undistortion_method = self.api_params.get("undistortion_method", SYSTEM_CONFIG["undistortion_none"])
 
         # 通过API方式上传相机标定文件
-        if self.undistortion_method == "相机参数计算":
+        if self.undistortion_method == SYSTEM_CONFIG["undistortion_camera_calc"]:
             calibration_file = self.api_params.get("calibration_file", None)
             if calibration_file is not None:
                 try:
@@ -343,9 +351,9 @@ class Detection_UI:
                     self.camera_matrix = np.array(calib_data["camera_matrix"])
                     self.dist_coeffs = np.array(calib_data["dist_coeffs"])
                     self.calibration_file = calibration_file if isinstance(calibration_file, str) else "api_upload"
-                    print("相机标定参数加载成功！")
+                    print(STATUS_MESSAGES["camera_calibration_success"])
                 except Exception as e:
-                    print(f"标定文件解析失败: {e}")
+                    print(get_status_message("camera_calibration_failed", error=str(e)))
                     self.camera_matrix = None
                     self.dist_coeffs = None
                     self.calibration_file = None
@@ -353,7 +361,7 @@ class Detection_UI:
                 self.camera_matrix = None
                 self.dist_coeffs = None
                 self.calibration_file = None
-        elif self.undistortion_method == "手动调整参数":
+        elif self.undistortion_method == SYSTEM_CONFIG["undistortion_manual"]:
             # 从API参数中获取畸变系数
             self.image_k1 = float(self.api_params.get("image_k1", 0.0))
         
@@ -373,14 +381,14 @@ class Detection_UI:
             self.scale_factor_fill = float(self.api_params.get("scale_factor_fill", 0.1))
 
         # 设置类别标签
-        if self.model_type == "分割任务":
+        if self.model_type == SYSTEM_CONFIG["model_type_segmentation"]:
             self.cls_name = Segmentation_type
             self.detect_class_color = Segmentation_class_colors
         else:
-            if self.image_type == "红外":
+            if self.image_type == SYSTEM_CONFIG["image_type_thermal"]:
                 self.cls_name = Thermo_type
                 self.detect_class_color = Thermo_class_colors
-            elif self.image_type == "EL隐裂":
+            elif self.image_type == SYSTEM_CONFIG["image_type_el"]:
                 self.cls_name = EL_type
                 self.detect_class_color = EL_class_colors
             elif self.image_type == "可见光":
@@ -425,7 +433,7 @@ class Detection_UI:
 
             # 确保颜色列表长度与模型类别一致
             if len(self.colors) != len(self.model.names):
-                st.warning("⚠️ 警告: 颜色列表长度与模型类别不一致！将使用随机颜色填充。")
+                st.warning(STATUS_MESSAGES["color_list_warning"])
 
         except Exception as e:
             print(f"无法加载模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
@@ -507,7 +515,7 @@ class Detection_UI:
         st.sidebar.header("🖥️ 显示设置")
 
         # 添加固定比例选项
-        aspect_ratio = st.sidebar.selectbox("选择显示比例", options=["16:9", "4:3", "自由调整"], index=0)
+        aspect_ratio = st.sidebar.selectbox(UI_SELECTORS["aspect_ratio_selection"], options=UI_OPTIONS["aspect_ratios"], index=0)
         if aspect_ratio == "16:9":
             ratio = 16 / 9
         elif aspect_ratio == "4:3":
@@ -539,8 +547,8 @@ class Detection_UI:
             self.csv_output_path += os.sep
 
         st.sidebar.header("📤 日志导出格式设置")
-        self.export_format = st.sidebar.radio("选择导出格式", options=["Word", "CSV", "Excel", "JSON"], index=0)
-        st.sidebar.caption(f"💡 提示: {self.export_format} 文件将导出至 {self.csv_output_path} 路径。")
+        self.export_format = st.sidebar.radio(UI_SELECTORS["export_format_selection"], options=UI_OPTIONS["export_formats"], index=0)
+        st.sidebar.caption(UI_LABELS["export_format_hint"].format(format=self.export_format, path=self.csv_output_path))
 
         # 根据用户选择的导出格式设置文件后缀
         if self.export_format == "CSV":
@@ -575,7 +583,7 @@ class Detection_UI:
 
         self.available_cameras = st.session_state['available_cameras']
         if len(self.available_cameras) == 1:
-            st.write("未找到可用的摄像头")
+            st.write(STATUS_MESSAGES["no_camera_found"])
 
         # 初始化或获取识别结果的表格
         self.logTable = st.session_state['logTable']
@@ -584,14 +592,14 @@ class Detection_UI:
         st.sidebar.header("⚙️ 检测阈值设定")
         # 置信度阈值的滑动条
         self.conf_threshold = float(st.sidebar.slider("置信度设定", min_value=0.0, max_value=1.0, value=0.15))
-        st.sidebar.caption("💡 提示: 置信度设定范围为0.0到1.0，代表检测结果的置信度。")
+        st.sidebar.caption(UI_LABELS["conf_threshold_hint"])
         # IOU阈值的滑动条
         self.iou_threshold = float(st.sidebar.slider("IOU设定", min_value=0.0, max_value=1.0, value=0.25))
-        st.sidebar.caption("💡 提示: IOU设定范围为0.0到1.0，代表检测结果的重叠度。")
+        st.sidebar.caption(UI_LABELS["iou_threshold_hint"])
         # 设置侧边栏的模型设置部分
         st.sidebar.header("🧠 模型设置")
         # 选择模型类型的下拉菜单
-        self.model_type = st.sidebar.radio("选择任务类型", options=["检测任务", "分割任务"], index=0)
+        self.model_type = st.sidebar.radio(UI_SELECTORS["task_type_selection"], options=UI_OPTIONS["task_types"], index=0)
 
         available_options = []
         # 添加提示信息
@@ -662,7 +670,7 @@ class Detection_UI:
 
         # 选择模型文件类型，可以是默认的或者自定义的
         st.sidebar.header("📁 模型文件设置")
-        model_file_option = st.sidebar.radio("模型设置", options=["默认", "指定权重文件"], index=0)
+        model_file_option = st.sidebar.radio(UI_SELECTORS["model_settings"], options=UI_OPTIONS["model_settings"], index=0)
         if model_file_option == "指定权重文件":
             # 如果选择自定义模型文件，则提供文件上传器
             model_file = st.sidebar.file_uploader("选择.pt文件", type="pt")
@@ -714,7 +722,7 @@ class Detection_UI:
 
                 # 确保颜色列表长度与模型类别一致
                 if len(self.colors) != len(self.model.names):
-                    st.warning("⚠️ 警告: 颜色列表长度与模型类别不一致！将使用随机颜色填充。")
+                    st.warning(STATUS_MESSAGES["color_list_warning"])
 
             except Exception as e:
                 st.sidebar.error(f"⚠️ 错误: 无法加载默认模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
@@ -750,14 +758,14 @@ class Detection_UI:
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header("📹 输入源识别设置")
         # 选择输入源类型：无输入，摄像头或 RTSP/RTMP 流
-        self.input_source = st.sidebar.radio("选择输入源", options=["图片文件", "图片文件夹", "视频文件", "视频文件夹", "摄像头", "RTSP/RTMP流"], index=0)
+        self.input_source = st.sidebar.radio(UI_SELECTORS["input_source_selection"], options=UI_OPTIONS["input_sources"], index=0)
 
         if "file_key" not in st.session_state:
             st.session_state["file_key"] = str(random.random())
 
         if self.input_source == "摄像头":
             # 选择摄像头的下拉菜单
-            self.selected_camera = st.sidebar.selectbox("选择摄像头序号", self.available_cameras)
+            self.selected_camera = st.sidebar.selectbox(UI_SELECTORS["camera_selection"], self.available_cameras)
             st.sidebar.caption("💡 提示: 请点击'开始检测'按钮，启动摄像头检测！")
         elif self.input_source == "RTSP/RTMP流":
             # 输入 RTSP/RTMP 地址
@@ -1054,7 +1062,7 @@ class Detection_UI:
                 st.session_state['sidebar_preview_index'] = current_preview_index
                 
                 # 侧边栏图片预览控制
-                st.sidebar.subheader("🖼️ 图片预处理预览")
+                st.sidebar.subheader(UI_LABELS["image_preprocessing_preview"])
                 
                 # 图片切换控件
                 preview_col1, preview_col2, preview_col3 = st.sidebar.columns([1, 2, 1])
@@ -1471,7 +1479,7 @@ class Detection_UI:
         
         if frame_id == -1:  # 显示所有目标
             if not saved_images_ini:
-                st.warning("没有检测结果可显示！")
+                st.warning(STATUS_MESSAGES["no_detection_results"])
                 if hasattr(self, 'image_placeholder'):
                     self.image_placeholder.image(load_default_image(), caption="原始画面")
                 if hasattr(self, 'table_placeholder'):
@@ -1480,7 +1488,7 @@ class Detection_UI:
             frame_id = 0  # 默认显示第一帧
 
         if frame_id >= len(saved_images_ini) or frame_id >= len(saved_results):
-            st.warning(f"帧ID {frame_id} 超出范围！当前有 {len(saved_images_ini)} 张图片")
+            st.warning(STATUS_MESSAGES["frame_id_out_of_range_warning"].format(frame_id=frame_id, total=len(saved_images_ini)))
             return
 
         # 获取当前选中的目标过滤选项
@@ -1638,7 +1646,7 @@ class Detection_UI:
 
                     # Ensure cls_id is within bounds
                     if cls_id >= len(self.colors):
-                        st.warning(f"⚠️ 警告: 检测到的类别索引 {cls_id} 超出颜色列表范围！使用默认颜色。")
+                        st.warning(STATUS_MESSAGES["index_out_of_range_warning"].format(cls_id=cls_id))
                         color = (255, 0, 0)  # 默认红色
                     else:
                         color = self.colors[cls_id]
@@ -1734,7 +1742,7 @@ class Detection_UI:
 
         # 在第一列设置显示模式的选择
         with col1:
-            st.subheader("📷 视频/图片检测系统")
+            st.subheader(UI_LABELS["video_image_detection_system"])
             self.display_mode = st.radio("单/双画面显示", ["叠加显示", "对比显示"])
             self.image_placeholder = st.empty()
             self.image_placeholder_res = st.empty()
@@ -1760,7 +1768,7 @@ class Detection_UI:
 
         # 在最右侧列设置识别结果表格的显示
         with col2:
-            st.subheader("🖼️ 当前图片检测结果")
+            st.subheader(UI_LABELS["current_image_results"])
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
 
@@ -1799,7 +1807,7 @@ class Detection_UI:
                 st.session_state['selectbox_target'] = current_selected
             
             selectbox_target = self.selectbox_placeholder.selectbox(
-                "目标过滤", 
+                UI_LABELS["target_filter"], 
                 detected_targets, 
                 key=selectbox_key, 
                 index=current_index
@@ -1814,22 +1822,36 @@ class Detection_UI:
 
             # 创建一个导出结果的按钮
             st.write("---------------------")
-            if st.button("📤 导出结果"):
-                current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-                self.saved_log_data = os.path.join(self.csv_output_path, f"log_table_data_{current_time}")
+            if st.button(BUTTON_TEXTS["export_results"]):
+                current_time = datetime.now().strftime("%Y年%m月%d日_%H时%M分")
+                
+                # 使用新的命名配置生成文件名
+                base_filename = generate_filename(
+                    "report",
+                    image_type=self.image_type,
+                    task_type=self.model_type,
+                    timestamp=current_time
+                )
+                self.saved_log_data = os.path.join(self.csv_output_path, base_filename)
 
                 if self.export_format == "CSV":
                     self.saved_log_data += ".csv"
                     self.logTable.save_to_csv(self.saved_log_data)
-                    st.write(f"识别结果文件已经保存为 CSV 格式：{self.saved_log_data}")
+                    st.success(get_status_message("export_success", 
+                                                file_type="CSV数据表", 
+                                                filename=os.path.basename(self.saved_log_data)))
                 elif self.export_format == "Excel":
                     self.saved_log_data += ".xlsx"
                     self.logTable.save_to_excel(self.saved_log_data)
-                    st.write(f"识别结果文件已经保存为 Excel 格式：{self.saved_log_data}")
+                    st.success(get_status_message("export_success", 
+                                                file_type="Excel电子表格", 
+                                                filename=os.path.basename(self.saved_log_data)))
                 elif self.export_format == "JSON":
                     self.saved_log_data += ".json"
                     self.logTable.save_to_json(self.saved_log_data)
-                    st.write(f"识别结果文件已经保存为 JSON 格式：{self.saved_log_data}")
+                    st.success(get_status_message("export_success", 
+                                                file_type="JSON数据文件", 
+                                                filename=os.path.basename(self.saved_log_data)))
                 elif self.export_format == "Word":
                     self.saved_log_data += ".docx"
                     # 构建检测参数字典
@@ -1842,10 +1864,12 @@ class Detection_UI:
                         'cls_name': getattr(self, 'cls_name', {})
                     }
                     self.logTable.save_to_word(self.saved_log_data, detection_params)
-                    st.write(f"识别结果文件已经保存为 Word 格式：{self.saved_log_data}")
+                    st.success(get_status_message("export_success", 
+                                                file_type="Word检测报告", 
+                                                filename=os.path.basename(self.saved_log_data)))
 
                 self.logTable.clear_data()
-            st.subheader("📜 历史日志")
+            st.subheader(UI_LABELS["history_log"])
             # 显示所有结果记录的空白表格
             self.log_table_placeholder = st.empty()
             self.logTable.update_table(self.log_table_placeholder)
@@ -1854,12 +1878,12 @@ class Detection_UI:
 
         with col1:
             st.write("")
-            run_button = st.button("🚀 开始检测")
+            run_button = st.button(BUTTON_TEXTS["start_detection"])
             self.close_placeholder = st.empty()
 
         # 将切换按钮移到独立区域，并简化显示逻辑
         st.markdown("---")
-        st.subheader("📸 图片浏览控制")
+        st.subheader(UI_LABELS["image_browser_control"])
         
         # 检查是否有检测结果（优先检查session state，然后检查logTable）
         saved_images_ini = st.session_state.get('saved_images_ini', [])
@@ -1872,7 +1896,7 @@ class Detection_UI:
         
         if len(saved_images_ini) > 0:
             total_imgs = len(saved_images_ini)
-            st.info(f"共有 {total_imgs} 张检测结果图片")
+            st.info(STATUS_MESSAGES["total_images_info"].format(count=total_imgs))
             
             # 初始化或验证图片索引
             if 'image_play_index' not in st.session_state:
@@ -1886,25 +1910,25 @@ class Detection_UI:
             col_prev, col_info, col_next = st.columns([1, 2, 1])
             
             with col_prev:
-                if st.button("⬅️ 上一张", key="prev_btn", disabled=(current_index <= 0)):
+                if st.button(BUTTON_TEXTS["previous_image"], key="prev_btn", disabled=(current_index <= 0)):
                     st.session_state['image_play_index'] = max(0, current_index - 1)
                     st.rerun()
             
             with col_info:
-                st.write(f"**第 {current_index + 1} / {total_imgs} 张图片**")
+                st.write(STATUS_MESSAGES["image_index_info"].format(current=current_index + 1, total=total_imgs))
                 # 显示当前图片名称
                 if current_index < len(st.session_state.get('saved_names', [])):
                     img_name = st.session_state['saved_names'][current_index]
-                    st.caption(f"文件名: {img_name}")
+                    st.caption(STATUS_MESSAGES["filename_info"].format(filename=img_name))
             
             with col_next:
-                if st.button("下一张 ➡️", key="next_btn", disabled=(current_index >= total_imgs - 1)):
+                if st.button(BUTTON_TEXTS["next_image"], key="next_btn", disabled=(current_index >= total_imgs - 1)):
                     st.session_state['image_play_index'] = min(total_imgs - 1, current_index + 1)
                     st.rerun()
             
             # 添加滑块控制
             new_index = st.slider(
-                "选择图片", 
+                STATUS_MESSAGES["image_slider_label"], 
                 min_value=0, 
                 max_value=total_imgs - 1, 
                 value=current_index,
@@ -1920,14 +1944,14 @@ class Detection_UI:
             self.toggle_comboBox(st.session_state['image_play_index'])
             
         else:
-            st.info("暂无检测结果，请先上传图片并开始检测")
+            st.info(STATUS_MESSAGES["no_detection_results"])
             # 显示默认图像
             if hasattr(self, 'image_placeholder'):
                 self.image_placeholder.image(load_default_image(), caption="原始画面")
                 if self.display_mode == "对比显示" and hasattr(self, 'image_placeholder_res'):
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
 
-        st.subheader("📊 实时监控仪表盘")
+        st.subheader(UI_LABELS["realtime_dashboard"])
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             self.frame_count_placeholder = st.empty()
@@ -1939,10 +1963,10 @@ class Detection_UI:
             self.detection_time_placeholder = st.empty()
 
         # 初始化默认值
-        self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
-        self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
-        self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
-        self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
+        self.frame_count_placeholder.metric(STATUS_MESSAGES["current_frame_metric"], st.session_state['current_frame_count'])
+        self.fps_placeholder.metric(STATUS_MESSAGES["current_fps_metric"], st.session_state['current_fps'])
+        self.target_count_placeholder.metric(STATUS_MESSAGES["target_count_metric"], st.session_state['current_target_count'])
+        self.detection_time_placeholder.metric(STATUS_MESSAGES["detection_time_metric"], st.session_state['current_detection_time'])
 
         # 🔧 添加调试信息
         self.debug_display_state()
@@ -1963,32 +1987,32 @@ class Detection_UI:
                 if self.uploaded_file:
                     self._process_image_input()
                 else:
-                    st.warning("请先上传图片文件或选择图片文件夹！")
+                    st.warning(STATUS_MESSAGES["upload_files_first"])
                     
             elif self.input_source == "视频文件" or self.input_source == "视频文件夹":
                 if hasattr(self, 'uploaded_video') and self.uploaded_video:
                     self._process_video_input()
                 else:
-                    st.warning("请先上传视频文件或选择视频文件夹！")
+                    st.warning(STATUS_MESSAGES["upload_video_first"])
                     
             elif self.input_source == "摄像头":
                 if self.selected_camera is not None:
                     camera_id = int(self.selected_camera.split(':')[0]) if ':' in str(self.selected_camera) else int(self.selected_camera)
                     self._process_camera_input(camera_id)
                 else:
-                    st.warning("请先选择摄像头！")
-                    
+                    st.warning(STATUS_MESSAGES["select_camera_first"])
+
             elif self.input_source == "RTSP/RTMP流":
                 if self.rtsp_input_url:
                     self._process_rtsp_input(self.rtsp_input_url)
                 else:
-                    st.warning("请先输入RTSP/RTMP地址！")
+                    st.warning(STATUS_MESSAGES["input_rtsp_first"])
                     
             else:
-                st.error(f"不支持的输入源类型: {self.input_source}")
-                
+                st.error(STATUS_MESSAGES["unsupported_input_source"].format(source=self.input_source))
+
         except Exception as e:
-            st.error(f"处理输入时发生错误: {str(e)}")
+            st.error(STATUS_MESSAGES["input_processing_error"].format(error=str(e)))
 
     def _ensure_initialization(self):
         """
@@ -2038,7 +2062,7 @@ class Detection_UI:
         # 初始化进度显示
         progress_container = st.container()
         with progress_container:
-            st.info("🚀 开始图片检测...")
+            st.info(STATUS_MESSAGES["image_detection_start"])
             overall_progress = st.progress(0)
             status_text = st.empty()
             current_image_info = st.empty()
@@ -2046,12 +2070,12 @@ class Detection_UI:
         if isinstance(self.uploaded_file, list):
             # 批量处理多张图片
             total_files = len(self.uploaded_file)
-            status_text.write(f"📋 准备处理 {total_files} 张图片...")
+            status_text.write(get_status_message("processing_files", total_files=total_files))
             
             # 计算预估时间
             estimated_time_per_image = 2.0  # 假设每张图片需要2秒
             estimated_total_time = total_files * estimated_time_per_image
-            status_text.write(f"⏱️ 预计总用时: {estimated_total_time:.1f} 秒")
+            status_text.write(get_status_message("estimated_time", time=estimated_total_time))
             
             start_time = time.time()
             successful_count = 0
@@ -2061,8 +2085,8 @@ class Detection_UI:
                 try:
                     # 更新当前处理信息
                     current_file_name = uploaded_file.name if hasattr(uploaded_file, 'name') else f"图片_{idx+1}"
-                    current_image_info.info(f"🔄 正在处理: {current_file_name} ({idx+1}/{total_files})")
-                    
+                    current_image_info.info(STATUS_MESSAGES["processing_current"].format(filename=current_file_name, current=idx + 1, total=total_files))
+
                     # 读取图片数据
                     if hasattr(uploaded_file, 'read'):
                         uploaded_file.seek(0)
@@ -2079,7 +2103,7 @@ class Detection_UI:
                     image_ini = cv2.imdecode(file_bytes, 1)
                     
                     if image_ini is None:
-                        st.error(f"❌ 无法解码图片: {file_name}")
+                        st.error(STATUS_MESSAGES["image_decode_error"].format(filename=file_name))
                         failed_count += 1
                         continue
                     
@@ -2099,10 +2123,10 @@ class Detection_UI:
                     st.session_state['current_detection_time'] = self.detection_time
                     
                     # 更新显示
-                    self.frame_count_placeholder.metric("📸 当前帧数", idx + 1)
-                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
-                    
+                    self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], idx + 1)
+                    self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
+                    self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
+
                     # 显示图片
                     resized_image = cv2.resize(image, (self.display_width, self.display_height))
                     resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
@@ -2129,20 +2153,28 @@ class Detection_UI:
                         avg_time_per_image = elapsed_time / (idx + 1)
                         remaining_images = total_files - (idx + 1)
                         remaining_time = remaining_images * avg_time_per_image
-                        status_text.success(f"✅ 已完成 {idx+1}/{total_files} 张图片 | 预计剩余时间: {remaining_time:.1f} 秒")
+                        status_text.success(STATUS_MESSAGES["batch_processing_progress"].format(
+                            current=idx + 1, 
+                            total=total_files,
+                            remaining_time=round(remaining_time, 2)
+                        ))
                     
                     # 添加短暂延迟以显示进度
                     time.sleep(0.1)
                     
                 except Exception as e:
-                    st.error(f"❌ 处理图片 {file_name if 'file_name' in locals() else '未知'} 时出错: {str(e)}")
+                    st.error(STATUS_MESSAGES["image_processing_error"].format(filename=current_file_name, error=str(e)))
                     failed_count += 1
                     continue
             
             # 完成后的总结
             total_time = time.time() - start_time
-            current_image_info.success(f"🎉 批量检测完成！")
-            status_text.success(f"📊 处理完成: 成功 {successful_count} 张，失败 {failed_count} 张，总用时 {total_time:.2f} 秒")
+            current_image_info.success(STATUS_MESSAGES["batch_processing_complete"])
+            status_text.success(STATUS_MESSAGES["batch_processing_summary"].format(
+                successful_count=successful_count, 
+                failed_count=failed_count, 
+                total_time=total_time
+            ))
             overall_progress.progress(1.0)
             
             # 立即更新session state以确保UI同步
@@ -2160,7 +2192,6 @@ class Detection_UI:
             if hasattr(self, 'log_table_placeholder'):
                 self.logTable.update_table(self.log_table_placeholder)
             
-            st.success("批量图片检测完成！")
             # 立即刷新页面，让selectbox自动更新
             st.rerun()
             
@@ -2170,11 +2201,11 @@ class Detection_UI:
                 # 显示处理状态
                 progress_container = st.container()
                 with progress_container:
-                    st.info("🔄 开始处理单张图片...")
+                    st.info(STATUS_MESSAGES["single_image_processing_start"])
                     single_progress = st.progress(0)
                     status_info = st.empty()
                 
-                status_info.write("📁 正在读取图片文件...")
+                status_info.write(STATUS_MESSAGES["reading_image_file"])
                 single_progress.progress(0.2)
                 
                 source_img = self.uploaded_file.read()
@@ -2182,23 +2213,23 @@ class Detection_UI:
                 image_ini = cv2.imdecode(file_bytes, 1)
                 
                 if image_ini is None:
-                    st.error("❌ 无法解码图片文件！")
+                    st.error(STATUS_MESSAGES["image_decode_failed"])
                     return
                 
-                status_info.write("🖼️ 正在应用图像处理...")
+                status_info.write(STATUS_MESSAGES["applying_image_processing"])
                 single_progress.progress(0.4)
                 
                 # 应用图像处理
                 processed_image = self.apply_image_processing(image_ini)
                 
-                status_info.write("🤖 正在进行AI检测...")
+                status_info.write(STATUS_MESSAGES["ai_detection_running"])
                 single_progress.progress(0.6)
                 
                 # 进行检测
                 framecopy = processed_image.copy()
                 image, detInfo, select_info = self.frame_process(framecopy, self.uploaded_file.name)
                 
-                status_info.write("💾 正在保存检测结果...")
+                status_info.write(STATUS_MESSAGES["saving_detection_results"])
                 single_progress.progress(0.8)
                 
                 # 保存结果
@@ -2210,9 +2241,9 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric("📸 当前帧数", 1)
-                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], 1)
+                self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
+                self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
                 
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
@@ -2228,7 +2259,7 @@ class Detection_UI:
                 # 添加到日志表
                 self.logTable.add_frames(image, detInfo, processed_image, self.uploaded_file.name)
                 
-                status_info.write("🔄 正在更新界面...")
+                status_info.write(STATUS_MESSAGES["updating_interface"])
                 single_progress.progress(0.9)
                 
                 # 立即更新session state以确保UI同步
@@ -2247,31 +2278,31 @@ class Detection_UI:
                     self.logTable.update_table(self.log_table_placeholder)
                 
                 single_progress.progress(1.0)
-                status_info.success(f"✅ 单张图片检测完成！检测到 {len(detInfo)} 个目标，用时 {self.detection_time:.2f} 秒")
+                status_info.success(get_status_message("single_image_detection_complete", count=len(detInfo), time=self.detection_time))
                 
-                st.success("单张图片检测完成！")
+                st.success(STATUS_MESSAGES["single_image_complete"])
                 # 立即刷新页面，让selectbox自动更新
                 st.rerun()
                 
                 # 立即显示检测结果
                 self.toggle_comboBox(0)
                 
-                st.success("图片检测完成！")
+                st.success(STATUS_MESSAGES["image_detection_complete"])
                 
             except Exception as e:
-                st.error(f"处理单张图片时出错: {str(e)}")
+                st.error(get_status_message("single_image_processing_error", error=str(e)))
 
     def _process_video_input(self):
         """
         处理视频输入
         """
         if not hasattr(self, 'uploaded_video') or not self.uploaded_video:
-            st.warning("请先上传视频文件！")
+            st.warning(STATUS_MESSAGES["upload_video_first"])
             return
             
         self.logTable.clear_frames()
         self.progress_bar.progress(0)
-        self.close_flag = self.close_placeholder.button(label="停止")
+        self.close_flag = self.close_placeholder.button(label=BUTTON_TEXTS["stop"])
         
         try:
             if isinstance(self.uploaded_video, list):
@@ -2285,7 +2316,7 @@ class Detection_UI:
                 self._process_single_video(self.uploaded_video, 0)
                 
         except Exception as e:
-            st.error(f"处理视频时出错: {str(e)}")
+            st.error(get_status_message("video_processing_error", error=str(e)))
 
     def _process_single_video(self, video_file, video_index):
         """处理单个视频文件"""
@@ -2297,7 +2328,7 @@ class Detection_UI:
             
             cap = cv2.VideoCapture(tfile.name)
             if not cap.isOpened():
-                st.error(f"无法打开视频文件: {video_file.name}")
+                st.error(get_status_message("video_open_failed", video_name=video_file.name))
                 return
             
             # 获取视频信息
@@ -2305,7 +2336,7 @@ class Detection_UI:
             fps = cap.get(cv2.CAP_PROP_FPS)
             current_frame = 0
             
-            st.info(f"开始处理视频: {video_file.name} (总帧数: {total_frames})")
+            st.info(get_status_message("video_processing_start", video_name=video_file.name, total_frames=total_frames))
             
             while cap.isOpened() and not self.close_flag and current_frame < total_frames:
                 ret, frame = cap.read()
@@ -2328,9 +2359,9 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric("📸 当前帧数", current_frame + 1)
-                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], current_frame + 1)
+                self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
+                self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
                 
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
@@ -2356,7 +2387,7 @@ class Detection_UI:
             os.unlink(tfile.name)  # 删除临时文件
             
         except Exception as e:
-            st.error(f"处理视频 {video_file.name} 时出错: {str(e)}")
+            st.error(get_status_message("single_video_processing_error", video_name=video_file.name, error=str(e)))
 
     def _process_camera_input(self, camera_id):
         """
@@ -2365,17 +2396,17 @@ class Detection_UI:
         try:
             cap = cv2.VideoCapture(camera_id)
             if not cap.isOpened():
-                st.error(f"无法打开摄像头 {camera_id}")
+                st.error(get_status_message("camera_open_failed", camera_id=camera_id))
                 return
             
-            st.info(f"摄像头 {camera_id} 已启动，点击停止按钮结束检测")
-            self.close_flag = self.close_placeholder.button(label="停止")
+            st.info(get_status_message("camera_started", camera_id=camera_id))
+            self.close_flag = self.close_placeholder.button(label=BUTTON_TEXTS["stop"])
             
             frame_count = 0
             while cap.isOpened() and not self.close_flag:
                 ret, frame = cap.read()
                 if not ret:
-                    st.error("无法从摄像头读取帧")
+                    st.error(STATUS_MESSAGES["camera_read_frame_failed"])
                     break
                 
                 # 应用图像处理
@@ -2391,20 +2422,20 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric("📸 当前帧数", frame_count + 1)
-                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], frame_count + 1)
+                self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
+                self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
                 
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
                 
                 if self.display_mode == "叠加显示":
-                    self.image_placeholder.image(resized_image, channels="BGR", caption="摄像头识别画面")
+                    self.image_placeholder.image(resized_image, channels="BGR", caption=UI_LABELS["camera_detection_view"])
                 else:
-                    self.image_placeholder.image(resized_frame, channels="BGR", caption="摄像头原始画面")
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption=UI_LABELS["camera_original_view"])
                     if hasattr(self, 'image_placeholder_res'):
-                        self.image_placeholder_res.image(resized_image, channels="BGR", caption="摄像头识别画面")
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=UI_LABELS["camera_detection_view"])
                 
                 # 添加到日志表
                 self.logTable.add_frames(image, detInfo, processed_frame, f"camera_{frame_count}")
@@ -2415,7 +2446,7 @@ class Detection_UI:
             cap.release()
             
         except Exception as e:
-            st.error(f"处理摄像头输入时出错: {str(e)}")
+            st.error(STATUS_MESSAGES["camera_processing_error"].format(error=str(e)))
 
     def _process_rtsp_input(self, rtsp_url):
         """
@@ -2424,17 +2455,17 @@ class Detection_UI:
         try:
             cap = cv2.VideoCapture(rtsp_url)
             if not cap.isOpened():
-                st.error(f"无法连接到RTSP/RTMP流: {rtsp_url}")
+                st.error(STATUS_MESSAGES["rtsp_connection_failed"].format(rtsp_url=rtsp_url))
                 return
-            
-            st.info(f"RTSP/RTMP流已连接: {rtsp_url}")
+
+            st.info(STATUS_MESSAGES["rtsp_connected"].format(rtsp_url=rtsp_url))
             self.close_flag = self.close_placeholder.button(label="停止")
             
             frame_count = 0
             while cap.isOpened() and not self.close_flag:
                 ret, frame = cap.read()
                 if not ret:
-                    st.warning("RTSP/RTMP流中断，尝试重连...")
+                    st.warning(STATUS_MESSAGES["rtsp_stream_interrupted"])
                     time.sleep(2)
                     continue
                 
@@ -2451,10 +2482,10 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric("📸 当前帧数", frame_count + 1)
-                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
-                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
-                
+                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], frame_count + 1)
+                self.target_count_placeholder.metric(METRICS_LABELS["current_target"], len(detInfo))
+                self.detection_time_placeholder.metric(METRICS_LABELS["current_detection_time"], self.detection_time)
+
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
@@ -2475,4 +2506,4 @@ class Detection_UI:
             cap.release()
             
         except Exception as e:
-            st.error(f"处理RTSP/RTMP流时出错: {str(e)}")
+            st.error(STATUS_MESSAGES["rtsp_processing_error"].format(error=str(e)))

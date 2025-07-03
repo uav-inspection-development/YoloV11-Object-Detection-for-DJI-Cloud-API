@@ -619,7 +619,7 @@ class LogTable:
 
             # 保存 Word 文件
             doc.save(word_file_path)
-            print(f"专业光伏巡检报告已保存到: {word_file_path}")
+            print(f"光伏巡检报告已保存到: {word_file_path}")
 
         except Exception as e:
             print(f"保存到 Word 文件失败: {str(e)}")
