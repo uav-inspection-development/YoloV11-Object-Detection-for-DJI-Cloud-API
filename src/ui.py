@@ -66,11 +66,17 @@ def streamlit_login_page():
 
 if __name__ == "__main__":
     # 设置页面布局为宽布局
+    # 🚀 必须在第一行设置页面配置，在其他 Streamlit 命令之前
     st.set_page_config(
         page_title="光伏云组件检测系统",
         page_icon=abs_path("../icon/icon.jpg", path_type="current"),
         initial_sidebar_state="expanded",
-        layout="wide"
+        layout="wide",
+        menu_items={
+            'Get Help': None,
+            'Report a bug': None,
+            'About': None
+        }
     )
 
     # 判断是否通过 streamlit run 启动

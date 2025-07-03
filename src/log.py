@@ -80,6 +80,7 @@ class LogTable:
         self.saved_images_ini = []
         self.saved_results = []
         self.saved_names = []
+        self.saved_targets_info = []  # 存储每张图片的目标类别信息
 
         self.columns = ['文件路径', '识别结果', '类型', '位置(pixel)', '面积(pixel)', '时间(s)']
         self.data = pd.DataFrame(columns=self.columns)
@@ -92,13 +93,25 @@ class LogTable:
             image (numpy.ndarray): 检测到的图像。
             detInfo (list): 检测信息。
             img_ini (numpy.ndarray): 初始图像。
+            img_name (str): 图像名称。
         """
         self.saved_images.append(image)
         self.saved_images_ini.append(img_ini)
         self.saved_results.append(detInfo)
         self.saved_names.append(img_name)
+        
+        # 提取并保存当前图片的目标类别信息
+        current_targets = ["全部目标"]  # 默认包含"全部目标"选项
         if detInfo:
             self.saved_target_images.append(image)
+            # 从detInfo中提取中文类别名称
+            for det in detInfo:
+                if len(det) >= 2:  # det格式: [name, chinese_name, bbox, area, time, cls_id]
+                    chinese_name = det[1]  # 中文名称
+                    if chinese_name not in current_targets:
+                        current_targets.append(chinese_name)
+        
+        self.saved_targets_info.append(current_targets)
         # print('____')
         # print(detInfo)
         # print('____')
@@ -112,6 +125,7 @@ class LogTable:
         self.saved_results = []
         self.saved_target_images = []
         self.saved_names = []
+        self.saved_targets_info = []
 
     def save_frames_file(self, fps=30, video_name='save', video_time=None, output_path='output/frame/'):
         """

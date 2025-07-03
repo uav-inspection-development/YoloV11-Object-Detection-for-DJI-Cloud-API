@@ -21,6 +21,53 @@ import tkinter as tk
 from tkinter import filedialog
 from utils import LocalFileObj
 import base64
+import hashlib
+from functools import lru_cache
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+# 🚀 性能优化模块导入
+from streamlit_config import optimize_streamlit_performance, setup_image_optimization, add_performance_css
+from image_optimizer import get_image_optimizer, optimize_image_display, process_uploaded_images
+
+
+# 🚀 性能优化：添加缓存装饰器
+@st.cache_data(ttl=300, max_entries=50)  # 缓存5分钟，最多50个条目
+def cached_image_resize(image_bytes, width, height):
+    """缓存图像调整大小操作"""
+    image_array = np.frombuffer(image_bytes, dtype=np.uint8)
+    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+    resized = cv2.resize(image, (width, height))
+    return resized
+
+@st.cache_data(ttl=600, max_entries=20)  # 缓存10分钟
+def cached_image_processing(image_bytes, processing_params):
+    """缓存图像预处理操作"""
+    image_array = np.frombuffer(image_bytes, dtype=np.uint8)
+    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+    
+    # 根据参数进行处理
+    if processing_params.get('enable_pseudo_color') and is_black_and_white(image):
+        image = convert_to_pseudo_colorizer(
+            image, 
+            contrast=processing_params.get('contrast', 1.0),
+            brightness=processing_params.get('brightness', 0)
+        )
+    
+    if processing_params.get('enable_rotate_correction'):
+        image = rotate_image(
+            image,
+            angle_x=processing_params.get('rot_angle_x', 0),
+            angle_y=processing_params.get('rot_angle_y', 0),
+            zoom_factor=processing_params.get('keystone_scale', 1.0)
+        )
+    
+    return image
+
+def generate_cache_key(*args):
+    """生成缓存键"""
+    content = str(args)
+    return hashlib.md5(content.encode()).hexdigest()
 
 # 尝试导入Git信息
 try:
@@ -86,6 +133,23 @@ class Detection_UI:
         self.output_path = abs_path("../output/")
         self.enable_rtsp_output = None
         self.rtsp_output_url = None
+
+        # 🚀 性能优化：添加缓存管理
+        self.image_cache = {}  # 图像缓存
+        self.processing_cache = {}  # 处理结果缓存
+        self.max_cache_size = 50  # 最大缓存条目数
+        self.executor = ThreadPoolExecutor(max_workers=2)  # 异步处理线程池
+        
+        # 🚀 性能优化：设置 Streamlit 优化配置（不包含页面配置）
+        if self.from_streamlit:
+            # 只调用不包含 set_page_config 的优化函数
+            optimize_streamlit_performance()
+            add_performance_css()
+            self.image_optimizer = get_image_optimizer()
+        
+        # 预设显示尺寸，避免重复计算
+        self.display_width = 640
+        self.display_height = 480
 
         # 初始化类别标签列表和为每个类别随机分配颜色
         self.cls_name = Visible_type
@@ -197,6 +261,10 @@ class Detection_UI:
         self.logTable = LogTable(self.saved_log_data)
         self.model = Web_Detector()
         self.colors = []
+
+        # 确保 logTable 属性始终存在
+        if not hasattr(self, 'logTable'):
+            self.logTable = LogTable(self.saved_log_data)
 
         if 'current_frame_count' not in st.session_state:
             st.session_state['current_frame_count'] = 0
@@ -529,6 +597,8 @@ class Detection_UI:
         # 添加提示信息
         if self.model_type == "检测任务":
             st.sidebar.caption("💡 提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。")
+            # 检测任务也应该有矩形框选项
+            self.rectangle_bounding_output = st.sidebar.checkbox("输出矩形边框", value=True)
             available_options = ["EL隐裂", "红外", "可见光", "其他"]
         elif self.model_type == "分割任务":
             self.rectangle_bounding_output = st.sidebar.checkbox("输出矩形边框", value=True)
@@ -567,7 +637,7 @@ class Detection_UI:
         st.sidebar.header("🎯 目标类别选择")
         self.available_classes = list(self.cls_name.values())
         self.available_class_keys = list(self.cls_name.keys())
-        self.selected_classes = st.sidebar.multiselect(
+        selected_chinese_classes = st.sidebar.multiselect(
             "选择需要检测或分割的目标类别",
             options=self.available_classes,
             default=self.available_classes  # 默认选择所有类别
@@ -575,19 +645,26 @@ class Detection_UI:
 
         # 将选定的类别转换为索引
         self.selected_class_ids = [
-            idx for idx, name in enumerate(self.model.names) if name in self.selected_classes
+            idx for idx, name in enumerate(self.model.names) if name in selected_chinese_classes
         ]
 
         # 添加提示信息
-        if len(self.selected_classes) == 0:
+        if len(selected_chinese_classes) == 0:
             st.sidebar.caption("💡 提示: 未选择任何类别，模型将不会检测任何目标。")
         else:
-            st.sidebar.caption(f"💡 提示: 当前选择的类别为: {', '.join(self.selected_classes)}")
+            st.sidebar.caption(f"💡 提示: 当前选择的类别为: {', '.join(selected_chinese_classes)}")
 
-        # 映射中文名称到英文名称
+        # 正确映射中文名称到英文名称
         self.selected_classes = [
-            english_name for english_name, chinese_name in self.cls_name.items() if chinese_name in self.selected_classes
+            english_name for english_name, chinese_name in self.cls_name.items() 
+            if chinese_name in selected_chinese_classes
         ]
+
+        # 调试信息：显示映射结果
+        if self.from_streamlit:
+            st.sidebar.caption(f"🔧 调试: 选择的英文类别: {', '.join(self.selected_classes)}")
+            if hasattr(self.model, 'names'):
+                st.sidebar.caption(f"🔧 调试: 模型类别: {', '.join(self.model.names)}")
 
         # 选择模型文件类型，可以是默认的或者自定义的
         st.sidebar.header("📁 模型文件设置")
@@ -992,766 +1069,365 @@ class Detection_UI:
 
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
             st.sidebar.header("📡 RTSP/RTMP输出设置")
-            self.enable_rtsp_output = st.sidebar.checkbox("启用RTSP/RTMP输出", value=False)
+            self.enable_rtsp_output = st.sidebar.checkbox("启用RTSP/RTMP输出", value=False)        # RTSP/RTMP输出地址输入
+        if self.enable_rtsp_output:
+            self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
+            st.sidebar.write("💡 提示: 设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
+            
+        # 🔧 调用调试函数
+        self.debug_detection_settings()
 
-            # RTSP/RTMP输出地址输入
-            if self.enable_rtsp_output:
-                self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
-                st.sidebar.write("💡 提示: 设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
-
-    def process_camera_or_file(self):
+    def debug_detection_settings(self):
         """
-        根据用户选择的输入源（摄像头、图片文件、视频文件或RTSP/RTMP流），处理并显示检测结果。
+        调试检测设置，显示当前配置信息
         """
-        if self.input_source in ["摄像头", "RTSP/RTMP流"]:
-            self._process_stream()
-        elif self.input_source == "图片文件" or self.input_source == "图片文件夹":
-            # 确保上传文件为列表
-            files = self.uploaded_file if isinstance(self.uploaded_file, list) else [self.uploaded_file]
-            for f in files:
-                if f: f.seek(0)
-            self._process_image_input()
-        elif self.input_source == "视频文件" or self.input_source == "视频文件夹":
-            files = self.uploaded_video if isinstance(self.uploaded_video, list) else [self.uploaded_video]
-            for f in files:
-                if f: f.seek(0)
-            self._process_video_input()
-        else:
-            st.warning("请选择有效的输入源！")
-
-    def _process_stream(self):
-        """
-        处理摄像头或 RTSP/RTMP 流。
-        """
-        if self.input_source == "摄像头":
-            input_type = "camera"
-            # 使用 OpenCV 捕获摄像头画面
-            if str(self.selected_camera) == '0':
-                input_source = 0
-            else:
-                if len(self.selected_camera) < 8:
-                    try:
-                        input_source = int(self.selected_camera)
-                    except:
-                        st.warning("请检查摄像头序号")
-                else:
-                    input_source = self.selected_camera
-        elif self.input_source == "RTSP/RTMP流":
-            input_type = "stream"
-            if not self.rtsp_input_url:
-                st.warning("请输入有效的RTSP/RTMP地址！")
-                return
-            input_source = self.rtsp_input_url
-        self.logTable.clear_frames()  # 清除之前的帧记录
-        # 创建一个结束按钮
-        self.close_flag = self.close_placeholder.button(label="停止")
-
-        cap = cv2.VideoCapture(input_source)
-
-        if not cap.isOpened():
-            st.error(f"无法打开{self.input_source}，请检查地址或设备连接！")
-            return
-
-        self.uploaded_video = None
-
-        fps = cap.get(cv2.CAP_PROP_FPS)
-
-        self.FPS = fps
-
-        # 设置总帧数为1000
-        total_frames = 1000
-        current_frame = 0
-        self.progress_bar.progress(0)  # 初始化进度条
-
-        try:
-
-            cap = cv2.VideoCapture(input_source)
-
-            if not cap.isOpened():
-                st.error(f"无法打开摄像头或RTSP/RTMP流，请检查地址或设备连接！")
-                return
-
-            # 获取视频属性
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            self.FPS = fps
-
-            # 创建进度条
-            self.progress_bar.progress(0)
-
-            # 创建保存文件的信息
-            if not os.path.exists(self.output_path):
-                os.makedirs(self.output_path)
-
-            if self.enable_video_output:
-                ret, frame = cap.read()
-                height, width, layers = frame.shape
-                size = (width, height)
+        if self.from_streamlit:
+            with st.sidebar.expander("🔧 调试信息", expanded=False):
+                st.write("### 当前配置")
+                st.write(f"- 模型类型: {getattr(self, 'model_type', 'None')}")
+                st.write(f"- 图像类型: {getattr(self, 'image_type', 'None')}")
+                st.write(f"- 矩形框输出: {getattr(self, 'rectangle_bounding_output', 'None')}")
+                st.write(f"- 置信度阈值: {getattr(self, 'conf_threshold', 'None')}")
+                st.write(f"- IOU阈值: {getattr(self, 'iou_threshold', 'None')}")
                 
-                # 设置视频保存路径，使用当前时间作为文件名后缀
-                current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-                file_name = os.path.join(self.output_path, "/video/", f"{input_type}_{current_time}.avi")
-                d_file_name = os.path.dirname(file_name)
-                if not os.path.exists(d_file_name):
-                    os.makedirs(d_file_name)
-                video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+                st.write("### 类别设置")
+                st.write(f"- 可用类别(中文): {getattr(self, 'available_classes', [])}")
+                st.write(f"- 选择的类别(英文): {getattr(self, 'selected_classes', [])}")
+                
+                if hasattr(self, 'model') and hasattr(self.model, 'names'):
+                    st.write(f"- 模型类别: {self.model.names}")
+                    
+                if hasattr(self, 'cls_name'):
+                    st.write(f"- 类别映射: {self.cls_name}")
+                    
+                st.write("### 颜色设置")
+                st.write(f"- 颜色列表长度: {len(getattr(self, 'colors', []))}")
+                if hasattr(self, 'colors') and len(self.colors) > 0:
+                    st.write(f"- 前3个颜色: {self.colors[:3]}")
 
-                if not video_out.isOpened():
-                    st.error("无法打开视频输出流，请检查路径或文件权限！")
-                    return
-
-            if self.enable_rtsp_output:
-                # 设置RTSP/RTMP输出流
-                stream_out = cv2.VideoWriter(self.rtsp_output_url, cv2.VideoWriter_fourcc(*'H264'), fps, size)
-
-                if not stream_out.isOpened():
-                    st.error("无法打开RTSP/RTMP输出流，请检查服务器配置！")
-                    return
-
-            while cap.isOpened() and not self.close_flag:
-                ret, frame = cap.read()
-                if ret:
-                    # 去畸变
-                    if self.undistortion_method == "相机参数计算":
-                        frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
-                    elif self.undistortion_method == "手动调整参数":
-                        frame = auto_undistort_image(frame, self.image_k1)
-
-                    # 梯形校正
-                    if self.enable_rotate_correction:
-                        frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
-
-                    if self.enable_auto_keystone_correction:
-                        frame = auto_keystone_correction(frame, scale_factor=self.scale_factor_keystone)
-
-                    if self.enable_background_fill:
-                        frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor_fill)
-
-                    # 图像增强
-                    if self.image_enhancement_method == "CLAHE":
-                        frame = enhance_texture(frame, method="clahe")
-                    elif self.image_enhancement_method == "Histogram Equalization":
-                        frame = enhance_texture(frame, method="histogram_equalization")
-
-                    # 调节摄像头的分辨率
-                    # 调整图像尺寸
-                    frame = cv2.resize(frame, (self.new_width, self.new_height))
-
-                    # 检查图像是否为黑白图像
-                    is_bw = is_black_and_white(frame)
-                    # 如果启用了伪彩色转换，应用转换
-                    if self.enable_pseudo_color and is_bw:
-                        frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
-
-                    framecopy = frame.copy()
-                    image, detInfo, _ = self.frame_process(framecopy, input_type)
-
-                    # 更新检测结果并存储到 st.session_state
-                    st.session_state['current_frame_count'] = current_frame
-                    st.session_state['current_fps'] = self.FPS
-                    st.session_state['current_target_count'] = len(detInfo)
-                    st.session_state['current_detection_time'] = self.detection_time
-
-                    # 更新检测结果
-                    self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
-                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
-                    self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
-                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
-
-                    # 保存目标结果图片
-                    if detInfo:
-                        file_name = abs_path(self.output_path + '/image/' + str(current_frame + 1) + '.jpg', path_type="current")
-                        save_chinese_image(file_name, image)
-
-                    if self.enable_video_output:
-                        # 保存目标结果视频
-                        video_out.write(image)
-
-                    if self.enable_rtsp_output:
-                        # 保存RTSP/RTMP输出流
-                        stream_out.write(image)
-
-                    # 调整图像尺寸
-                    resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                    resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
-                    if self.display_mode == "叠加显示":
-                        self.image_placeholder.image(resized_image, channels="BGR", caption="识别画面")
-                    else:
-                        self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面")
-                        self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面")
-
-                    self.logTable.add_frames(image, detInfo, frame, input_type + f"_{current_frame}")
-
-                    # 更新进度条
-                    progress_percentage = int((current_frame / total_frames) * 100)
-                    self.progress_bar.progress(progress_percentage)
-                    current_frame = (current_frame + 1) % total_frames  # 重置进度条
+    def debug_display_state(self):
+        """
+        调试显示状态，输出当前图像和检测结果的状态信息
+        """
+        if self.from_streamlit:
+            with st.expander("🔧 显示状态调试", expanded=False):
+                st.write("### Session State 图像数据")
+                st.write(f"- saved_images_ini 数量: {len(st.session_state.get('saved_images_ini', []))}")
+                st.write(f"- saved_images 数量: {len(st.session_state.get('saved_images', []))}")
+                st.write(f"- saved_names 数量: {len(st.session_state.get('saved_names', []))}")
+                st.write(f"- 当前图片索引: {st.session_state.get('image_play_index', 'None')}")
+                
+                st.write("### LogTable 图像数据")
+                if hasattr(self, 'logTable'):
+                    st.write(f"- logTable.saved_images_ini 数量: {len(getattr(self.logTable, 'saved_images_ini', []))}")
+                    st.write(f"- logTable.saved_images 数量: {len(getattr(self.logTable, 'saved_images', []))}")
+                    st.write(f"- logTable.saved_names 数量: {len(getattr(self.logTable, 'saved_names', []))}")
                 else:
-                    break
+                    st.write("- logTable: 未初始化")
+                    
+                st.write("### 显示模式")
+                st.write(f"- 显示模式: {getattr(self, 'display_mode', 'None')}")
+                st.write(f"- 选择的目标: {st.session_state.get('selectbox_target', 'None')}")
 
-            self.logTable.update_table(self.log_table_placeholder)
-        finally:
-            cap.release()
-            if self.enable_video_output:
-                video_out.release()
-            if self.enable_rtsp_output:
-                stream_out.release()
-            if self.uploaded_video is None:
-                name_in = None
-            else:
-                name_in = self.uploaded_video.name
+    # ...existing code...
 
-            res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
-            if res:
-                st.write(f"结果的目标文件已经保存：{res}")
+    # 🚀 性能优化方法
+    def manage_cache_size(self, cache_dict):
+        """管理缓存大小，避免内存泄漏"""
+        if len(cache_dict) > self.max_cache_size:
+            # 删除最旧的缓存条目
+            oldest_key = next(iter(cache_dict))
+            del cache_dict[oldest_key]
 
-    def _process_image_input(self):
-        """
-        处理上传的图片文件。
-        """
-        # 如果上传了图片文件
-        if self.uploaded_file:
-            # output/image/xxx.jpg
+    def get_image_hash(self, image_data):
+        """生成图像数据的哈希值用作缓存键"""
+        if isinstance(image_data, bytes):
+            return hashlib.md5(image_data).hexdigest()
+        elif hasattr(image_data, 'read'):
+            # 对于文件对象
+            current_pos = image_data.tell()
+            image_data.seek(0)
+            hash_val = hashlib.md5(image_data.read()).hexdigest()
+            image_data.seek(current_pos)
+            return hash_val
+        return None
 
-            self.logTable.clear_frames()
-            self.progress_bar.progress(0)
+    def cached_image_decode(self, image_data):
+        """缓存图像解码操作"""
+        cache_key = self.get_image_hash(image_data)
+        if cache_key and cache_key in self.image_cache:
+            return self.image_cache[cache_key].copy()
+        
+        # 解码图像
+        if isinstance(image_data, bytes):
+            file_bytes = np.asarray(bytearray(image_data), dtype=np.uint8)
+        else:
+            file_bytes = np.asarray(bytearray(image_data.read()), dtype=np.uint8)
+        
+        image = cv2.imdecode(file_bytes, 1)
+        
+        # 缓存结果
+        if cache_key:
+            self.manage_cache_size(self.image_cache)
+            self.image_cache[cache_key] = image.copy()
+        
+        return image
 
-            # 检查是否上传了多个文件
-            if isinstance(self.uploaded_file, list):
-                # 批量处理上传的图片
-                for idx, uploaded_file in enumerate(self.uploaded_file):
-                    # 处理每个上传的图片文件
+    def optimized_image_resize(self, image, target_width=None, target_height=None):
+        """优化的图像调整大小"""
+        if target_width is None:
+            target_width = self.display_width
+        if target_height is None:
+            target_height = self.display_height
+            
+        # 如果图像已经是目标尺寸，直接返回
+        if image.shape[1] == target_width and image.shape[0] == target_height:
+            return image
+        
+        return cv2.resize(image, (target_width, target_height))
+
+    def batch_process_images(self, uploaded_files):
+        """批量处理图像（异步）"""
+        def process_single_image(uploaded_file):
+            try:
+                # 读取图片数据
+                if hasattr(uploaded_file, 'read'):
+                    uploaded_file.seek(0)
                     source_img = uploaded_file.read()
-                    if not source_img:
-                        st.error(f"文件 {uploaded_file.name} 读取失败或为空！")
-                        continue
-                    file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
-                    image_ini = cv2.imdecode(file_bytes, 1)
-                    # 去畸变
-                    if self.undistortion_method == "相机参数计算":
-                        image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
-                    elif self.undistortion_method == "手动调整参数":
-                        image_ini = auto_undistort_image(image_ini, self.image_k1)
-
-                    # 梯形校正
-                    if self.enable_rotate_correction:
-                        image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
-
-                    if self.enable_auto_keystone_correction:
-                        image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor_keystone)
-
-                    if self.enable_background_fill:
-                        image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor_fill)
-
-                    # 图像增强
-                    if self.image_enhancement_method == "CLAHE":
-                        image_ini = enhance_texture(image_ini, method="clahe")
-                    elif self.image_enhancement_method == "Histogram Equalization":
-                        image_ini = enhance_texture(image_ini, method="histogram_equalization")
-
-                    # 检查图像是否为黑白图像
-                    is_bw = is_black_and_white(image_ini)
-                    # 如果启用了伪彩色转换，应用转换
-                    if self.enable_pseudo_color and is_bw:
-                        image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
-
-                    framecopy = image_ini.copy()
-                    image, detInfo, select_info = self.frame_process(framecopy, uploaded_file.name)
-                    save_chinese_image(self.output_path + '/image/' + uploaded_file.name, image)
-
-                    # 更新检测结果并存储到 st.session_state
-                    st.session_state['current_frame_count'] = idx + 1
-                    st.session_state['current_fps'] = 0
-                    st.session_state['current_target_count'] = len(detInfo)
-                    st.session_state['current_detection_time'] = self.detection_time
-
-                    # 更新检测结果
-                    self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
-                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
-                    self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
-                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
-
-                    # 调整图像尺寸
-                    resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                    resized_frame = cv2.resize(image_ini, (self.new_width, self.new_height))
-                    if self.display_mode == "叠加显示":
-                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_file.name}")
-                    else:
-                        self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {uploaded_file.name}")
-                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_file.name}")
-
-                    self.logTable.add_frames(image, detInfo, image_ini, uploaded_file.name)
-                    # 更新进度条
-                    progress_percentage = int(((idx + 1) / len(self.uploaded_file)) * 100)
-                    self.progress_bar.progress(progress_percentage)
-
-                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
-                st.session_state['saved_images'] = self.logTable.saved_images
-                st.session_state['saved_names'] = self.logTable.saved_names
-                st.success("批量图片检测完成！")
-
-            else:
-                # 单个文件处理
-                source_img = self.uploaded_file.read()
-                if not source_img:
-                    st.error(f"文件 {self.uploaded_file.name} 读取失败或为空！")
-                    return
+                    file_name = uploaded_file.name
+                else:
+                    # 处理 LocalFileObj
+                    with open(uploaded_file.name, 'rb') as f:
+                        source_img = f.read()
+                    file_name = os.path.basename(uploaded_file.name)
+                
+                # 解码图片
                 file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                 image_ini = cv2.imdecode(file_bytes, 1)
-                # 去畸变
-                if self.undistortion_method == "相机参数计算":
-                    image_ini = camera_undistortion(image_ini, self.camera_matrix, self.dist_coeffs)
-                elif self.undistortion_method == "手动调整参数":
-                    image_ini = auto_undistort_image(image_ini, self.image_k1)
-
-                # 梯形校正
-                if self.enable_rotate_correction:
-                    image_ini = rotate_image(image_ini, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
-
-                if self.enable_auto_keystone_correction:
-                    image_ini = auto_keystone_correction(image_ini, scale_factor=self.scale_factor_keystone)
-
-                if self.enable_background_fill:
-                    image_ini = fill_largest_polygon_white(image_ini, scale_factor=self.scale_factor_fill)
-
-                # 图像增强
-                if self.image_enhancement_method == "CLAHE":
-                    image_ini = enhance_texture(image_ini, method="clahe")
-                elif self.image_enhancement_method == "Histogram Equalization":
-                    image_ini = enhance_texture(image_ini, method="histogram_equalization")
-
-                # 检查图像是否为黑白图像
-                is_bw = is_black_and_white(image_ini)
-                # 如果启用了伪彩色转换，应用转换
-                if self.enable_pseudo_color and is_bw:
-                    image_ini = convert_to_pseudo_colorizer(image_ini, contrast=self.image_contrast, brightness=self.image_brightness)
-
-                framecopy = image_ini.copy()
-                image, detInfo, select_info = self.frame_process(framecopy, self.uploaded_file.name)
-                save_chinese_image(self.output_path + '/image/' + self.uploaded_file.name, image)
-
-                # 更新检测结果并存储到 st.session_state
-                st.session_state['current_frame_count'] = 0
-                st.session_state['current_fps'] = 0
-                st.session_state['current_target_count'] = len(detInfo)
-                st.session_state['current_detection_time'] = self.detection_time
-
-                # 更新检测结果
-                self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
-                self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
-                self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
-                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
-
-                # 调整图像尺寸
-                resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                resized_frame = cv2.resize(image_ini, (self.new_width, self.new_height))
-                if self.display_mode == "叠加显示":
-                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_file.name}")
-                else:
-                    self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {self.uploaded_file.name}")
-                    self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_file.name}")
-
-                self.logTable.add_frames(image, detInfo, image_ini, self.uploaded_file.name)
-                self.progress_bar.progress(100)
-
-                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
-                st.session_state['saved_images'] = self.logTable.saved_images
-                st.session_state['saved_names'] = self.logTable.saved_names
-                st.success("单张图片检测完成！")
-
-            self.selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", select_info)
-
-            self.logTable.update_table(self.log_table_placeholder)  # 更新所有结果记录的表格
-        else:
-            st.warning("请上传图片文件！")
-
-    def _process_video_input(self):
-        """
-        处理上传的视频文件。
-        """
-        if self.uploaded_video:
-            # output/video_name/video/xxx.avi
-
-            # 处理上传的视频
-            self.logTable.clear_frames()
-            self.progress_bar.progress(0)
-
-            self.close_flag = self.close_placeholder.button(label="停止")
-
-            # 检查是否上传了多个视频文件
-            if isinstance(self.uploaded_video, list):
-                for idx, uploaded_video in enumerate(self.uploaded_video):
-                    # 处理每个上传的视频文件
-                    video_file = uploaded_video
-                    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
-                    try:
-                        tfile.write(video_file.read())
-                        tfile.flush()
-
-                        tfile.seek(0)  # 确保文件指针回到文件开头
-
-                        cap = cv2.VideoCapture(tfile.name)
-                        if not cap.isOpened():
-                            st.error(f"无法打开视频文件: {uploaded_video.name}")
-                            continue  # Skip to the next file
-
-                        # 获取视频总帧数和帧率
-                        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                        fps = cap.get(cv2.CAP_PROP_FPS)
-                        self.FPS = fps
-                        total_length = total_frames / fps if fps > 0 else 0
-                        print(f'视频时长：{total_length:.2f}s')
-                        self.progress_bar.progress(0)
-
-                        current_frame = 0
-
-                        # 创建保存文件的信息
-                        video_savepath = self.output_path + '/' + uploaded_video.name
-                        if not os.path.exists(video_savepath):
-                            os.makedirs(video_savepath)
-
-                        if self.enable_video_output:
-                            ret, frame = cap.read()
-                            height, width, layers = frame.shape
-                            size = (width, height)
-                            file_name = abs_path(video_savepath + '/video/' + uploaded_video.name + '.avi', path_type="current")
-                            video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
-
-                        while cap.isOpened() and not self.close_flag:
-                            ret, frame = cap.read()
-                            if ret:
-                                # 去畸变
-                                if self.undistortion_method == "相机参数计算":
-                                    frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
-                                elif self.undistortion_method == "手动调整参数":
-                                    frame = auto_undistort_image(frame, self.image_k1)
-                                # 梯形校正
-                                if self.enable_rotate_correction:
-                                    frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
-
-                                if self.enable_auto_keystone_correction:
-                                    frame = auto_keystone_correction(frame, scale_factor=self.scale_factor_keystone)
-
-                                if self.enable_background_fill:
-                                    frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor_fill)
-
-                                # 图像增强
-                                if self.image_enhancement_method == "CLAHE":
-                                    frame = enhance_texture(frame, method="clahe")
-                                elif self.image_enhancement_method == "Histogram Equalization":
-                                    frame = enhance_texture(frame, method="histogram_equalization")
-
-                                # 检查是否为黑白图像
-                                is_bw = is_black_and_white(frame)
-                                # 如果启用了伪彩色转换，应用转换
-                                if self.enable_pseudo_color and is_bw:
-                                    frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
-
-                                framecopy = frame.copy()
-                                current_time = current_frame / fps
-                                if current_time < total_length:
-                                    current_frame += 1
-                                    current_time_str = format_time(current_time)
-                                    image, detInfo, _ = self.frame_process(framecopy, uploaded_video.name, video_time=current_time_str)
-
-                                    # 更新检测结果并存储到 st.session_state
-                                    st.session_state['current_frame_count'] = current_frame
-                                    st.session_state['current_fps'] = self.FPS
-                                    st.session_state['current_target_count'] = len(detInfo)
-                                    st.session_state['current_detection_time'] = self.detection_time
-
-                                    # 更新检测结果
-                                    self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
-                                    self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
-                                    self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
-                                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
-
-                                    if detInfo:
-                                        time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
-                                        formatted_time = time_obj.strftime("%H_%M_%S")
-                                        file_name = abs_path(video_savepath + '/image/' + formatted_time + '_' + str(current_frame) + '.jpg', path_type="current")
-                                        save_chinese_image(file_name, image)
-
-                                    if self.enable_video_output:
-                                        video_out.write(image)
-
-                                    # 调整图像尺寸
-                                    resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                                    resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
-                                    if self.display_mode == "叠加显示":
-                                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_video.name}")
-                                    else:
-                                        self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {uploaded_video.name}")
-                                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {uploaded_video.name}")
-
-                                    self.logTable.add_frames(image, detInfo, frame, uploaded_video.name + f"_{current_frame}")
-
-                                    # 更新进度条
-                                    progress_percentage = int(((current_frame + 1) / total_frames) * 100)
-                                    self.progress_bar.progress(progress_percentage)
-
-                                    current_frame += 1
-                            else:
-                                break
-
-                        self.logTable.update_table(self.log_table_placeholder)
-                    finally:
-                        cap.release()
-                        if self.enable_video_output:
-                            video_out.release()
-
-                        if self.uploaded_video is None:
-                            name_in = None
-                        else:
-                            name_in = uploaded_video.name
-
-                        res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
-                        if res:
-                            st.write(f"结果的目标文件已经保存：{res}")
-
-                        tfile.close()
-                        # 如果不需要再保留临时文件，可以在处理完后删除
-                        print(f'{tfile.name} 临时文件可以删除')
-                        # os.remove(tfile.name)
-
-                    # 更新进度条
-                    batch_progress = int(((idx + 1) / len(self.uploaded_video)) * 100)
-                    self.progress_bar.progress(batch_progress)
-
-                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
-                st.session_state['saved_images'] = self.logTable.saved_images
-                st.session_state['saved_names'] = self.logTable.saved_names
-                st.success("批量视频检测完成！")
-            else:
-                video_file = self.uploaded_video
-                tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+                
+                if image_ini is None:
+                    return {
+                        'name': file_name,
+                        'error': '无法解码图片',
+                        'status': 'error'
+                    }
+                
+                # 应用图像处理
+                processed_image = self.apply_image_processing(image_ini)
+                
+                # 进行检测
+                framecopy = processed_image.copy()
+                image, detInfo, select_info = self.frame_process(framecopy, file_name)
+                
+                # 保存结果
+                save_chinese_image(self.output_path + '/image/' + file_name, image)
+                
+                return {
+                    'name': file_name,
+                    'original': image,
+                    'processed': processed_image,
+                    'status': 'success'
+                }
+            except Exception as e:
+                return {
+                    'name': file_name if hasattr(uploaded_file, 'name') else 'unknown',
+                    'error': str(e),
+                    'status': 'error'
+                }
+        
+        # 使用线程池进行并行处理
+        if len(uploaded_files) > 1:
+            futures = [self.executor.submit(process_single_image, f) for f in uploaded_files]
+            results = []
+            for future in futures:
                 try:
-                    tfile.write(video_file.read())
-                    tfile.flush()
-
-                    tfile.seek(0)  # 确保文件指针回到文件开头
-
-                    cap = cv2.VideoCapture(tfile.name)
-
-                    if not cap.isOpened():
-                        st.error(f"无法打开视频文件: {uploaded_video.name}")
-                        return
-
-                    # 获取视频总帧数和帧率
-                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    fps = cap.get(cv2.CAP_PROP_FPS)
-                    self.FPS = fps
-                    # 计算视频总长度（秒）
-                    total_length = total_frames / fps if fps > 0 else 0
-                    print('视频时长：' + str(total_length)[:4] + 's')
-                    # 创建进度条
-                    self.progress_bar.progress(0)
-
-                    current_frame = 0
-
-                    # 创建保存文件的信息
-                    video_savepath = self.output_path + '/' + self.uploaded_video.name
-                    if not os.path.exists(video_savepath):
-                        os.makedirs(video_savepath)
-
-                    if self.enable_video_output:
-                        ret, frame = cap.read()
-                        height, width, layers = frame.shape
-                        size = (width, height)
-                        file_name = abs_path(video_savepath + '/video/' + self.uploaded_video.name + '.avi', path_type="current")
-                        video_out = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
-
-                    while cap.isOpened() and not self.close_flag:
-                        ret, frame = cap.read()
-                        if ret:
-                            # 去畸变
-                            if self.undistortion_method == "相机参数计算":
-                                frame = camera_undistortion(frame, self.camera_matrix, self.dist_coeffs)
-                            elif self.undistortion_method == "手动调整参数":
-                                frame = auto_undistort_image(frame, self.image_k1)
-
-                            # 梯形校正
-                            if self.enable_rotate_correction:
-                                frame = rotate_image(frame, angle_x=self.rot_angle_x, angle_y=self.rot_angle_y, zoom_factor=self.keystone_scale)
-
-                            if self.enable_auto_keystone_correction:
-                                frame = auto_keystone_correction(frame, scale_factor=self.scale_factor_keystone)
-
-                            if self.enable_background_fill:
-                                frame = fill_largest_polygon_white(frame, scale_factor=self.scale_factor_fill)
-
-                            if self.image_enhancement_method == "CLAHE":
-                                frame = enhance_texture(frame, method="clahe")
-                            elif self.image_enhancement_method == "Histogram Equalization":
-                                frame = enhance_texture(frame, method="histogram_equalization")
-
-                            # 检查是否为黑白图像
-                            is_bw = is_black_and_white(frame)
-                            # 如果启用了伪彩色转换，应用转换
-                            if self.enable_pseudo_color and is_bw:
-                                frame = convert_to_pseudo_colorizer(frame, contrast=self.image_contrast, brightness=self.image_brightness)
-
-                            framecopy = frame.copy()
-                            # 计算当前帧对应的时间（秒）
-                            current_time = current_frame / fps
-                            if current_time < total_length:
-                                current_frame += 1
-                                current_time_str = format_time(current_time)
-                                image, detInfo, _ = self.frame_process(framecopy, self.uploaded_video.name, video_time=current_time_str)
-
-                                # 更新检测结果并存储到 st.session_state
-                                st.session_state['current_frame_count'] = current_frame
-                                st.session_state['current_fps'] = self.FPS
-                                st.session_state['current_target_count'] = len(detInfo)
-                                st.session_state['current_detection_time'] = self.detection_time
-
-                                # 更新检测结果
-                                self.frame_count_placeholder.metric("📸 当前帧数", st.session_state['current_frame_count'])
-                                self.fps_placeholder.metric("⚡ 当前帧率 (FPS)", st.session_state['current_fps'])
-                                self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
-                                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
-
-                                # 保存目标结果图片
-                                if detInfo:
-                                    # 将字符串转换为 datetime 对象
-                                    time_obj = datetime.strptime(current_time_str, "%H:%M:%S")
-
-                                    # 将 datetime 对象格式化为所需的字符串格式
-                                    formatted_time = time_obj.strftime("%H_%M_%S")
-                                    file_name = abs_path(video_savepath + '/image/' + formatted_time  + '_' + str(current_frame) + '.jpg',
-                                                        path_type="current")
-                                    save_chinese_image(file_name, image)
-
-                                if self.enable_video_output:
-                                    # 保存目标结果视频
-                                    video_out.write(image)
-
-                                # 调整图像尺寸
-                                resized_image = cv2.resize(image, (self.new_width, self.new_height))
-                                resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
-                                if self.display_mode == "叠加显示":
-                                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_video.name}")
-                                else:
-                                    self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {self.uploaded_video.name}")
-                                    self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_video.name}")
-
-                                self.logTable.add_frames(image, detInfo, frame, self.uploaded_video.name + f"_{current_frame}")
-
-                                # 更新进度条
-                                if total_length > 0:
-                                    progress_percentage = int(((current_frame + 1) / total_frames) * 100)
-                                    self.progress_bar.progress(progress_percentage)
-
-                                current_frame += 1
-                        else:
-                            break
-
-                    self.logTable.update_table(self.log_table_placeholder)
-                finally:
-                    cap.release()
-                    if self.enable_video_output:
-                        video_out.release()
-
-                    if self.uploaded_video is None:
-                        name_in = None
-                    else:
-                        name_in = self.uploaded_video.name
-
-                    res = self.logTable.save_frames_file(fps=self.FPS, video_name=name_in, output_path=self.output_path + '/frame/')
-                    if res:
-                        st.write(f"结果的目标文件已经保存：{res}")
-
-                    tfile.close()
-                    # 如果不需要再保留临时文件，可以在处理完后删除
-                    print(tfile.name + ' 临时文件可以删除')
-                    # os.remove(tfile.name)
-
-                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini
-                st.session_state['saved_images'] = self.logTable.saved_images
-                st.session_state['saved_names'] = self.logTable.saved_names
-                st.success("单个视频检测完成！")
+                    result = future.result(timeout=30)  # 30秒超时
+                    results.append(result)
+                except Exception as e:
+                    results.append({'error': str(e), 'status': 'timeout'})
+            return results
         else:
-            st.warning("请上传视频文件！")
+            # 单个文件直接处理
+            return [process_single_image(uploaded_files[0])]
+
+    def apply_image_processing(self, image):
+        """应用图像处理流水线"""
+        processed = image.copy()
+        
+        # 去畸变
+        if hasattr(self, 'undistortion_method'):
+            if self.undistortion_method == "相机参数计算" and hasattr(self, 'camera_matrix'):
+                if self.camera_matrix is not None and self.dist_coeffs is not None:
+                    processed = camera_undistortion(processed, self.camera_matrix, self.dist_coeffs)
+            elif self.undistortion_method == "手动调整参数" and hasattr(self, 'image_k1'):
+                processed = auto_undistort_image(processed, self.image_k1)
+
+        # 梯形校正
+        if hasattr(self, 'enable_rotate_correction') and self.enable_rotate_correction:
+            processed = rotate_image(
+                processed, 
+                angle_x=getattr(self, 'rot_angle_x', 0),
+                angle_y=getattr(self, 'rot_angle_y', 0), 
+                zoom_factor=getattr(self, 'keystone_scale', 1.0)
+            )
+
+        if hasattr(self, 'enable_auto_keystone_correction') and self.enable_auto_keystone_correction:
+            processed = auto_keystone_correction(processed, scale_factor=getattr(self, 'scale_factor_keystone', 1.0))
+
+        if hasattr(self, 'enable_background_fill') and self.enable_background_fill:
+            processed = fill_largest_polygon_white(processed, scale_factor=getattr(self, 'scale_factor_fill', 1.0))
+
+        # 图像增强
+        if hasattr(self, 'image_enhancement_method'):
+            if self.image_enhancement_method == "CLAHE":
+                processed = enhance_texture(processed, method="clahe")
+            elif self.image_enhancement_method == "Histogram Equalization":
+                processed = enhance_texture(processed, method="histogram_equalization")
+
+        # 伪彩色处理
+        if hasattr(self, 'enable_pseudo_color') and self.enable_pseudo_color:
+            if is_black_and_white(processed):
+                processed = convert_to_pseudo_colorizer(
+                    processed,
+                    contrast=getattr(self, 'image_contrast', 1.0),
+                    brightness=getattr(self, 'image_brightness', 0)
+                )
+
+        return processed
 
     def toggle_comboBox(self, frame_id):
         """
-        处理并显示指定帧的检测结果。
+        🚀 优化版本：处理并显示指定帧的检测结果。
 
         Args:
             frame_id (int): 指定要显示检测结果的帧ID。
 
         根据用户选择的目标过滤选项，显示该帧的检测结果和图像。
         """
+        # 优先使用session state中的数据，确保数据一致性
+        saved_images_ini = st.session_state.get('saved_images_ini', [])
+        saved_images = st.session_state.get('saved_images', [])
+        saved_results = getattr(self.logTable, 'saved_results', [])
+        saved_names = st.session_state.get('saved_names', [])
+        
+        # 如果session state为空但logTable有数据，同步数据
+        if not saved_images_ini and hasattr(self.logTable, 'saved_images_ini') and self.logTable.saved_images_ini:
+            saved_images_ini = self.logTable.saved_images_ini
+            saved_images = getattr(self.logTable, 'saved_images', [])
+            saved_names = getattr(self.logTable, 'saved_names', [])
+            # 同步到session state
+            st.session_state['saved_images_ini'] = saved_images_ini
+            st.session_state['saved_images'] = saved_images
+            st.session_state['saved_names'] = saved_names
+        
         if frame_id == -1:  # 显示所有目标
-            if not self.logTable.saved_images_ini:
+            if not saved_images_ini:
                 st.warning("没有检测结果可显示！")
-                self.image_placeholder.image(load_default_image(), caption="原始画面")
-                self.table_placeholder.table(pd.DataFrame(columns=["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)"]))
+                if hasattr(self, 'image_placeholder'):
+                    self.image_placeholder.image(load_default_image(), caption="原始画面")
+                if hasattr(self, 'table_placeholder'):
+                    self.table_placeholder.table(pd.DataFrame(columns=["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)"]))
                 return
             frame_id = 0  # 默认显示第一帧
 
-        if len(self.logTable.saved_results) > frame_id:
-            frame = self.logTable.saved_images_ini[frame_id]  # 获取指定帧的初始图像
-            image = frame.copy()  # 创建图像副本以避免修改原始图像
+        if frame_id >= len(saved_images_ini) or frame_id >= len(saved_results):
+            st.warning(f"帧ID {frame_id} 超出范围！当前有 {len(saved_images_ini)} 张图片")
+            return
 
-            detection_results = self.logTable.saved_results[frame_id]  # 获取指定帧的所有检测结果
-            disp_res = ResultLogger()  # 创建结果记录器
+        # 获取当前选中的目标过滤选项
+        selected_target = st.session_state.get('selectbox_target', "全部目标")
 
-            # 获取当前选中的目标过滤选项
-            selected_target = st.session_state.get('selectbox_target', "全部目标")
+        # 🚀 性能优化：缓存图像调整大小的结果
+        cache_key = f"frame_{frame_id}_{self.display_width}_{self.display_height}_{selected_target}"
+        
+        frame = saved_images_ini[frame_id]  # 获取指定帧的初始图像
+        
+        # 强制重新绘制检测框，避免缓存导致的显示问题
+        # 创建图像副本并调整大小
+        image = frame.copy()
+        detection_results = self.logTable.saved_results[frame_id]
+        
+        # 获取当前选中的目标过滤选项
+        selected_target = st.session_state.get('selectbox_target', "全部目标")
 
-            if detection_results:
-                cnt = 0  # 用于绘制检测框的计数器
-                for detInfo in detection_results:  # 遍历当前帧的所有检测结果
-                    if isinstance(detInfo, list) and len(detInfo) == 6:  # 验证结构
-                        name, chinese_name, bbox, conf, use_time, cls_id = detInfo
+        # 确保检测框正确绘制
+        if detection_results:
+            cnt = 0
+            for detInfo in detection_results:
+                if isinstance(detInfo, list) and len(detInfo) == 6:
+                    name, chinese_name, bbox, conf, use_time, cls_id = detInfo
 
-                        # Ensure cls_id is within bounds
-                        if cls_id >= len(self.colors):
-                            st.warning(f"⚠️ 警告: 检测到的类别索引 {cls_id} 超出颜色列表范围！使用默认颜色。")
-                            color = (255, 0, 0)  # 默认红色
-                        else:
-                            color = self.colors[cls_id]
-
-                        # 如果选择了目标过滤，跳过不匹配的目标
-                        if selected_target != "全部目标" and selected_target != chinese_name:
-                            continue
-
-                        # label = '%s %.0f%%' % (name, conf * 100)  # 构造标签文本
-
-                        # 合并结果到表格
-                        disp_res.concat_results(name, chinese_name, bbox, str(round(conf, 2)), str(use_time))
-
-                        # 绘制检测框
-                        info = {
-                            'class_name': name,
-                            'bbox': bbox,
-                            'score': conf,
-                            'class_id': cls_id,
-                            'mask': None
-                        }
-                        image, _ = draw_detections(image, info, color=color, alpha=0.2, line_number=cnt)
-                        cnt += 1
-                    else:
+                    # 如果选择了目标过滤，跳过不匹配的目标
+                    if selected_target != "全部目标" and selected_target != chinese_name:
                         continue
 
-                # 在表格中显示过滤后的检测结果
+                    # 确保 cls_id 在范围内
+                    if cls_id < len(self.colors):
+                        color = self.colors[cls_id]
+                    else:
+                        color = (255, 0, 0)  # 默认红色
+
+                    # 确保矩形框绘制参数正确
+                    info = {
+                        'class_name': name,
+                        'bbox': bbox,
+                        'score': conf,
+                        'class_id': cls_id,
+                        'mask': None
+                    }
+                    # 使用更明显的参数来绘制检测框
+                    image, _ = draw_detections(
+                        image, info, 
+                        color=color, 
+                        alpha=0.3,  # 增加透明度使框更明显
+                        line_number=cnt,
+                        rectangle_bbox=getattr(self, 'rectangle_bounding_output', True)
+                    )
+                    cnt += 1
+
+        # 调整图像大小
+        if hasattr(self, 'optimized_image_resize'):
+            resized_image = self.optimized_image_resize(image, self.display_width, self.display_height)
+            resized_frame = self.optimized_image_resize(frame, self.display_width, self.display_height)
+        else:
+            resized_image = cv2.resize(image, (self.display_width, self.display_height))
+            resized_frame = cv2.resize(frame, (self.display_width, self.display_height))
+
+        # 🚀 性能优化：异步更新表格数据
+        detection_results = saved_results[frame_id] if frame_id < len(saved_results) else []
+        
+        if detection_results:
+            # 使用列表推导式提高性能
+            filtered_results = [
+                detInfo for detInfo in detection_results
+                if isinstance(detInfo, list) and len(detInfo) == 6 and
+                (selected_target == "全部目标" or selected_target == detInfo[1])
+            ]
+            
+            if filtered_results and hasattr(self, 'table_placeholder'):
+                disp_res = ResultLogger()
+                for detInfo in filtered_results:
+                    name, chinese_name, bbox, conf, use_time, cls_id = detInfo
+                    disp_res.concat_results(name, chinese_name, bbox, str(round(conf, 2)), str(use_time))
                 self.table_placeholder.table(disp_res.results_df)
             else:
-                # 如果没有检测结果，显示空表格
+                if hasattr(self, 'table_placeholder'):
+                    self.table_placeholder.table(pd.DataFrame(columns=["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)"]))
+        else:
+            if hasattr(self, 'table_placeholder'):
                 self.table_placeholder.table(pd.DataFrame(columns=["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)"]))
 
-            # 调整图像尺寸
-            resized_image = cv2.resize(image, (self.new_width, self.new_height))
-            resized_frame = cv2.resize(frame, (self.new_width, self.new_height))
+        # 获取图像名称
+        img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"Frame_{frame_id}"
 
-            img_name = self.logTable.saved_names[frame_id]  # 获取指定帧的图像名称
-
-            # 根据显示模式显示处理后的图像或原始图像
+        # 根据显示模式显示处理后的图像或原始图像
+        if hasattr(self, 'display_mode') and hasattr(self, 'image_placeholder'):
             if self.display_mode == "叠加显示":
                 self.image_placeholder.image(resized_image, channels="BGR", caption="识别画面: " + img_name)
             else:
                 self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面: " + img_name)
-                self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面: " + img_name)
+                if hasattr(self, 'image_placeholder_res'):
+                    self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面: " + img_name)
 
     def frame_process(self, image, file_name, video_time=None, is_api=False):
         """
@@ -1800,6 +1476,13 @@ class Detection_UI:
                 for idx, info in enumerate(det_info):
                     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
 
+                    # 显示检测到的类别和选择的类别
+                    if self.from_streamlit and idx == 0:  # 只在第一个检测对象时显示，避免刷屏
+                        st.sidebar.write(f"🔧 检测到类别: {name}")
+                        st.sidebar.write(f"🔧 选择的类别: {self.selected_classes}")
+                        st.sidebar.write(f"🔧 是否匹配: {name in self.selected_classes}")
+                        st.sidebar.write(f"🔧 矩形框输出: {self.rectangle_bounding_output}")
+
                     # Ensure cls_id is within bounds
                     if cls_id >= len(self.colors):
                         st.warning(f"⚠️ 警告: 检测到的类别索引 {cls_id} 超出颜色列表范围！使用默认颜色。")
@@ -1807,6 +1490,7 @@ class Detection_UI:
                     else:
                         color = self.colors[cls_id]
 
+                    # 🔧 确保类别匹配逻辑正确
                     if name in self.selected_classes:
                         # 绘制检测框、标签和面积信息
                         if not is_api:
@@ -1848,6 +1532,7 @@ class Detection_UI:
             caption (str): 显示的标题或说明。
         """
         # 显示画面并更新结果
+       
         self.image_placeholder.image(frame, channels="BGR", caption=caption)
 
         # 更新检测结果
@@ -1897,16 +1582,21 @@ class Detection_UI:
         # 在第一列设置显示模式的选择
         with col1:
             st.header("📷 视频/图片检测系统")
-            self.display_mode = st.radio("单/双画面显示设置", ["叠加显示", "对比显示"])
+            self.display_mode = st.radio("单/双画面显示", ["叠加显示", "对比显示"])
             self.image_placeholder = st.empty()
             self.image_placeholder_res = st.empty()
-            # 根据显示模式创建用于显示视频画面的空容器
+            # 根据显示模式创建用于显示视频画面的空容器，优化默认图像显示逻辑，避免覆盖检测结果
             if self.display_mode == "叠加显示":
-                if not self.logTable.saved_images_ini:
+                # 只在没有任何保存图像且没有session state中的图像时显示默认图像
+                if (not hasattr(self.logTable, 'saved_images_ini') or 
+                    not self.logTable.saved_images_ini) and \
+                   (not st.session_state.get('saved_images_ini')):
                     self.image_placeholder.image(load_default_image(), caption="原始画面")
             else:
                 # "双画面显示"
-                if not self.logTable.saved_images_ini:
+                if (not hasattr(self.logTable, 'saved_images_ini') or 
+                    not self.logTable.saved_images_ini) and \
+                   (not st.session_state.get('saved_images_ini')):
                     self.image_placeholder.image(load_default_image(), caption="原始画面")
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
             # 显示用的进度条
@@ -1923,14 +1613,49 @@ class Detection_UI:
 
             self.selectbox_placeholder = st.empty()
 
-            # 初始化目标过滤选项
+            # 初始化目标过滤选项 - 根据当前图片动态获取检测目标
             idx = st.session_state.get('image_play_index', 0)
-
-            detected_targets = st.session_state.get("select_info", ["全部目标"])
-            selectbox_target = self.selectbox_placeholder.selectbox("目标过滤", detected_targets, key='selectbox_target')
-            # 延迟执行 toggle_comboBox
+            
+            # 获取当前图片的检测目标（优先从session_state获取，然后从logTable获取）
+            saved_targets_info = st.session_state.get('saved_targets_info', [])
+            if not saved_targets_info and hasattr(self.logTable, 'saved_targets_info'):
+                saved_targets_info = self.logTable.saved_targets_info
+                # 同步到session_state
+                st.session_state['saved_targets_info'] = saved_targets_info
+            
+            if saved_targets_info and idx < len(saved_targets_info):
+                detected_targets = saved_targets_info[idx]
+            else:
+                detected_targets = st.session_state.get("select_info", ["全部目标"])
+            
+            # selectbox动态key，确保当目标列表变化时selectbox会刷新
+            selectbox_key = f"selectbox_target_{idx}_{hash(tuple(detected_targets))}"
+            
+            # 确保当前选中的目标在新的目标列表中，如果不在则重置为"全部目标"
+            current_selected = st.session_state.get('selectbox_target', "全部目标")
+            if current_selected not in detected_targets:
+                current_selected = "全部目标"
+                st.session_state['selectbox_target'] = current_selected
+            
+            # 获取当前选中目标在列表中的索引
+            try:
+                current_index = detected_targets.index(current_selected)
+            except ValueError:
+                current_index = 0
+                current_selected = detected_targets[0] if detected_targets else "全部目标"
+                st.session_state['selectbox_target'] = current_selected
+            
+            selectbox_target = self.selectbox_placeholder.selectbox(
+                "目标过滤", 
+                detected_targets, 
+                key=selectbox_key, 
+                index=current_index
+            )
+            
+            # 只在选项变化时同步并刷新显示
             if 'last_target' not in st.session_state or st.session_state['last_target'] != selectbox_target:
                 self.selectbox_target = selectbox_target
+                st.session_state['selectbox_target'] = selectbox_target
                 st.session_state['last_target'] = selectbox_target
                 self.toggle_comboBox(idx)
 
@@ -1970,30 +1695,74 @@ class Detection_UI:
             run_button = st.button("🚀 开始检测")
             self.close_placeholder = st.empty()
 
-            # ====== 新增：图片和视频切换显示功能 ======
-            # 优先显示图片切换
-            if hasattr(self.logTable, "saved_images_ini") and len(self.logTable.saved_images_ini) > 0:
-                total_imgs = len(st.session_state['saved_images_ini'])
-                if 'image_play_index' not in st.session_state or st.session_state['image_play_index'] >= total_imgs:
-                    st.session_state['image_play_index'] = total_imgs - 1
-
-                col_prev, col_next = st.columns([1, 1])
-                with col_prev:
-                    if st.button("⬅️ 上一张图片", key="prev_image"):
-                        if st.session_state['image_play_index'] > 0:
-                            st.session_state['image_play_index'] -= 1
-                with col_next:
-                    if st.button("下一张图片 ➡️", key="next_image"):
-                        if st.session_state['image_play_index'] < total_imgs - 1:
-                            st.session_state['image_play_index'] += 1
-
-                # 替换这里的显示和表格更新逻辑，统一调用 toggle_comboBox 处理
-                idx = st.session_state['image_play_index']
-                self.toggle_comboBox(idx)
-            else:
-                # 如果没有保存的图像，则显示默认图像
+        # 将切换按钮移到独立区域，并简化显示逻辑
+        st.markdown("---")
+        st.subheader("📸 图片浏览控制")
+        
+        # 检查是否有检测结果（优先检查session state，然后检查logTable）
+        saved_images_ini = st.session_state.get('saved_images_ini', [])
+        if not saved_images_ini and hasattr(self.logTable, 'saved_images_ini'):
+            saved_images_ini = self.logTable.saved_images_ini
+            # 同步到session state
+            st.session_state['saved_images_ini'] = saved_images_ini
+            st.session_state['saved_images'] = getattr(self.logTable, 'saved_images', [])
+            st.session_state['saved_names'] = getattr(self.logTable, 'saved_names', [])
+        
+        if len(saved_images_ini) > 0:
+            total_imgs = len(saved_images_ini)
+            st.info(f"共有 {total_imgs} 张检测结果图片")
+            
+            # 初始化或验证图片索引
+            if 'image_play_index' not in st.session_state:
+                st.session_state['image_play_index'] = 0
+            elif st.session_state['image_play_index'] >= total_imgs:
+                st.session_state['image_play_index'] = total_imgs - 1
+                
+            current_index = st.session_state['image_play_index']
+            
+            # 创建三列布局：[上一张] [当前信息] [下一张]
+            col_prev, col_info, col_next = st.columns([1, 2, 1])
+            
+            with col_prev:
+                if st.button("⬅️ 上一张", key="prev_btn", disabled=(current_index <= 0)):
+                    st.session_state['image_play_index'] = max(0, current_index - 1)
+                    st.rerun()
+            
+            with col_info:
+                st.write(f"**第 {current_index + 1} / {total_imgs} 张图片**")
+                # 显示当前图片名称
+                if current_index < len(st.session_state.get('saved_names', [])):
+                    img_name = st.session_state['saved_names'][current_index]
+                    st.caption(f"文件名: {img_name}")
+            
+            with col_next:
+                if st.button("下一张 ➡️", key="next_btn", disabled=(current_index >= total_imgs - 1)):
+                    st.session_state['image_play_index'] = min(total_imgs - 1, current_index + 1)
+                    st.rerun()
+            
+            # 添加滑块控制
+            new_index = st.slider(
+                "选择图片", 
+                min_value=0, 
+                max_value=total_imgs - 1, 
+                value=current_index,
+                key="image_slider"
+            )
+            
+            # 如果滑块值改变，更新索引
+            if new_index != current_index:
+                st.session_state['image_play_index'] = new_index
+                st.rerun()
+            
+            # 显示检测结果
+            self.toggle_comboBox(st.session_state['image_play_index'])
+            
+        else:
+            st.info("暂无检测结果，请先上传图片并开始检测")
+            # 显示默认图像
+            if hasattr(self, 'image_placeholder'):
                 self.image_placeholder.image(load_default_image(), caption="原始画面")
-                if self.display_mode == "对比显示" and self.image_placeholder_res:
+                if self.display_mode == "对比显示" and hasattr(self, 'image_placeholder_res'):
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
 
         st.header("📊 实时监控仪表盘")
@@ -2013,11 +1782,469 @@ class Detection_UI:
         self.target_count_placeholder.metric("🎯 检测目标数量", st.session_state['current_target_count'])
         self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", st.session_state['current_detection_time'])
 
+        # 🔧 添加调试信息
+        self.debug_display_state()
+
         if run_button:
             self.process_camera_or_file()  # 运行摄像头或文件处理
-            st.rerun()  # 重新运行以更新界面
+            st.rerun()
 
-# 实例化并运行应用
-if __name__ == "__main__":
-    app = Detection_UI(from_streamlit=True)
-    app.setupMainWindow()
+    def process_camera_or_file(self):
+        """
+        根据输入源类型处理不同的输入（摄像头、文件、RTSP流等）
+        """
+        try:
+            # 确保所有必需的属性都已初始化
+            self._ensure_initialization()
+            
+            if self.input_source == "图片文件" or self.input_source == "图片文件夹":
+                if self.uploaded_file:
+                    self._process_image_input()
+                else:
+                    st.warning("请先上传图片文件或选择图片文件夹！")
+                    
+            elif self.input_source == "视频文件" or self.input_source == "视频文件夹":
+                if hasattr(self, 'uploaded_video') and self.uploaded_video:
+                    self._process_video_input()
+                else:
+                    st.warning("请先上传视频文件或选择视频文件夹！")
+                    
+            elif self.input_source == "摄像头":
+                if self.selected_camera is not None:
+                    camera_id = int(self.selected_camera.split(':')[0]) if ':' in str(self.selected_camera) else int(self.selected_camera)
+                    self._process_camera_input(camera_id)
+                else:
+                    st.warning("请先选择摄像头！")
+                    
+            elif self.input_source == "RTSP/RTMP流":
+                if self.rtsp_input_url:
+                    self._process_rtsp_input(self.rtsp_input_url)
+                else:
+                    st.warning("请先输入RTSP/RTMP地址！")
+                    
+            else:
+                st.error(f"不支持的输入源类型: {self.input_source}")
+                
+        except Exception as e:
+            st.error(f"处理输入时发生错误: {str(e)}")
+
+    def _ensure_initialization(self):
+        """
+        确保所有必需的属性都已正确初始化
+        """
+        # 确保 logTable 存在
+        if not hasattr(self, 'logTable') or self.logTable is None:
+            if hasattr(st, 'session_state') and 'logTable' in st.session_state:
+                self.logTable = st.session_state['logTable']
+            else:
+                # 如果 saved_log_data 不存在，创建一个默认的
+                if not hasattr(self, 'saved_log_data'):
+                    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    self.saved_log_data = os.path.join(
+                        getattr(self, 'csv_output_path', abs_path("../output/logs/", path_type="current")),
+                        f"log_table_data_{current_time}.csv"
+                    )
+                
+                self.logTable = LogTable(self.saved_log_data)
+                if hasattr(st, 'session_state'):
+                    st.session_state['logTable'] = self.logTable
+        
+        # 确保 progress_bar 存在
+        if not hasattr(self, 'progress_bar') or self.progress_bar is None:
+            self.progress_bar = st.progress(0)
+        
+        # 确保 close_placeholder 存在
+        if not hasattr(self, 'close_placeholder') or self.close_placeholder is None:
+            self.close_placeholder = st.empty()
+        
+        # 确保显示相关属性存在
+        if not hasattr(self, 'display_width'):
+            self.display_width = 640
+        if not hasattr(self, 'display_height'):
+            self.display_height = 480
+
+    def _process_image_input(self):
+        """
+        处理图片输入
+        """
+        if not self.uploaded_file:
+            st.warning("请先上传图片文件！")
+            return
+            
+        self.logTable.clear_frames()
+        self.progress_bar.progress(0)
+
+        if isinstance(self.uploaded_file, list):
+            # 批量处理多张图片
+            st.info(f"开始处理 {len(self.uploaded_file)} 张图片...")
+            
+            for idx, uploaded_file in enumerate(self.uploaded_file):
+                try:
+                    # 读取图片数据
+                    if hasattr(uploaded_file, 'read'):
+                        uploaded_file.seek(0)
+                        source_img = uploaded_file.read()
+                        file_name = uploaded_file.name
+                    else:
+                        # 处理 LocalFileObj
+                        with open(uploaded_file.name, 'rb') as f:
+                            source_img = f.read()
+                        file_name = os.path.basename(uploaded_file.name)
+                    
+                    # 解码图片
+                    file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
+                    image_ini = cv2.imdecode(file_bytes, 1)
+                    
+                    if image_ini is None:
+                        st.error(f"无法解码图片: {file_name}")
+                        continue
+                    
+                    # 应用图像处理
+                    processed_image = self.apply_image_processing(image_ini)
+                    
+                    # 进行检测
+                    framecopy = processed_image.copy()
+                    image, detInfo, select_info = self.frame_process(framecopy, file_name)
+                    
+                    # 保存结果
+                    save_chinese_image(self.output_path + '/image/' + file_name, image)
+                    
+                    # 更新状态
+                    st.session_state['current_frame_count'] = idx + 1
+                    st.session_state['current_target_count'] = len(detInfo)
+                    st.session_state['current_detection_time'] = self.detection_time
+                    
+                    # 更新显示
+                    self.frame_count_placeholder.metric("📸 当前帧数", idx + 1)
+                    self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                    self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                    
+                    # 显示图片
+                    resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                    resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
+                    
+                    if self.display_mode == "叠加显示":
+                        self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {file_name}")
+                    else:
+                        self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {file_name}")
+                        if hasattr(self, 'image_placeholder_res'):
+                            self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {file_name}")
+                    
+                    # 添加到日志表
+                    self.logTable.add_frames(image, detInfo, processed_image, file_name)
+                    
+                    # 更新进度条
+                    progress = int(((idx + 1) / len(self.uploaded_file)) * 100)
+                    self.progress_bar.progress(progress)
+                    
+                except Exception as e:
+                    st.error(f"处理图片 {file_name if 'file_name' in locals() else '未知'} 时出错: {str(e)}")
+                    continue
+            
+            # 立即更新session state以确保UI同步
+            st.session_state['saved_images_ini'] = self.logTable.saved_images_ini.copy()
+            st.session_state['saved_images'] = self.logTable.saved_images.copy()
+            st.session_state['saved_names'] = self.logTable.saved_names.copy()
+            # 同步每张图片的目标信息
+            if hasattr(self.logTable, 'saved_targets_info'):
+                st.session_state['saved_targets_info'] = self.logTable.saved_targets_info.copy()
+            
+            # 确保索引重置为0以显示第一张图片
+            st.session_state['image_play_index'] = 0
+            
+            # 更新历史日志显示
+            if hasattr(self, 'log_table_placeholder'):
+                self.logTable.update_table(self.log_table_placeholder)
+            
+            st.success("批量图片检测完成！")
+            # 立即刷新页面，让selectbox自动更新
+            st.rerun()
+            
+        else:
+            # 单张图片处理
+            try:
+                source_img = self.uploaded_file.read()
+                file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
+                image_ini = cv2.imdecode(file_bytes, 1)
+                
+                if image_ini is None:
+                    st.error("无法解码图片文件！")
+                    return
+                
+                # 应用图像处理
+                processed_image = self.apply_image_processing(image_ini)
+                
+                # 进行检测
+                framecopy = processed_image.copy()
+                image, detInfo, select_info = self.frame_process(framecopy, self.uploaded_file.name)
+                
+                # 保存结果
+                save_chinese_image(self.output_path + '/image/' + self.uploaded_file.name, image)
+                
+                # 更新状态
+                st.session_state['current_frame_count'] = 1
+                st.session_state['current_target_count'] = len(detInfo)
+                st.session_state['current_detection_time'] = self.detection_time
+                
+                # 更新显示
+                self.frame_count_placeholder.metric("📸 当前帧数", 1)
+                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                
+                # 显示图片
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
+                
+                if self.display_mode == "叠加显示":
+                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_file.name}")
+                else:
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {self.uploaded_file.name}")
+                    if hasattr(self, 'image_placeholder_res'):
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {self.uploaded_file.name}")
+                
+                # 添加到日志表
+                self.logTable.add_frames(image, detInfo, processed_image, self.uploaded_file.name)
+                self.progress_bar.progress(100)
+                
+                # 立即更新session state以确保UI同步
+                st.session_state['saved_images_ini'] = self.logTable.saved_images_ini.copy()
+                st.session_state['saved_images'] = self.logTable.saved_images.copy()
+                st.session_state['saved_names'] = self.logTable.saved_names.copy()
+                # 同步每张图片的目标信息
+                if hasattr(self.logTable, 'saved_targets_info'):
+                    st.session_state['saved_targets_info'] = self.logTable.saved_targets_info.copy()
+                
+                # 确保索引重置为0
+                st.session_state['image_play_index'] = 0
+                
+                # 更新历史日志显示
+                if hasattr(self, 'log_table_placeholder'):
+                    self.logTable.update_table(self.log_table_placeholder)
+                
+                st.success("单张图片检测完成！")
+                # 立即刷新页面，让selectbox自动更新
+                st.rerun()
+                
+                # 立即显示检测结果
+                self.toggle_comboBox(0)
+                
+                st.success("图片检测完成！")
+                
+            except Exception as e:
+                st.error(f"处理单张图片时出错: {str(e)}")
+
+    def _process_video_input(self):
+        """
+        处理视频输入
+        """
+        if not hasattr(self, 'uploaded_video') or not self.uploaded_video:
+            st.warning("请先上传视频文件！")
+            return
+            
+        self.logTable.clear_frames()
+        self.progress_bar.progress(0)
+        self.close_flag = self.close_placeholder.button(label="停止")
+        
+        try:
+            if isinstance(self.uploaded_video, list):
+                # 处理多个视频文件
+                for idx, uploaded_video in enumerate(self.uploaded_video):
+                    if self.close_flag:
+                        break
+                    self._process_single_video(uploaded_video, idx)
+            else:
+                # 处理单个视频文件
+                self._process_single_video(self.uploaded_video, 0)
+                
+        except Exception as e:
+            st.error(f"处理视频时出错: {str(e)}")
+
+    def _process_single_video(self, video_file, video_index):
+        """处理单个视频文件"""
+        try:
+            # 创建临时文件
+            tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+            tfile.write(video_file.read())
+            tfile.flush()
+            
+            cap = cv2.VideoCapture(tfile.name)
+            if not cap.isOpened():
+                st.error(f"无法打开视频文件: {video_file.name}")
+                return
+            
+            # 获取视频信息
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            current_frame = 0
+            
+            st.info(f"开始处理视频: {video_file.name} (总帧数: {total_frames})")
+            
+            while cap.isOpened() and not self.close_flag and current_frame < total_frames:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                # 应用图像处理
+                processed_frame = self.apply_image_processing(frame)
+                
+                # 进行检测
+                framecopy = processed_frame.copy()
+                current_time = current_frame / fps if fps > 0 else 0
+                time_str = f"{int(current_time//3600):02d}:{int((current_time%3600)//60):02d}:{int(current_time%60):02d}"
+                
+                image, detInfo, _ = self.frame_process(framecopy, f"{video_file.name}_{current_frame}", video_time=time_str)
+                
+                # 更新状态
+                st.session_state['current_frame_count'] = current_frame + 1
+                st.session_state['current_target_count'] = len(detInfo)
+                st.session_state['current_detection_time'] = self.detection_time
+                
+                # 更新显示
+                self.frame_count_placeholder.metric("📸 当前帧数", current_frame + 1)
+                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                
+                # 显示图片
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
+                
+                if self.display_mode == "叠加显示":
+                    self.image_placeholder.image(resized_image, channels="BGR", caption=f"识别画面: {video_file.name}")
+                else:
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption=f"原始画面: {video_file.name}")
+                    if hasattr(self, 'image_placeholder_res'):
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=f"识别画面: {video_file.name}")
+                
+                # 添加到日志表
+                self.logTable.add_frames(image, detInfo, processed_frame, f"{video_file.name}_{current_frame}")
+                
+                # 更新进度条
+                progress = int((current_frame / total_frames) * 100)
+                self.progress_bar.progress(progress)
+                
+                current_frame += 1
+                
+            cap.release()
+            os.unlink(tfile.name)  # 删除临时文件
+            
+        except Exception as e:
+            st.error(f"处理视频 {video_file.name} 时出错: {str(e)}")
+
+    def _process_camera_input(self, camera_id):
+        """
+        处理摄像头输入
+        """
+        try:
+            cap = cv2.VideoCapture(camera_id)
+            if not cap.isOpened():
+                st.error(f"无法打开摄像头 {camera_id}")
+                return
+            
+            st.info(f"摄像头 {camera_id} 已启动，点击停止按钮结束检测")
+            self.close_flag = self.close_placeholder.button(label="停止")
+            
+            frame_count = 0
+            while cap.isOpened() and not self.close_flag:
+                ret, frame = cap.read()
+                if not ret:
+                    st.error("无法从摄像头读取帧")
+                    break
+                
+                # 应用图像处理
+                processed_frame = self.apply_image_processing(frame)
+                
+                # 进行检测
+                framecopy = processed_frame.copy()
+                image, detInfo, _ = self.frame_process(framecopy, f"camera_{frame_count}")
+                
+                # 更新状态
+                st.session_state['current_frame_count'] = frame_count + 1
+                st.session_state['current_target_count'] = len(detInfo)
+                st.session_state['current_detection_time'] = self.detection_time
+                
+                # 更新显示
+                self.frame_count_placeholder.metric("📸 当前帧数", frame_count + 1)
+                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                
+                # 显示图片
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
+                
+                if self.display_mode == "叠加显示":
+                    self.image_placeholder.image(resized_image, channels="BGR", caption="摄像头识别画面")
+                else:
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption="摄像头原始画面")
+                    if hasattr(self, 'image_placeholder_res'):
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption="摄像头识别画面")
+                
+                # 添加到日志表
+                self.logTable.add_frames(image, detInfo, processed_frame, f"camera_{frame_count}")
+                
+                frame_count += 1
+                time.sleep(0.1)  # 控制帧率
+                
+            cap.release()
+            
+        except Exception as e:
+            st.error(f"处理摄像头输入时出错: {str(e)}")
+
+    def _process_rtsp_input(self, rtsp_url):
+        """
+        处理RTSP/RTMP流输入
+        """
+        try:
+            cap = cv2.VideoCapture(rtsp_url)
+            if not cap.isOpened():
+                st.error(f"无法连接到RTSP/RTMP流: {rtsp_url}")
+                return
+            
+            st.info(f"RTSP/RTMP流已连接: {rtsp_url}")
+            self.close_flag = self.close_placeholder.button(label="停止")
+            
+            frame_count = 0
+            while cap.isOpened() and not self.close_flag:
+                ret, frame = cap.read()
+                if not ret:
+                    st.warning("RTSP/RTMP流中断，尝试重连...")
+                    time.sleep(2)
+                    continue
+                
+                # 应用图像处理
+                processed_frame = self.apply_image_processing(frame)
+                
+                # 进行检测
+                framecopy = processed_frame.copy()
+                image, detInfo, _ = self.frame_process(framecopy, f"rtsp_{frame_count}")
+                
+                # 更新状态
+                st.session_state['current_frame_count'] = frame_count + 1
+                st.session_state['current_target_count'] = len(detInfo)
+                st.session_state['current_detection_time'] = self.detection_time
+                
+                # 更新显示
+                self.frame_count_placeholder.metric("📸 当前帧数", frame_count + 1)
+                self.target_count_placeholder.metric("🎯 检测目标数量", len(detInfo))
+                self.detection_time_placeholder.metric("⏱️ 检测用时 (秒)", self.detection_time)
+                
+                # 显示图片
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
+                
+                if self.display_mode == "叠加显示":
+                    self.image_placeholder.image(resized_image, channels="BGR", caption="RTSP识别画面")
+                else:
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption="RTSP原始画面")
+                    if hasattr(self, 'image_placeholder_res'):
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption="RTSP识别画面")
+                
+                # 添加到日志表
+                self.logTable.add_frames(image, detInfo, processed_frame, f"rtsp_{frame_count}")
+                
+                frame_count += 1
+                time.sleep(0.05)  # 控制帧率
+                
+            cap.release()
+            
+        except Exception as e:
+            st.error(f"处理RTSP/RTMP流时出错: {str(e)}")
