@@ -94,26 +94,8 @@ def generate_filename(template_type, **kwargs):
         # 如果缺少必要参数，返回默认格式
         return f"光伏板检测文件-{kwargs.get('timestamp', 'unknown')}"
 
-# 侧边栏标签优化
-SIDEBAR_LABELS = {
-    "settings_menu": "🔧 设置菜单",
-    "login_settings": "🔒 登陆设置",
-    "logout_button": "🚪 退出登陆",
-    "display_settings": "🖥️ 显示设置",
-    "log_path_settings": "📂 日志保存路径设置",
-    "export_format_settings": "📤 日志导出格式设置",
-    "detection_thresholds": "⚙️ 检测阈值设定",
-    "model_settings": "🧠 模型设置",
-    "image_type_selection": "🖼️ 图像类型选择",
-    "target_class_selection": "🎯 目标类别选择",
-    "model_file_settings": "📁 模型文件设置",
-    "input_source_settings": "📹 输入源识别设置",
-    "image_preview": "🖼️ 图像预览",
-    "detection_params": "⚙️ 检测参数",
-    "export_options": "📤 导出选项",
-    "history": "📜 历史记录",
-    "statistics": "📊 统计信息",
-    "about": "📖 关于"
+MAIN_LABELS = {
+    "display_mode_selection": "单/双画面显示",
 }
 
 # 按钮文本优化
@@ -146,8 +128,52 @@ SYSTEM_CONFIG = {
     "target_all": "全部目标"
 }
 
+# 侧边栏标题
+SIDEBAR_HEADERS= {
+    "settings_menu": "🔧 设置菜单",
+    "login_settings": "🔒 登陆设置",
+    "display_settings": "🖥️ 显示设置",
+    "log_path_settings": "📂 日志保存路径设置",
+    "export_format_settings": "📤 日志导出格式设置",
+    "detection_thresholds": "⚙️ 检测阈值设定",
+    "model_settings": "🧠 模型设置",
+    "target_class_selection": "🎯 目标类别选择",
+    "image_type_selection": "🖼️ 图像类型选择",
+    "model_file_settings": "📁 模型文件设置",
+    "input_source_settings": "📹 输入源识别设置",
+}
+
+# 侧边栏设置项标签
+SIDEBAR_LABELS = {
+    "logout_button": "🚪 退出登陆",
+    "log_save_path": "日志保存路径",
+    "image_preview": "🖼️ 图像预览",
+    "detection_params": "⚙️ 检测参数",
+    "export_options": "📤 导出选项",
+    "history": "📜 历史记录",
+    "statistics": "📊 统计信息",
+    "about": "📖 关于",
+    "upload_images": "📤 上传图片",
+    "aspect_ratio_selection": "选择显示比例",
+    "export_format_selection": "选择导出格式",
+    "task_type_selection": "选择任务类型",
+    "model_settings": "模型设置",
+    "input_source_selection": "选择输入源",
+    "camera_selection": "选择摄像头序号",
+    "display_height_input": "输入显示高度 (默认: 1080)",
+    "display_width_input": "输入显示宽度",
+    "display_width_input_free": "输入显示宽度 (默认: 1080)",
+    "display_height_input_free": "输入显示高度 (默认: 720)",
+    "conf_threshold_slider": "置信度设定",
+    "iou_threshold_slider": "IOU设定",
+    "rectangle_output_checkbox": "输出矩形边框",
+    "select_image_type": "选择图像类型",
+    "select_image_folder": "📂 选择图片文件夹",
+    "input_folder_path": "输入图片文件夹路径",
+}
+
 # 界面选项配置
-UI_OPTIONS = {
+SIDEBAR_OPTIONS = {
     "aspect_ratios": ["16:9", "4:3", "自由调整"],
     "export_formats": ["Word", "CSV", "Excel", "JSON"],
     "task_types": ["检测任务", "分割任务"],
@@ -158,35 +184,16 @@ UI_OPTIONS = {
     "display_modes": ["叠加显示", "对比显示"]
 }
 
-# 界面选择器标签
-UI_SELECTORS = {
-    "aspect_ratio_selection": "选择显示比例",
-    "export_format_selection": "选择导出格式",
-    "task_type_selection": "选择任务类型",
-    "model_settings": "模型设置",
-    "input_source_selection": "选择输入源",
-    "camera_selection": "选择摄像头序号",
-    "display_mode_selection": "单/双画面显示"
-}
-
 # 界面提示文本
-UI_LABELS = {
-    "aspect_ratio_selection": "选择显示比例",
-    "display_height_input": "输入显示高度 (默认: 1080)",
-    "display_width_input": "输入显示宽度",
-    "display_width_input_free": "输入显示宽度 (默认: 1080)",
-    "display_height_input_free": "输入显示高度 (默认: 720)",
+SIDEBAR_MESSAGES = {
+    "image_upload_success": "📂 已成功上传 {count} 张图片",
     "csv_output_path_input": "修改日志输出路径 (默认路径为output/logs/)",
-    "export_format_selection": "选择导出格式",
     "export_format_hint": "💡 提示: {format} 文件将导出至 {path} 路径。",
-    "conf_threshold_slider": "置信度设定",
     "conf_threshold_hint": "💡 提示: 置信度设定范围为0.0到1.0，代表检测结果的置信度。",
-    "iou_threshold_slider": "IOU设定",
     "iou_threshold_hint": "💡 提示: IOU设定范围为0.0到1.0，代表检测结果的重叠度。",
     "task_type_selection": "选择任务类型",
     "detection_task_hint": "💡 提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。",
     "segmentation_task_hint": "💡 提示: 分割任务将对所有的光伏板轮廓进行分割，选择输出矩形边框后，将检测矩形边框并输出，否则输出原始边缘，目标类别选择【单组件】或【组串】即可。",
-    "rectangle_output_checkbox": "输出矩形边框",
     "image_type_hint": "💡 提示: 当前选择的图像类型为: {type}",
     "target_class_multiselect": "选择检测目标类别",
     "no_class_selected_hint": "💡 提示: 未选择任何类别，模型将不会检测任何目标。",
@@ -198,7 +205,6 @@ UI_LABELS = {
     "camera_hint": "💡 提示: 请点击'开始检测'按钮，启动摄像头检测！",
     "rtsp_input": "输入RTSP/RTMP地址",
     "rtsp_hint": "💡 提示: 请点击'开始检测'按钮，启动RTSP/RTMP流检测！",
-    "upload_images": "上传图片",
     "upload_videos": "上传视频",
     "select_folder": "选择文件夹",
     "target_filter": "目标过滤",
@@ -206,8 +212,6 @@ UI_LABELS = {
     "class_settings": "类别设置",
     "real_time_detection": "实时检测信息",
     "color_settings": "颜色设置",
-    "session_state_data": "Session State 图像数据",
-    "logtable_data": "LogTable 图像数据",
     "image_browser_control": "📸 图片浏览控制",
     "realtime_dashboard": "📊 实时监控仪表盘",
     "video_image_detection_system": "📷 视频/图片检测系统",
@@ -230,7 +234,12 @@ UI_LABELS = {
     "folder_selection_hint": "💡 提示: 选择或输入本地图片文件夹路径，自动递归查找所有图片。",
     "video_folder_selection_hint": "💡 提示: 选择或输入本地视频文件夹路径，自动递归查找所有视频。",
     "image_upload_hint": "💡 提示: 请选择图片并点击'开始检测'按钮，进行图片检测！",
-    "video_upload_hint": "💡 提示: 请选择视频并点击'开始检测'按钮，进行视频检测！"
+    "video_upload_hint": "💡 提示: 请选择视频并点击'开始检测'按钮，进行视频检测！",
+    "more_files_remaining": "... 还有 {count} 个文件",
+    "more_videos_remaining": "... 还有 {count} 个视频",
+    "select_upload_images": "📤 请选择图片文件上传",
+    "select_image_type": "选择图片类型",
+    "display_uploaded_files": "📋 查看上传的文件",
 }
 
 # 状态消息模板
@@ -309,10 +318,12 @@ STATUS_MESSAGES = {
     "unknown_version": "未知版本",
     "color_list_warning": "⚠️ 警告: 颜色列表长度与模型类别不一致！将使用随机颜色填充。",
     "no_camera_found": "未找到可用的摄像头",
-    "more_files_remaining": "... 还有 {count} 个文件",
-    "more_videos_remaining": "... 还有 {count} 个视频",
     "camera_calibration_success": "相机标定参数加载成功！",
     "camera_calibration_failed": "标定文件解析失败: {error}",
+    "session_state_data": "Session State 图像数据",
+    "logtable_data": "LogTable 图像数据",
+    "display_mode": "显示模式",
+    "display_status_debug": "🔧 显示状态调试",
 }
 
 # 指标和仪表盘标签
