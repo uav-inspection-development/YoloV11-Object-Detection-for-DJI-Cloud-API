@@ -660,12 +660,6 @@ class Detection_UI:
             if chinese_name in selected_chinese_classes
         ]
 
-        # 调试信息：显示映射结果
-        if self.from_streamlit:
-            st.sidebar.caption(f"🔧 调试: 选择的英文类别: {', '.join(self.selected_classes)}")
-            if hasattr(self.model, 'names'):
-                st.sidebar.caption(f"🔧 调试: 模型类别: {', '.join(self.model.names)}")
-
         # 选择模型文件类型，可以是默认的或者自定义的
         st.sidebar.header("📁 模型文件设置")
         model_file_option = st.sidebar.radio("模型设置", options=["默认", "指定权重文件"], index=0)
@@ -1095,10 +1089,23 @@ class Detection_UI:
                 st.write(f"- 选择的类别(英文): {getattr(self, 'selected_classes', [])}")
                 
                 if hasattr(self, 'model') and hasattr(self.model, 'names'):
-                    st.write(f"- 模型类别: {self.model.names}")
+                    # 处理不同类型的 model.names
+                    if isinstance(self.model.names, dict):
+                        model_classes = list(self.model.names.values())
+                    elif isinstance(self.model.names, list):
+                        model_classes = self.model.names
+                    else:
+                        model_classes = str(self.model.names)
+                    st.write(f"- 模型类别: {model_classes}")
                     
                 if hasattr(self, 'cls_name'):
                     st.write(f"- 类别映射: {self.cls_name}")
+                
+                # 显示实时检测信息
+                if hasattr(self, '_debug_detected_classes'):
+                    st.write("### 实时检测信息")
+                    st.write(f"- 当前检测到的类别: {getattr(self, '_debug_detected_classes', [])}")
+                    st.write(f"- 类别匹配状态: {getattr(self, '_debug_class_matches', {})}")
                     
                 st.write("### 颜色设置")
                 st.write(f"- 颜色列表长度: {len(getattr(self, 'colors', []))}")
@@ -1472,16 +1479,20 @@ class Detection_UI:
                 res = None
                 cnt = 0
 
+                # 初始化调试信息存储
+                self._debug_detected_classes = []
+                self._debug_class_matches = {}
+                
                 # 遍历检测到的对象
                 for idx, info in enumerate(det_info):
                     name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
 
-                    # 显示检测到的类别和选择的类别
-                    if self.from_streamlit and idx == 0:  # 只在第一个检测对象时显示，避免刷屏
-                        st.sidebar.write(f"🔧 检测到类别: {name}")
-                        st.sidebar.write(f"🔧 选择的类别: {self.selected_classes}")
-                        st.sidebar.write(f"🔧 是否匹配: {name in self.selected_classes}")
-                        st.sidebar.write(f"🔧 矩形框输出: {self.rectangle_bounding_output}")
+                    # 收集调试信息（不直接显示）
+                    if idx == 0:  # 只在第一个检测对象时收集，避免重复
+                        self._debug_detected_classes = [info['class_name'] for info in det_info]
+                        for det_info_item in det_info:
+                            det_name = det_info_item['class_name']
+                            self._debug_class_matches[det_name] = det_name in self.selected_classes
 
                     # Ensure cls_id is within bounds
                     if cls_id >= len(self.colors):
@@ -1581,7 +1592,7 @@ class Detection_UI:
 
         # 在第一列设置显示模式的选择
         with col1:
-            st.header("📷 视频/图片检测系统")
+            st.subheader("📷 视频/图片检测系统")
             self.display_mode = st.radio("单/双画面显示", ["叠加显示", "对比显示"])
             self.image_placeholder = st.empty()
             self.image_placeholder_res = st.empty()
@@ -1607,7 +1618,7 @@ class Detection_UI:
 
         # 在最右侧列设置识别结果表格的显示
         with col2:
-            st.header("🖼️ 当前图片检测结果")
+            st.subheader("🖼️ 当前图片检测结果")
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
 
@@ -1683,7 +1694,7 @@ class Detection_UI:
                     st.write(f"识别结果文件已经保存为 Word 格式：{self.saved_log_data}")
 
                 self.logTable.clear_data()
-            st.header("📜 历史日志")
+            st.subheader("📜 历史日志")
             # 显示所有结果记录的空白表格
             self.log_table_placeholder = st.empty()
             self.logTable.update_table(self.log_table_placeholder)
@@ -1765,7 +1776,7 @@ class Detection_UI:
                 if self.display_mode == "对比显示" and hasattr(self, 'image_placeholder_res'):
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
 
-        st.header("📊 实时监控仪表盘")
+        st.subheader("📊 实时监控仪表盘")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             self.frame_count_placeholder = st.empty()
