@@ -863,7 +863,7 @@ class Detection_UI:
                 st.sidebar.success(f"📹 已成功上传 {num_videos} 个视频文件")
                 
                 # 显示视频列表和信息
-                with st.sidebar.expander("� 查看上传的视频", expanded=False):
+                with st.sidebar.expander("📹 查看上传的视频", expanded=False):
                     total_size = 0
                     for i, video in enumerate(self.uploaded_video[:5]):  # 最多显示前5个
                         video_size = len(video.getvalue()) / (1024 * 1024)  # MB
@@ -1832,7 +1832,16 @@ class Detection_UI:
                     st.write(f"识别结果文件已经保存为 JSON 格式：{self.saved_log_data}")
                 elif self.export_format == "Word":
                     self.saved_log_data += ".docx"
-                    self.logTable.save_to_word(self.saved_log_data)
+                    # 构建检测参数字典
+                    detection_params = {
+                        'model_type': self.model_type,
+                        'image_type': self.image_type,
+                        'conf_threshold': self.conf_threshold,
+                        'iou_threshold': self.iou_threshold,
+                        'selected_classes': getattr(self, 'selected_classes', []),
+                        'cls_name': getattr(self, 'cls_name', {})
+                    }
+                    self.logTable.save_to_word(self.saved_log_data, detection_params)
                     st.write(f"识别结果文件已经保存为 Word 格式：{self.saved_log_data}")
 
                 self.logTable.clear_data()

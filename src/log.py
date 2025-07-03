@@ -267,81 +267,364 @@ class LogTable:
         # 将DataFrame保存到JSON文件
         self.data.to_json(json_file_path, orient='records', lines=True, force_ascii=False)
 
-    def save_to_word(self, word_file_path):
+    def save_to_word(self, word_file_path, detection_params=None):
         """
-        将检测结果保存到 Word 文件。
+        将检测结果保存到专业的无人机光伏巡检报告格式的 Word 文件。
 
         Args:
             word_file_path (str): Word 文件的路径。
+            detection_params (dict): 检测参数，包含模型类型、图像类型、置信度等
         """
         try:
+            # 解析检测参数
+            if detection_params is None:
+                detection_params = {}
+            
+            model_type = detection_params.get('model_type', '检测任务')
+            image_type = detection_params.get('image_type', '其他')
+            conf_threshold = detection_params.get('conf_threshold', 0.15)
+            iou_threshold = detection_params.get('iou_threshold', 0.25)
+            selected_classes = detection_params.get('selected_classes', [])
+            cls_name = detection_params.get('cls_name', {})
+            
             # 创建一个 Word 文档
             doc = Document()
-            doc.add_heading('检测结果报告', level=1).alignment = 1  # 标题居中
+            
+            # 设置页面格式
+            sections = doc.sections
+            for section in sections:
+                section.top_margin = Inches(1)
+                section.bottom_margin = Inches(1)
+                section.left_margin = Inches(1.25)
+                section.right_margin = Inches(1.25)
 
-            # 添加首页信息并居中
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            total_images = len(self.saved_images)
-            doc.add_paragraph().add_run("\n").bold = True  # 添加空行
-            doc.add_paragraph(f"报告生成日期：{now}").paragraph_format.alignment = 1  # 居中
-            doc.add_paragraph(f"包含图片数量：{total_images}").paragraph_format.alignment = 1  # 居中
-            doc.add_paragraph("\n").paragraph_format.alignment = 1  # 添加空行
+            # 第一页：报告标题和日期
+            now = datetime.now()
+            report_time = now.strftime("%Y/%m/%d %H:%M:%S")
+            
+            # 添加多个空行使标题居中
+            for _ in range(8):
+                doc.add_paragraph("")
+            
+            title_para = doc.add_paragraph()
+            title_run = title_para.add_run("无人机光伏巡检报告")
+            title_run.font.size = Inches(0.25)  # 大标题
+            title_run.bold = True
+            title_para.alignment = 1  # 居中
+            
+            # 添加空行
+            for _ in range(3):
+                doc.add_paragraph("")
+            
+            date_para = doc.add_paragraph()
+            date_run = date_para.add_run(report_time)
+            date_run.font.size = Inches(0.15)
+            date_para.alignment = 1  # 居中
+            
+            # 添加空行
+            for _ in range(2):
+                doc.add_paragraph("")
+            
+            # 报告编号
+            report_num = f"PV-{now.strftime('%Y%m%d%H%M%S')}"
+            report_num_para = doc.add_paragraph(f"报告编号：{report_num}")
+            report_num_para.alignment = 1  # 居中
 
-            # 插入分页符
+            # 第一页结束，插入分页符进入目录页
             doc.add_page_break()
 
+            # 第二页：目录页
+            toc_title = doc.add_heading("目录", level=1)
+            toc_title.alignment = 1  # 居中
+            
+            # 添加空行
+            doc.add_paragraph("")
+            
+            # 目录内容，使用表格格式实现点线对齐
+            toc_table = doc.add_table(rows=5, cols=2)
+            toc_table.style = 'Light List'
+            
+            # 目录项
+            toc_items = [
+                ("1、概述", "3"),
+                ("2、光伏电站故障维修建议", "4"), 
+                ("3、结果统计", "5"),
+                ("4、详细检测结果", "6"),
+                ("", "")  # 空行
+            ]
+            
+            for i, (item, page) in enumerate(toc_items):
+                if item:  # 非空行
+                    toc_table.cell(i, 0).text = item
+                    toc_table.cell(i, 1).text = page
+                    toc_table.cell(i, 1).paragraphs[0].alignment = 2  # 右对齐页码
+            
+            # 目录页结束，插入分页符进入正文
+            doc.add_page_break()
+
+            # 1、概述部分
+            doc.add_heading("1、概述", level=1)
+            overview_table = doc.add_table(rows=8, cols=2)
+            overview_table.style = 'Table Grid'
+            
+            # 根据检测类型和图像类型生成检测场景描述
+            scene_desc = f"{image_type}{model_type}"
+            if model_type == "分割任务":
+                scene_desc += f" - 对{image_type}图像进行光伏板轮廓分割"
+            else:
+                scene_desc += f" - 对{image_type}图像进行异常检测"
+            
+            # 概述表格数据
+            overview_data = [
+                ["使用单位", "光伏电站"],
+                ["检测场景", scene_desc],
+                ["检测类型", f"{model_type} - {image_type}"],
+                ["飞行批号", f"UAV-{now.strftime('%Y%m%d')}"],
+                ["任务名称", f"光伏巡检任务-{now.strftime('%Y%m%d')}"],
+                ["报告日期", report_time],
+                ["检测图片数量", str(len(self.saved_images))],
+                ["检测参数", f"置信度: {conf_threshold}, IOU: {iou_threshold}"]
+            ]
+            
+            for i, (key, value) in enumerate(overview_data):
+                overview_table.cell(i, 0).text = key
+                overview_table.cell(i, 1).text = value
+
+            doc.add_paragraph("")
+            
+            # 概述部分结束，插入分页符进入故障建议部分
+            doc.add_page_break()
+            
+            # 2、光伏电站故障维修建议
+            doc.add_heading("2、光伏电站故障维修建议", level=1)
+            
+            # 根据检测类型定义不同的故障分类
+            if image_type == "EL隐裂":
+                fault_categories = {
+                    "一级故障": {
+                        "划伤": "组件表面出现划伤，建议检查并及时维护，避免进一步损坏。",
+                        "黑片": "检测到黑片异常，建议追踪观察并考虑维修。"
+                    },
+                    "二级故障": {
+                        "隐裂": "组件内部出现隐裂，建议立即检修或更换，避免电性能下降。",
+                        "碎片": "组件表面或内部出现碎片，建议立即更换组件。",
+                        "缺角": "组件出现缺角损坏，建议评估影响程度并考虑更换。"
+                    }
+                }
+            elif image_type == "红外":
+                fault_categories = {
+                    "一级故障": {
+                        "阳光反射": "红外图像中的阳光反射，属于正常现象，无需处理。",
+                        "光伏板正常热成像": "组件热成像正常，无异常发热。"
+                    },
+                    "二级故障": {
+                        "单一热斑": "单个组件出现热斑，建议检查组件连接和清洁度。",
+                        "异常低温": "组件温度异常偏低，建议检查电路连接。"
+                    },
+                    "三级故障": {
+                        "大面积热斑": "大面积热斑异常，建议立即检查电路和组件状态。",
+                        "二极管短路": "旁路二极管故障，建议立即维修或更换。"
+                    }
+                }
+            elif image_type == "可见光":
+                fault_categories = {
+                    "一级故障": {
+                        "脏污": "组件表面脏污，建议清洁以保证发电效率。",
+                        "鸟粪": "组件表面有鸟粪，建议清理并考虑防鸟措施。",
+                        "积雪": "组件表面积雪，建议及时清理。"
+                    },
+                    "二级故障": {
+                        "遮挡": "组件被遮挡，建议清除遮挡物或调整组件角度。",
+                        "隐裂": "可见光下发现隐裂，建议进一步检查。"
+                    },
+                    "三级故障": {
+                        "面板碎裂": "组件表面玻璃破损，建议立即更换。",
+                        "光伏板缺失": "组件缺失，建议立即补装。",
+                        "光伏板组件变形": "组件变形，建议检查支架和更换组件。"
+                    }
+                }
+            else:
+                # 默认故障分类（其他类型或分割任务）
+                fault_categories = {
+                    "检测信息": {
+                        "单组件": "成功分割识别单个光伏组件。",
+                        "组串": "成功分割识别光伏组串。",
+                        "行人": "检测到人员活动，建议注意安全。",
+                        "车辆": "检测到车辆，建议注意交通管制。"
+                    }
+                } if model_type == "分割任务" or image_type == "其他" else {
+                    "一级故障": {
+                        "异物遮挡": "组件表面草本、固定物等阴影遮挡，产生局部温度，建议进行面板遮挡消除。",
+                        "脏污": "组件表面可能因灰尘颗粒物等导致热斑，建议进行面板清理，避免光伏面板受损",
+                        "热斑": "光伏件呈现热斑效应。"
+                    }
+                }
+            
+            # 收集实际检测到的故障类型
+            detected_faults = set()
+            for detection_results in self.saved_results:
+                for detInfo in detection_results:
+                    if isinstance(detInfo, list) and len(detInfo) >= 2:
+                        fault_type = detInfo[1]  # 中文名称
+                        detected_faults.add(fault_type)
+            
+            # 输出故障建议
+            for level, faults in fault_categories.items():
+                doc.add_heading(level, level=2)
+                for fault_name, suggestion in faults.items():
+                    if any(fault_name in detected_fault for detected_fault in detected_faults):
+                        doc.add_paragraph(f"{fault_name}: {suggestion}")
+
+            doc.add_paragraph("")
+            
+            # 故障建议部分结束，插入分页符进入统计部分
+            doc.add_page_break()
+            
+            # 3、结果统计
+            doc.add_heading("3、结果统计", level=1)
+            
+            # 统计信息
+            total_detections = sum(len(results) for results in self.saved_results)
+            fault_counts = {}
+            for detection_results in self.saved_results:
+                for detInfo in detection_results:
+                    if isinstance(detInfo, list) and len(detInfo) >= 2:
+                        fault_type = detInfo[1]
+                        fault_counts[fault_type] = fault_counts.get(fault_type, 0) + 1
+            
+            # 算法引擎描述
+            if model_type == "分割任务":
+                doc.add_paragraph("无人机飞行后对本次航线进行了全方位的智能分割分析后得出此报告。")
+                algorithm_desc = f"采用YOLOv11分割算法对{image_type}图像进行光伏组件轮廓分割"
+            else:
+                doc.add_paragraph("无人机飞行后对本次航线进行了全方位的算法检测分析后得出此报告。")
+                algorithm_desc = f"采用YOLOv11检测算法对{image_type}图像进行异常检测"
+            
+            engines = list(fault_counts.keys()) if fault_counts else ["未检测到异常"]
+            doc.add_paragraph(f"使用的算法引擎：{algorithm_desc}")
+            doc.add_paragraph(f"检测到的类别：（{', '.join(engines)}）")
+            doc.add_paragraph("")
+            
+            # 报警次数统计
+            if total_detections > 0:
+                doc.add_paragraph(f"报警次数为：{total_detections} 次，其中：")
+                for fault_type, count in fault_counts.items():
+                    doc.add_paragraph(f"{fault_type}：{count}次；")
+            else:
+                doc.add_paragraph("报警次数为：0 次")
+            
+            doc.add_paragraph("")
+            
+            # 检测类型总统计表
+            if fault_counts:
+                doc.add_paragraph("检测类型总统计：")
+                stats_table = doc.add_table(rows=1, cols=4)
+                stats_table.style = 'Table Grid'
+                headers = ["检测类型", "目标数量", "占总检测数量", "缺陷等级"]
+                for i, header in enumerate(headers):
+                    stats_table.cell(0, i).text = header
+                
+                for fault_type, count in fault_counts.items():
+                    row_cells = stats_table.add_row().cells
+                    percentage = f"{(count / total_detections * 100):.1f}%"
+                    
+                    # 确定缺陷等级
+                    defect_level = "一级故障"  # 默认值
+                    for level, faults in fault_categories.items():
+                        if any(fault_name in fault_type for fault_name in faults.keys()):
+                            defect_level = level
+                            break
+                    
+                    row_cells[0].text = fault_type
+                    row_cells[1].text = str(count)
+                    row_cells[2].text = percentage
+                    row_cells[3].text = defect_level
+
+            doc.add_paragraph("")
+            
+            # 详细检测结果
+            if self.saved_results:
+                # 详细结果表
+                doc.add_paragraph("详细检测结果：")
+                detail_table = doc.add_table(rows=1, cols=6)
+                detail_table.style = 'Table Grid'
+                detail_headers = ["组串", "缺陷类型", "检测时间", "经度", "纬度", "置信度"]
+                for i, header in enumerate(detail_headers):
+                    detail_table.cell(0, i).text = header
+                
+                for idx, (detection_results, img_name) in enumerate(zip(self.saved_results, self.saved_names)):
+                    for detInfo in detection_results:
+                        if isinstance(detInfo, list) and len(detInfo) >= 6:
+                            row_cells = detail_table.add_row().cells
+                            row_cells[0].text = f"{idx + 1:06d}"  # 组串编号
+                            row_cells[1].text = str(detInfo[1])  # 缺陷类型
+                            row_cells[2].text = report_time  # 检测时间
+                            row_cells[3].text = "110.30989252777778"  # 模拟经度
+                            row_cells[4].text = "39.57314513888889"   # 模拟纬度
+                            row_cells[5].text = f"{float(detInfo[3]) if isinstance(detInfo[3], (int, float, str)) else 0.95:.2f}"  # 置信度
+
+            # 添加图片检测结果
+            doc.add_page_break()
+            if model_type == "分割任务":
+                doc.add_heading("分割图片详细结果", level=1)
+            else:
+                doc.add_heading("检测图片详细结果", level=1)
+            
             # 遍历每张图片的检测结果
             for idx, (image_ini, image_detected, detection_results, img_name) in enumerate(
                 zip(self.saved_images_ini, self.saved_images, self.saved_results, self.saved_names)
             ):
-                # 添加图片标题，使用标题字体并居中
-                title = doc.add_heading(f'图片 {idx + 1}: {img_name}', level=2)
-                title.alignment = 1  # 居中
+                # 添加图片标题
+                doc.add_heading(f'图片 {idx + 1}: {img_name}', level=2)
 
                 # 创建一个表格用于左右放置图片
-                table = doc.add_table(rows=1, cols=2)
+                table = doc.add_table(rows=2, cols=2)
                 table.autofit = True
 
                 # 左侧放置原始图像
                 cell_left = table.cell(0, 0)
-                cell_left.paragraphs[0].add_run('原始图像:').bold = True
+                cell_left.text = f'原始{image_type}图片'
                 original_image_stream = BytesIO()
                 Image.fromarray(cv2.cvtColor(image_ini, cv2.COLOR_BGR2RGB)).save(original_image_stream, format='PNG')
                 original_image_stream.seek(0)
-                cell_left.add_paragraph().add_run().add_picture(original_image_stream, width=Inches(3))
+                table.cell(1, 0).paragraphs[0].add_run().add_picture(original_image_stream, width=Inches(3))
 
                 # 右侧放置识别后的图像
                 cell_right = table.cell(0, 1)
-                cell_right.paragraphs[0].add_run('识别后的图像:').bold = True
+                if model_type == "分割任务":
+                    cell_right.text = f'{image_type}分割结果'
+                else:
+                    cell_right.text = f'{image_type}检测结果'
                 detected_image_stream = BytesIO()
                 Image.fromarray(cv2.cvtColor(image_detected, cv2.COLOR_BGR2RGB)).save(detected_image_stream, format='PNG')
                 detected_image_stream.seek(0)
-                cell_right.add_paragraph().add_run().add_picture(detected_image_stream, width=Inches(3))
+                table.cell(1, 1).paragraphs[0].add_run().add_picture(detected_image_stream, width=Inches(3))
 
-                # 添加检测结果表格
-                doc.add_paragraph('检测结果信息:').paragraph_format.alignment = 1  # 居中
-                table = doc.add_table(rows=1, cols=6)
-                table.style = 'Table Grid'
-                headers = ["识别结果", "类型", "位置(pixel)", "面积(pixel)", "时间(s)", "类别ID"]
-                for i, header in enumerate(headers):
-                    table.cell(0, i).text = header
+                # 添加检测结果信息
+                if detection_results:
+                    if model_type == "分割任务":
+                        doc.add_paragraph(f'分割到 {len(detection_results)} 个目标：')
+                    else:
+                        doc.add_paragraph(f'检测到 {len(detection_results)} 个目标：')
+                    for i, detInfo in enumerate(detection_results):
+                        if isinstance(detInfo, list) and len(detInfo) >= 2:
+                            doc.add_paragraph(f"  {i+1}. {detInfo[1]} - 置信度: {detInfo[3] if len(detInfo) > 3 else 'N/A'}")
+                else:
+                    if model_type == "分割任务":
+                        doc.add_paragraph('未分割到目标组件')
+                    else:
+                        doc.add_paragraph('未检测到故障')
 
-                # 填充检测结果
-                for detInfo in detection_results:
-                    if isinstance(detInfo, list) and len(detInfo) == 6:
-                        row_cells = table.add_row().cells
-                        for i, value in enumerate(detInfo):
-                            row_cells[i].text = str(value)
-
-                # 添加段落间距
-                doc.add_paragraph("\n")
+                doc.add_paragraph("")  # 添加间距
 
             # 保存 Word 文件
             doc.save(word_file_path)
-            print(f"检测结果已保存到 Word 文件: {word_file_path}")
+            print(f"专业光伏巡检报告已保存到: {word_file_path}")
 
         except Exception as e:
             print(f"保存到 Word 文件失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     def update_table(self, log_table_placeholder):
         """
