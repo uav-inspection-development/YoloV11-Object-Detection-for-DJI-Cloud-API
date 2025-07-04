@@ -33,8 +33,8 @@ from streamlit_config import optimize_streamlit_performance, setup_image_optimiz
 from naming_config import (
     get_image_type_name, get_task_type_name, get_export_format_name,
     generate_filename, get_status_message,
-    SIDEBAR_HEADERS, BUTTON_TEXTS, SIDEBAR_MESSAGES, STATUS_MESSAGES, METRICS_LABELS,
-    SYSTEM_CONFIG, SIDEBAR_OPTIONS, SIDEBAR_LABELS, MAIN_LABELS, get_metric_label
+    SIDEBAR_HEADERS, BUTTON_TEXTS, SIDEBAR_HINTS, STATUS_MESSAGES, MAIN_LABELS,
+    SYSTEM_CONFIG, SIDEBAR_OPTIONS, SIDEBAR_LABELS, MAIN_HEADERS, get_main_label
 )
 from image_optimizer import get_image_optimizer, optimize_image_display, process_uploaded_images
 
@@ -454,8 +454,8 @@ class Detection_UI:
         """
         # 获取版本信息字符串
         version_string = get_version_string()
-        
-        with st.sidebar.expander(f"📖 关于 ({version_string})", expanded=False):
+
+        with st.sidebar.expander(SIDEBAR_LABELS["about_version"].format(version_string=version_string), expanded=False):
             st.markdown("""
                 ## 关于本应用
                 本应用旨在检测光伏组件的故障，包括：
@@ -526,13 +526,13 @@ class Detection_UI:
         # 根据选择的比例调整宽度和高度
         if ratio:
             # 用户输入高度时自动调整宽度
-            self.new_height = st.sidebar.number_input("输入显示高度 (默认: 1080)", min_value=100, max_value=2160, value=1080, step=10)
+            self.new_height = st.sidebar.number_input(SIDEBAR_LABELS["display_height_input"], min_value=100, max_value=2160, value=1080, step=10)
             self.new_width = int(self.new_height * ratio)
-            st.sidebar.number_input("输入显示宽度", value=self.new_width, disabled=True)
+            st.sidebar.number_input(SIDEBAR_LABELS["display_width_input"], value=self.new_width, disabled=True)
         else:
             # 自由调整模式
-            self.new_width = st.sidebar.number_input("输入显示宽度 (默认: 1080)", min_value=100, max_value=3840, value=1080, step=10)
-            self.new_height = st.sidebar.number_input("输入显示高度 (默认: 720)", min_value=100, max_value=2160, value=720, step=10)
+            self.new_width = st.sidebar.number_input(SIDEBAR_LABELS["display_width_input_free"], min_value=100, max_value=3840, value=1080, step=10)
+            self.new_height = st.sidebar.number_input(SIDEBAR_LABELS["display_height_input_free"], min_value=100, max_value=2160, value=720, step=10)
 
         # 添加 CSV 输出路径设置
         st.sidebar.header(SIDEBAR_HEADERS["log_path_settings"])
@@ -548,7 +548,7 @@ class Detection_UI:
 
         st.sidebar.header(SIDEBAR_HEADERS["export_format_settings"])
         self.export_format = st.sidebar.radio(SIDEBAR_LABELS["export_format_selection"], options=SIDEBAR_OPTIONS["export_formats"], index=0)
-        st.sidebar.caption(SIDEBAR_MESSAGES["export_format_hint"].format(format=self.export_format, path=self.csv_output_path))
+        st.sidebar.caption(SIDEBAR_HINTS["export_format_hint"].format(format=self.export_format, path=self.csv_output_path))
 
         # 根据用户选择的导出格式设置文件后缀
         if self.export_format == "CSV":
@@ -592,10 +592,10 @@ class Detection_UI:
         st.sidebar.header(SIDEBAR_HEADERS["detection_thresholds"])
         # 置信度阈值的滑动条
         self.conf_threshold = float(st.sidebar.slider(SIDEBAR_LABELS["conf_threshold_slider"], min_value=0.0, max_value=1.0, value=0.15))
-        st.sidebar.caption(SIDEBAR_MESSAGES["conf_threshold_hint"])
+        st.sidebar.caption(SIDEBAR_HINTS["conf_threshold_hint"])
         # IOU阈值的滑动条
         self.iou_threshold = float(st.sidebar.slider(SIDEBAR_LABELS["iou_threshold_slider"], min_value=0.0, max_value=1.0, value=0.25))
-        st.sidebar.caption(SIDEBAR_MESSAGES["iou_threshold_hint"])
+        st.sidebar.caption(SIDEBAR_HINTS["iou_threshold_hint"])
         # 设置侧边栏的模型设置部分
         st.sidebar.header(SIDEBAR_HEADERS["model_settings"])
         # 选择模型类型的下拉菜单
@@ -604,13 +604,13 @@ class Detection_UI:
         available_options = []
         # 添加提示信息
         if self.model_type == "检测任务":
-            st.sidebar.caption(SIDEBAR_MESSAGES["detection_task_hint"])
+            st.sidebar.caption(SIDEBAR_HINTS["detection_task_hint"])
             # 检测任务也应该有矩形框选项
             self.rectangle_bounding_output = st.sidebar.checkbox(SIDEBAR_LABELS["rectangle_output_checkbox"], value=True)
             available_options = ["EL隐裂", "红外", "可见光", "其他"]
         elif self.model_type == "分割任务":
             self.rectangle_bounding_output = st.sidebar.checkbox(SIDEBAR_LABELS["rectangle_output_checkbox"], value=True)
-            st.sidebar.caption(SIDEBAR_MESSAGES["segmentation_task_hint"])
+            st.sidebar.caption(SIDEBAR_HINTS["segmentation_task_hint"])
             available_options = ["红外", "可见光"]
 
         # 添加图像类型选择
@@ -639,14 +639,14 @@ class Detection_UI:
             self.detect_class_color = Segmentation_class_colors
 
         # 提示用户选择的图像类型
-        st.sidebar.caption(SIDEBAR_MESSAGES["image_type_hint"])
+        st.sidebar.caption(SIDEBAR_HINTS["image_type_hint"])
 
         # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
         st.sidebar.header(SIDEBAR_HEADERS["target_class_selection"])
         self.available_classes = list(self.cls_name.values())
         self.available_class_keys = list(self.cls_name.keys())
         selected_chinese_classes = st.sidebar.multiselect(
-            "选择需要检测或分割的目标类别",
+            SIDEBAR_LABELS["select_detection_or_segmentation_type"],
             options=self.available_classes,
             default=self.available_classes  # 默认选择所有类别
         )
@@ -658,9 +658,9 @@ class Detection_UI:
 
         # 添加提示信息
         if len(selected_chinese_classes) == 0:
-            st.sidebar.caption("💡 提示: 未选择任何类别，模型将不会检测任何目标。")
+            st.sidebar.caption(SIDEBAR_HINTS["no_class_selected_hint"])
         else:
-            st.sidebar.caption(f"💡 提示: 当前选择的类别为: {', '.join(selected_chinese_classes)}")
+            st.sidebar.caption(SIDEBAR_HINTS["selected_classes_hint"].format(classes=', '.join(selected_chinese_classes)))
 
         # 正确映射中文名称到英文名称
         self.selected_classes = [
@@ -673,7 +673,7 @@ class Detection_UI:
         model_file_option = st.sidebar.radio(SIDEBAR_LABELS["model_settings"], options=SIDEBAR_OPTIONS["model_settings"], index=0)
         if model_file_option == "指定权重文件":
             # 如果选择自定义模型文件，则提供文件上传器
-            model_file = st.sidebar.file_uploader("选择.pt文件", type="pt")
+            model_file = st.sidebar.file_uploader(SIDEBAR_LABELS["select_pt_file"], type="pt")
 
             # 如果上传了模型文件，则保存并加载该模型
             if model_file is not None:
@@ -681,10 +681,10 @@ class Detection_UI:
                 try:
                     self.model.load_model(model_path=self.custom_model_file)
                 except Exception as e:
-                    st.sidebar.error(f"⚠️ 错误: 无法加载模型文件，请检查文件格式或路径是否正确！错误信息: {str(e)}")
+                    st.sidebar.error(STATUS_MESSAGES["model_load_error"].format(error=str(e)))
                 # 检查模型类别是否与选定类别一致
                 if set(self.model.names) != set(self.available_class_keys):
-                    st.sidebar.error("⚠️ 错误: 模型类别与选定类别不匹配，请检查模型文件或重新选择类别！")
+                    st.sidebar.error(STATUS_MESSAGES["model_class_mismatch"])
                 else:
                     self.colors = [self.detect_class_color.get(class_name, (0, 255, 0)) for class_name in self.cls_name.values()]
         elif model_file_option == "默认":
@@ -703,7 +703,7 @@ class Detection_UI:
                 elif self.image_type == "可见光":
                     model_path=abs_path("../weights/yolo11s-visible-seg.pt", path_type="current")
                 else:
-                    st.sidebar.error("⚠️ 错误: 不支持的图像类型！")
+                    st.sidebar.error(STATUS_MESSAGES["unsupported_image_type"])
 
             try:
                 self.model.load_model(model_path=model_path)
@@ -725,7 +725,7 @@ class Detection_UI:
                     st.warning(STATUS_MESSAGES["color_list_warning"])
 
             except Exception as e:
-                st.sidebar.error(f"⚠️ 错误: 无法加载默认模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
+                st.sidebar.error(STATUS_MESSAGES["default_model_load_error"].format(error=str(e)))
 
             # 检查类别是否完全一致
             if set(self.model.names) != set(self.available_class_keys):
@@ -747,7 +747,7 @@ class Detection_UI:
                 print(f"选定类别中缺失的类别: {missing_in_selected}")
 
                 # 在 Streamlit 侧边栏显示错误信息
-                st.sidebar.warning(f"⚠️ 警告: 模型类别与选定类别已自动调整！")
+                st.sidebar.warning(STATUS_MESSAGES["model_class_auto_adjusted"])
             else:
                 # 为模型中的类别重新分配颜色
                 self.colors = [
@@ -766,34 +766,34 @@ class Detection_UI:
         if self.input_source == "摄像头":
             # 选择摄像头的下拉菜单
             self.selected_camera = st.sidebar.selectbox(SIDEBAR_LABELS["camera_selection"], self.available_cameras)
-            st.sidebar.caption(SIDEBAR_MESSAGES["camera_hint"])
+            st.sidebar.caption(SIDEBAR_HINTS["camera_hint"])
         elif self.input_source == "RTSP/RTMP流":
             # 输入 RTSP/RTMP 地址
-            self.rtsp_input_url = st.sidebar.text_input("输入RTSP/RTMP地址", placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
-            st.sidebar.caption(SIDEBAR_MESSAGES["rtsp_hint"])
+            self.rtsp_input_url = st.sidebar.text_input(SIDEBAR_LABELS["rtsp_input"], placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path")
+            st.sidebar.caption(SIDEBAR_HINTS["rtsp_hint"])
         elif self.input_source == "图片文件":
             self.uploaded_file = st.sidebar.file_uploader(SIDEBAR_LABELS["upload_images"], type=["jpg", "png", "jpeg"], accept_multiple_files=True, key=st.session_state["file_key"])
             
             # 显示上传状态和进度
             if self.uploaded_file:
                 num_files = len(self.uploaded_file)
-                st.sidebar.success(SIDEBAR_MESSAGES["image_upload_success"].format(count=num_files))
+                st.sidebar.success(SIDEBAR_HINTS["image_upload_success"].format(count=num_files))
                 
                 # 显示文件列表
-                with st.sidebar.expander(SIDEBAR_MESSAGES["display_uploaded_files"], expanded=False):
+                with st.sidebar.expander(SIDEBAR_LABELS["display_uploaded_files"], expanded=False):
                     for i, file in enumerate(self.uploaded_file[:10]):  # 最多显示前10个
                         file_size = len(file.getvalue()) / 1024  # KB
                         st.write(f"{i+1}. {file.name} ({file_size:.1f} KB)")
                     if num_files > 10:
-                        st.write(SIDEBAR_MESSAGES["more_files_remaining"].format(count=num_files - 10))
+                        st.write(SIDEBAR_HINTS["more_files_remaining"].format(count=num_files - 10))
             else:
-                st.sidebar.info(SIDEBAR_MESSAGES["select_upload_images"])
+                st.sidebar.info(SIDEBAR_HINTS["image_upload_hint"])
                 
-            st.sidebar.caption(SIDEBAR_MESSAGES["image_upload_hint"])
+            st.sidebar.caption(SIDEBAR_HINTS["image_detection_hint"])
         elif self.input_source == "图片文件夹":
             default_types = ["jpg", "jpeg", "png"]
             image_types = st.sidebar.multiselect(
-                SIDEBAR_MESSAGES["select_image_type"], 
+                SIDEBAR_LABELS["select_image_type"], 
                 options=["jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp"], 
                 default=default_types
             )
@@ -833,11 +833,11 @@ class Detection_UI:
                             image_files.append(os.path.join(root_dir, file))
                 
                 scan_progress.progress(1.0)
-                st.sidebar.success(f"✅ 扫描完成！共找到 {len(image_files)} 张图片")
-                
+                st.sidebar.success(SIDEBAR_HINTS["scanning_complete"].format(count=len(image_files)))
+
                 # 显示文件夹统计信息
                 if image_files:
-                    with st.sidebar.expander("📊 文件夹统计", expanded=False):
+                    with st.sidebar.expander(SIDEBAR_LABELS["folder_statistics"], expanded=False):
                         # 按文件类型统计
                         type_count = {}
                         for file in image_files:
@@ -853,25 +853,25 @@ class Detection_UI:
                         for i, file in enumerate(image_files[:5]):
                             st.write(f"  {i+1}. {os.path.basename(file)}")
                         if len(image_files) > 5:
-                            st.write(f"  ... 还有 {len(image_files) - 5} 个文件")
+                            st.write(SIDEBAR_HINTS["more_files_remaining"].format(count=len(image_files) - 5))
                 
                 # 转为文件对象
                 self.uploaded_file = [LocalFileObj(f) for f in image_files]
             else:
                 if folder_path:
-                    st.sidebar.error("❌ 文件夹路径无效")
-                st.sidebar.caption("💡 提示: 选择或输入本地图片文件夹路径，自动递归查找所有图片。")
+                    st.sidebar.error(SIDEBAR_HINTS["invalid_folder_path"])
+                st.sidebar.caption(SIDEBAR_HINTS["folder_selection_hint"])
                 self.uploaded_file = []
         elif self.input_source == "视频文件":
-            self.uploaded_video = st.sidebar.file_uploader("上传视频文件", type=["mp4", "avi", "mov"], accept_multiple_files=True, key=st.session_state["file_key"])
+            self.uploaded_video = st.sidebar.file_uploader(SIDEBAR_LABELS["upload_videos"], type=["mp4", "avi", "mov"], accept_multiple_files=True, key=st.session_state["file_key"])
             
             # 显示上传状态和进度
             if self.uploaded_video:
                 num_videos = len(self.uploaded_video)
-                st.sidebar.success(f"📹 已成功上传 {num_videos} 个视频文件")
+                st.sidebar.success(SIDEBAR_HINTS["video_upload_success"].format(count=num_videos))
                 
                 # 显示视频列表和信息
-                with st.sidebar.expander("📹 查看上传的视频", expanded=False):
+                with st.sidebar.expander(SIDEBAR_LABELS["display_uploaded_video"], expanded=False):
                     total_size = 0
                     for i, video in enumerate(self.uploaded_video[:5]):  # 最多显示前5个
                         video_size = len(video.getvalue()) / (1024 * 1024)  # MB
@@ -879,20 +879,20 @@ class Detection_UI:
                         st.write(f"{i+1}. {video.name} ({video_size:.1f} MB)")
                     if num_videos > 5:
                         st.write(STATUS_MESSAGES["more_videos_remaining"].format(count=num_videos - 5))
-                    st.write(f"📊 总大小: {total_size:.1f} MB")
+                    st.write(SIDEBAR_HINTS["total_size"].format(size=total_size))
             else:
-                st.sidebar.info("📤 请选择视频文件上传")
+                st.sidebar.info(SIDEBAR_HINTS["video_upload_hint"])
                 
-            st.sidebar.caption("💡 提示: 请选择视频并点击'开始检测'按钮，进行视频检测！")
+            st.sidebar.caption(SIDEBAR_HINTS["video_detection_hint"])
         elif self.input_source == "视频文件夹":
             default_video_types = ["mp4", "avi", "mov"]
             video_types = st.sidebar.multiselect(
-                "选择视频类型",
+                SIDEBAR_LABELS["select_video_type"],
                 options=["mp4", "avi", "mov", "mkv", "flv", "wmv"],
                 default=default_video_types
             )
             # Tkinter文件夹选择器按钮
-            if st.sidebar.button("选择视频文件夹"):
+            if st.sidebar.button(SIDEBAR_LABELS["select_video_folder"]):
                 root = tk.Tk()
                 root.withdraw()
                 root.wm_attributes('-topmost', 1)
@@ -1062,7 +1062,7 @@ class Detection_UI:
                 st.session_state['sidebar_preview_index'] = current_preview_index
                 
                 # 侧边栏图片预览控制
-                st.sidebar.subheader(SIDEBAR_MESSAGES["image_preprocessing_preview"])
+                st.sidebar.subheader(MAIN_HEADERS["image_preprocessing_preview"])
                 
                 # 图片切换控件
                 preview_col1, preview_col2, preview_col3 = st.sidebar.columns([1, 2, 1])
@@ -1206,18 +1206,18 @@ class Detection_UI:
                 # Display original and distorted images
                 st.sidebar.image([image_ini, distorted_image], caption=[f"原始图像: {self.uploaded_file.name}", f"调整后的图像: {self.uploaded_file.name}"], channels="BGR")
         else:
-            st.sidebar.warning("💡 请先上传图像以调整畸变系数。")
+            st.sidebar.warning(SIDEBAR_HINTS["upload_image_to_adjust_distortion"])
 
-        st.sidebar.header("📁 输出文件路径设置")
-        self.output_path = st.sidebar.text_input("输出文件路径", value=abs_path("../output", path_type="current"), placeholder="例如：../output 或 D:/videos")
+        st.sidebar.header(SIDEBAR_HEADERS["output_file_path"])
+        self.output_path = st.sidebar.text_input(SIDEBAR_LABELS["output_file_path"], value=abs_path("../output", path_type="current"), placeholder="例如：../output 或 D:/videos")
 
         if self.input_source in ["摄像头", "RTSP/RTMP流"]:
-            st.sidebar.header("📡 RTSP/RTMP输出设置")
-            self.enable_rtsp_output = st.sidebar.checkbox("启用RTSP/RTMP输出", value=False)        # RTSP/RTMP输出地址输入
+            st.sidebar.header(SIDEBAR_HEADERS["rtsp_output_settings"])
+            self.enable_rtsp_output = st.sidebar.checkbox(SIDEBAR_LABELS["enable_rtsp_output"], value=False)        # RTSP/RTMP输出地址输入
         if self.enable_rtsp_output:
-            self.rtsp_output_url = st.sidebar.text_input("RTSP/RTMP输出地址", placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
-            st.sidebar.write("💡 提示: 设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream")
-            
+            self.rtsp_output_url = st.sidebar.text_input(SIDEBAR_LABELS["rtsp_output_url"], placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path")
+            st.sidebar.write(SIDEBAR_HINTS["rtsp_output_hint"])
+
         # 🔧 调用调试函数
         self.debug_detection_settings()
 
@@ -1226,15 +1226,15 @@ class Detection_UI:
         调试检测设置，显示当前配置信息
         """
         if self.from_streamlit:
-            with st.sidebar.expander("🔧 调试信息", expanded=False):
-                st.write("### 当前配置")
+            with st.sidebar.expander(MAIN_LABELS["debug_messages"], expanded=False):
+                st.subheader(MAIN_HEADERS["current_config"])
                 st.write(f"- 模型类型: {getattr(self, 'model_type', 'None')}")
                 st.write(f"- 图像类型: {getattr(self, 'image_type', 'None')}")
                 st.write(f"- 矩形框输出: {getattr(self, 'rectangle_bounding_output', 'None')}")
                 st.write(f"- 置信度阈值: {getattr(self, 'conf_threshold', 'None')}")
                 st.write(f"- IOU阈值: {getattr(self, 'iou_threshold', 'None')}")
                 
-                st.write("### 类别设置")
+                st.write(MAIN_HEADERS["class_settings"])
                 st.write(f"- 可用类别(中文): {getattr(self, 'available_classes', [])}")
                 st.write(f"- 选择的类别(英文): {getattr(self, 'selected_classes', [])}")
                 
@@ -1253,11 +1253,11 @@ class Detection_UI:
                 
                 # 显示实时检测信息
                 if hasattr(self, '_debug_detected_classes'):
-                    st.write("### 实时检测信息")
+                    st.write(MAIN_HEADERS["real_time_detection"])
                     st.write(f"- 当前检测到的类别: {getattr(self, '_debug_detected_classes', [])}")
                     st.write(f"- 类别匹配状态: {getattr(self, '_debug_class_matches', {})}")
                     
-                st.write("### 颜色设置")
+                st.write(MAIN_HEADERS["color_settings"])
                 st.write(f"- 颜色列表长度: {len(getattr(self, 'colors', []))}")
                 if hasattr(self, 'colors') and len(self.colors) > 0:
                     st.write(f"- 前3个颜色: {self.colors[:3]}")
@@ -1267,14 +1267,14 @@ class Detection_UI:
         调试显示状态，输出当前图像和检测结果的状态信息
         """
         if self.from_streamlit:
-            with st.expander(STATUS_MESSAGES["display_status_debug"], expanded=False):
-                st.write("### " + STATUS_MESSAGES["session_state_data"])
+            with st.expander(MAIN_LABELS["display_status_debug"], expanded=False):
+                st.subheader(MAIN_HEADERS["session_state_data"])
                 st.write(f"- saved_images_ini 数量: {len(st.session_state.get('saved_images_ini', []))}")
                 st.write(f"- saved_images 数量: {len(st.session_state.get('saved_images', []))}")
                 st.write(f"- saved_names 数量: {len(st.session_state.get('saved_names', []))}")
                 st.write(f"- 当前图片索引: {st.session_state.get('image_play_index', 'None')}")
 
-                st.write("### " + STATUS_MESSAGES["logtable_data"])
+                st.subheader(MAIN_HEADERS["logtable_data"])
                 if hasattr(self, 'logTable'):
                     st.write(f"- logTable.saved_images_ini 数量: {len(getattr(self.logTable, 'saved_images_ini', []))}")
                     st.write(f"- logTable.saved_images 数量: {len(getattr(self.logTable, 'saved_images', []))}")
@@ -1282,7 +1282,7 @@ class Detection_UI:
                 else:
                     st.write("- logTable: 未初始化")
 
-                st.write("### " + STATUS_MESSAGES["display_mode"])
+                st.subheader(MAIN_HEADERS["display_mode"])
                 st.write(f"- 显示模式: {getattr(self, 'display_mode', 'None')}")
                 st.write(f"- 选择的目标: {st.session_state.get('selectbox_target', 'None')}")
 
@@ -1740,7 +1740,7 @@ class Detection_UI:
 
         # 在第一列设置显示模式的选择
         with col1:
-            st.subheader(SIDEBAR_MESSAGES["video_image_detection_system"])
+            st.subheader(MAIN_HEADERS["video_image_detection_system"])
             self.display_mode = st.radio(MAIN_LABELS["display_mode_selection"], ["叠加显示", "对比显示"])
             self.image_placeholder = st.empty()
             self.image_placeholder_res = st.empty()
@@ -1766,7 +1766,7 @@ class Detection_UI:
 
         # 在最右侧列设置识别结果表格的显示
         with col2:
-            st.subheader(SIDEBAR_MESSAGES["current_image_results"])
+            st.subheader(MAIN_HEADERS["current_image_results"])
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
 
@@ -1805,7 +1805,7 @@ class Detection_UI:
                 st.session_state['selectbox_target'] = current_selected
             
             selectbox_target = self.selectbox_placeholder.selectbox(
-                SIDEBAR_MESSAGES["target_filter"], 
+                MAIN_LABELS["target_filter"], 
                 detected_targets, 
                 key=selectbox_key, 
                 index=current_index
@@ -1867,7 +1867,7 @@ class Detection_UI:
                                                 filename=os.path.basename(self.saved_log_data)))
 
                 self.logTable.clear_data()
-            st.subheader(SIDEBAR_MESSAGES["history_log"])
+            st.subheader(MAIN_HEADERS["history_log"])
             # 显示所有结果记录的空白表格
             self.log_table_placeholder = st.empty()
             self.logTable.update_table(self.log_table_placeholder)
@@ -1881,7 +1881,7 @@ class Detection_UI:
 
         # 将切换按钮移到独立区域，并简化显示逻辑
         st.markdown("---")
-        st.subheader(SIDEBAR_MESSAGES["image_browser_control"])
+        st.subheader(MAIN_HEADERS["image_browser_control"])
         
         # 检查是否有检测结果（优先检查session state，然后检查logTable）
         saved_images_ini = st.session_state.get('saved_images_ini', [])
@@ -1926,7 +1926,7 @@ class Detection_UI:
             
             # 添加滑块控制
             new_index = st.slider(
-                STATUS_MESSAGES["image_slider_label"], 
+                MAIN_LABELS["image_slider_label"], 
                 min_value=0, 
                 max_value=total_imgs - 1, 
                 value=current_index,
@@ -1949,7 +1949,7 @@ class Detection_UI:
                 if self.display_mode == "对比显示" and hasattr(self, 'image_placeholder_res'):
                     self.image_placeholder_res.image(load_default_image(), caption="识别画面")
 
-        st.subheader(SIDEBAR_MESSAGES["realtime_dashboard"])
+        st.subheader(MAIN_HEADERS["realtime_dashboard"])
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             self.frame_count_placeholder = st.empty()
@@ -2052,7 +2052,7 @@ class Detection_UI:
         处理图片输入
         """
         if not self.uploaded_file:
-            st.warning("请先上传图片文件！")
+            st.warning(SIDEBAR_HINTS["upload_files_first"])
             return
             
         self.logTable.clear_frames()
@@ -2121,9 +2121,9 @@ class Detection_UI:
                     st.session_state['current_detection_time'] = self.detection_time
                     
                     # 更新显示
-                    self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], idx + 1)
-                    self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
-                    self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
+                    self.frame_count_placeholder.metric(MAIN_LABELS["current_frame"], idx + 1)
+                    self.target_count_placeholder.metric(MAIN_LABELS["target_count"], len(detInfo))
+                    self.detection_time_placeholder.metric(MAIN_LABELS["detection_time"], self.detection_time)
 
                     # 显示图片
                     resized_image = cv2.resize(image, (self.display_width, self.display_height))
@@ -2239,9 +2239,9 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], 1)
-                self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
-                self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
+                self.frame_count_placeholder.metric(MAIN_LABELS["current_frame"], 1)
+                self.target_count_placeholder.metric(MAIN_LABELS["target_count"], len(detInfo))
+                self.detection_time_placeholder.metric(MAIN_LABELS["detection_time"], self.detection_time)
                 
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
@@ -2357,9 +2357,9 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], current_frame + 1)
-                self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
-                self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
+                self.frame_count_placeholder.metric(MAIN_LABELS["current_frame"], current_frame + 1)
+                self.target_count_placeholder.metric(MAIN_LABELS["target_count"], len(detInfo))
+                self.detection_time_placeholder.metric(MAIN_LABELS["detection_time"], self.detection_time)
                 
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
@@ -2420,20 +2420,20 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], frame_count + 1)
-                self.target_count_placeholder.metric(METRICS_LABELS["target_count"], len(detInfo))
-                self.detection_time_placeholder.metric(METRICS_LABELS["detection_time"], self.detection_time)
+                self.frame_count_placeholder.metric(MAIN_LABELS["current_frame"], frame_count + 1)
+                self.target_count_placeholder.metric(MAIN_LABELS["target_count"], len(detInfo))
+                self.detection_time_placeholder.metric(MAIN_LABELS["detection_time"], self.detection_time)
                 
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
                 
                 if self.display_mode == "叠加显示":
-                    self.image_placeholder.image(resized_image, channels="BGR", caption=SIDEBAR_MESSAGES["camera_detection_view"])
+                    self.image_placeholder.image(resized_image, channels="BGR", caption=SIDEBAR_LABELS["camera_detection_view"])
                 else:
-                    self.image_placeholder.image(resized_frame, channels="BGR", caption=SIDEBAR_MESSAGES["camera_original_view"])
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption=SIDEBAR_LABELS["camera_original_view"])
                     if hasattr(self, 'image_placeholder_res'):
-                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=SIDEBAR_MESSAGES["camera_detection_view"])
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=SIDEBAR_LABELS["camera_detection_view"])
                 
                 # 添加到日志表
                 self.logTable.add_frames(image, detInfo, processed_frame, f"camera_{frame_count}")
@@ -2457,7 +2457,7 @@ class Detection_UI:
                 return
 
             st.info(STATUS_MESSAGES["rtsp_connected"].format(rtsp_url=rtsp_url))
-            self.close_flag = self.close_placeholder.button(label="停止")
+            self.close_flag = self.close_placeholder.button(label=BUTTON_TEXTS["stop"])
             
             frame_count = 0
             while cap.isOpened() and not self.close_flag:
@@ -2480,21 +2480,21 @@ class Detection_UI:
                 st.session_state['current_detection_time'] = self.detection_time
                 
                 # 更新显示
-                self.frame_count_placeholder.metric(METRICS_LABELS["current_frame"], frame_count + 1)
-                self.target_count_placeholder.metric(METRICS_LABELS["current_target"], len(detInfo))
-                self.detection_time_placeholder.metric(METRICS_LABELS["current_detection_time"], self.detection_time)
+                self.frame_count_placeholder.metric(MAIN_LABELS["current_frame"], frame_count + 1)
+                self.target_count_placeholder.metric(MAIN_LABELS["current_target"], len(detInfo))
+                self.detection_time_placeholder.metric(MAIN_LABELS["current_detection_time"], self.detection_time)
 
                 # 显示图片
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
                 
                 if self.display_mode == "叠加显示":
-                    self.image_placeholder.image(resized_image, channels="BGR", caption="RTSP识别画面")
+                    self.image_placeholder.image(resized_image, channels="BGR", caption=SIDEBAR_LABELS["rtsp_detection_view"])
                 else:
-                    self.image_placeholder.image(resized_frame, channels="BGR", caption="RTSP原始画面")
+                    self.image_placeholder.image(resized_frame, channels="BGR", caption=SIDEBAR_LABELS["rtsp_original_view"])
                     if hasattr(self, 'image_placeholder_res'):
-                        self.image_placeholder_res.image(resized_image, channels="BGR", caption="RTSP识别画面")
-                
+                        self.image_placeholder_res.image(resized_image, channels="BGR", caption=SIDEBAR_LABELS["rtsp_detection_view"])
+
                 # 添加到日志表
                 self.logTable.add_frames(image, detInfo, processed_frame, f"rtsp_{frame_count}")
                 

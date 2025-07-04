@@ -94,10 +94,6 @@ def generate_filename(template_type, **kwargs):
         # 如果缺少必要参数，返回默认格式
         return f"光伏板检测文件-{kwargs.get('timestamp', 'unknown')}"
 
-MAIN_LABELS = {
-    "display_mode_selection": "单/双画面显示",
-}
-
 # 按钮文本优化
 BUTTON_TEXTS = {
     "start_detection": "🚀 开始检测",
@@ -141,6 +137,24 @@ SIDEBAR_HEADERS= {
     "image_type_selection": "🖼️ 图像类型选择",
     "model_file_settings": "📁 模型文件设置",
     "input_source_settings": "📹 输入源识别设置",
+    "output_file_path": "📁 输出文件路径设置",
+    "rtsp_output_settings": "📡 RTSP/RTMP输出设置",
+}
+
+MAIN_HEADERS = {
+    "history_log": "📜 历史日志",
+    "image_browser_control": "📸 图片浏览控制",
+    "realtime_dashboard": "📊 实时监控仪表盘",
+    "current_config": "当前配置",
+    "class_settings": "类别设置",
+    "real_time_detection": "实时检测信息",
+    "color_settings": "颜色设置",
+    "session_state_data": "Session State 图像数据",
+    "logtable_data": "LogTable 图像数据",
+    "display_mode": "显示模式",
+    "video_image_detection_system": "📷 视频/图片检测系统",
+    "current_image_results": "🖼️ 当前图片检测结果",
+    "image_preprocessing_preview": "🖼️ 图片预处理预览",
 }
 
 # 侧边栏设置项标签
@@ -167,9 +181,27 @@ SIDEBAR_LABELS = {
     "conf_threshold_slider": "置信度设定",
     "iou_threshold_slider": "IOU设定",
     "rectangle_output_checkbox": "输出矩形边框",
-    "select_image_type": "选择图像类型",
+    "select_image_type": "选择图片类型",
     "select_image_folder": "📂 选择图片文件夹",
     "input_folder_path": "输入图片文件夹路径",
+    "output_file_path": "📁 输出文件路径设置",
+    "enable_rtsp_output": "启用RTSP/RTMP输出",
+    "rtsp_output_url": "RTSP/RTMP输出地址",
+    "rtsp_input": "输入RTSP/RTMP地址",
+    "upload_videos": "上传视频",
+    "display_uploaded_video": "📋 查看上传的视频",
+    "folder_statistics": "📊 文件夹统计",
+    "select_video_type": "选择视频类型",
+    "select_video_folder": "📂 选择视频文件夹",
+    "select_pt_file": "选择.pt文件",
+    # 视频显示画面标签
+    "camera_detection_view": "摄像头识别画面",
+    "camera_original_view": "摄像头原始画面", 
+    "rtsp_detection_view": "RTSP识别画面",
+    "rtsp_original_view": "RTSP原始画面",
+    "display_uploaded_files": "📋 查看上传的文件",
+    "about_version": "📖 关于 {version_string}",
+    "select_detection_or_segmentation_type": "选择需要检测或分割的目标类别",
 }
 
 # 界面选项配置
@@ -185,45 +217,21 @@ SIDEBAR_OPTIONS = {
 }
 
 # 界面提示文本
-SIDEBAR_MESSAGES = {
+SIDEBAR_HINTS = {
     "image_upload_success": "📂 已成功上传 {count} 张图片",
+    "video_upload_success": "📹 已成功上传 {count} 个视频",
     "csv_output_path_input": "修改日志输出路径 (默认路径为output/logs/)",
     "export_format_hint": "💡 提示: {format} 文件将导出至 {path} 路径。",
     "conf_threshold_hint": "💡 提示: 置信度设定范围为0.0到1.0，代表检测结果的置信度。",
     "iou_threshold_hint": "💡 提示: IOU设定范围为0.0到1.0，代表检测结果的重叠度。",
-    "task_type_selection": "选择任务类型",
     "detection_task_hint": "💡 提示: 检测任务将检测异常的光伏板组件或其他异常，目标类别按实际需要选择。",
     "segmentation_task_hint": "💡 提示: 分割任务将对所有的光伏板轮廓进行分割，选择输出矩形边框后，将检测矩形边框并输出，否则输出原始边缘，目标类别选择【单组件】或【组串】即可。",
     "image_type_hint": "💡 提示: 当前选择的图像类型为: {type}",
     "target_class_multiselect": "选择检测目标类别",
     "no_class_selected_hint": "💡 提示: 未选择任何类别，模型将不会检测任何目标。",
     "selected_classes_hint": "💡 提示: 当前选择的类别为: {classes}",
-    "model_file_radio": "模型设置",
-    "upload_model_file": "选择.pt文件",
-    "input_source_radio": "选择输入源",
-    "camera_selection": "选择摄像头序号",
     "camera_hint": "💡 提示: 请点击'开始检测'按钮，启动摄像头检测！",
-    "rtsp_input": "输入RTSP/RTMP地址",
     "rtsp_hint": "💡 提示: 请点击'开始检测'按钮，启动RTSP/RTMP流检测！",
-    "upload_videos": "上传视频",
-    "select_folder": "选择文件夹",
-    "target_filter": "目标过滤",
-    "current_config": "当前配置",
-    "class_settings": "类别设置",
-    "real_time_detection": "实时检测信息",
-    "color_settings": "颜色设置",
-    "image_browser_control": "📸 图片浏览控制",
-    "realtime_dashboard": "📊 实时监控仪表盘",
-    "video_image_detection_system": "📷 视频/图片检测系统",
-    "current_image_results": "🖼️ 当前图片检测结果",
-    "history_log": "📜 历史日志",
-    "all_targets": "全部目标",
-    "image_preprocessing_preview": "🖼️ 图片预处理预览",
-    # 视频显示画面标签
-    "camera_detection_view": "摄像头识别画面",
-    "camera_original_view": "摄像头原始画面", 
-    "rtsp_detection_view": "RTSP识别画面",
-    "rtsp_original_view": "RTSP原始画面",
     # 图像处理提示
     "false_color_hint": "💡 提示: 伪彩色转换针对于输入图像为黑白图像且图像类型为红外热图。",
     "rotation_correction_hint": "💡 提示: 图像旋转校正用于修正图像的倾斜角度，适用于拍摄角度不正的图像。",
@@ -233,13 +241,17 @@ SIDEBAR_MESSAGES = {
     "distortion_coefficient_hint": "💡 提示: 畸变系数用于描述镜头的径向畸变。畸变系数大于0：桶形畸变，图像边缘向外扩展；畸变系数小于0：枕形畸变，图像边缘向内收缩。",
     "folder_selection_hint": "💡 提示: 选择或输入本地图片文件夹路径，自动递归查找所有图片。",
     "video_folder_selection_hint": "💡 提示: 选择或输入本地视频文件夹路径，自动递归查找所有视频。",
-    "image_upload_hint": "💡 提示: 请选择图片并点击'开始检测'按钮，进行图片检测！",
-    "video_upload_hint": "💡 提示: 请选择视频并点击'开始检测'按钮，进行视频检测！",
+    "image_detection_hint": "💡 提示: 请选择图片并点击'开始检测'按钮，进行图片检测！",
+    "video_upload_hint": "📤 请选择视频文件上传",
+    "video_detection_hint": "💡 提示: 请选择视频并点击'开始检测'按钮，进行视频检测！",
+    "rtsp_output_hint": "💡 提示: 设置RTSP/RTMP输出地址，将流视频检测结果推送至RTSP/RTMP客户端，例如：rtmp://<ip>:<port>/live/stream",
     "more_files_remaining": "... 还有 {count} 个文件",
     "more_videos_remaining": "... 还有 {count} 个视频",
-    "select_upload_images": "📤 请选择图片文件上传",
-    "select_image_type": "选择图片类型",
-    "display_uploaded_files": "📋 查看上传的文件",
+    "image_upload_hint": "📤 请选择图片文件上传",
+    "upload_image_first": "请先上传图片文件或选择图片文件夹！",
+    "upload_image_to_adjust_distortion": "💡 请上传图片以调整畸变参数！",
+    "invalid_folder_path": "❌ 无效的文件夹路径，请检查路径是否正确！",
+    "total_size": "📊 总大小: {size} MB",
 }
 
 # 状态消息模板
@@ -272,7 +284,6 @@ STATUS_MESSAGES = {
     "total_images_info": "共有 {count} 张检测结果图片",
     "image_index_info": "**第 {current} / {total} 张图片**",
     "filename_info": "文件名: {filename}",
-    "image_slider_label": "选择图片",
     "current_frame_metric": "📸 当前帧数",
     "current_fps_metric": "⚡ 当前帧率 (FPS)",
     "target_count_metric": "🎯 检测目标数量",
@@ -320,14 +331,13 @@ STATUS_MESSAGES = {
     "no_camera_found": "未找到可用的摄像头",
     "camera_calibration_success": "相机标定参数加载成功！",
     "camera_calibration_failed": "标定文件解析失败: {error}",
-    "session_state_data": "Session State 图像数据",
-    "logtable_data": "LogTable 图像数据",
-    "display_mode": "显示模式",
-    "display_status_debug": "🔧 显示状态调试",
+    "scanning_complete": "🔍 文件夹扫描完成！已找到 {count} 个文件。",
 }
 
-# 指标和仪表盘标签
-METRICS_LABELS = {
+# 主页面标签
+MAIN_LABELS = {
+    "display_mode_selection": "单/双画面显示",
+    "target_filter": "目标过滤",
     "current_frame": "📸 当前帧数",
     "current_fps": "⚡ 当前帧率 (FPS)",
     "target_count": "🎯 检测目标数量",
@@ -337,16 +347,17 @@ METRICS_LABELS = {
     "statistics_by_type": "按类型统计",
     "example_files": "示例文件",
     "total_size": "📊 总大小",
-    "current_config": "### 当前配置",
     "model_type_label": "- 模型类型",
     "image_type_label": "- 图像类型", 
     "rectangle_output_label": "- 矩形框输出",
     "conf_threshold_label": "- 置信度阈值",
     "iou_threshold_label": "- IOU阈值",
-    "class_settings": "### 类别设置",
     "available_classes_label": "- 可用类别(中文)",
     "selected_classes_label": "- 选择的类别(英文)",
-    "model_classes_label": "- 模型类别"
+    "model_classes_label": "- 模型类别",
+    "image_slider_label": "选择图片",
+    "display_status_debug": "🔧 显示状态调试",
+    "debug_messages": "🔧 调试消息",
 }
 
 def get_status_message(message_type, **kwargs):
@@ -357,9 +368,9 @@ def get_status_message(message_type, **kwargs):
     except KeyError:
         return template
 
-def get_metric_label(metric_type, **kwargs):
+def get_main_label(metric_type, **kwargs):
     """获取指标标签"""
-    template = METRICS_LABELS.get(metric_type, "")
+    template = MAIN_LABELS.get(metric_type, "")
     try:
         return template.format(**kwargs)
     except KeyError:
