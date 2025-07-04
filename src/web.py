@@ -526,7 +526,7 @@ class Detection_UI:
             elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
                 self.cls_name = EL_type
                 self.detect_class_color = EL_class_colors
-            elif self.image_type == "可见光":
+            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
                 self.cls_name = Visible_type
                 self.detect_class_color = Visible_class_colors
             else:
@@ -534,25 +534,25 @@ class Detection_UI:
                 self.detect_class_color = Other_class_colors
 
         # 重新加载模型
-        if self.model_type == "检测任务":
-            if self.image_type == "红外":
+        if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
+            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
                 model_path = abs_path(
                     "../weights/yolo11s-thermo.pt", path_type="current"
                 )
-            elif self.image_type == "EL隐裂":
+            elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
                 model_path = abs_path("../weights/yolo11s-el.pt", path_type="current")
-            elif self.image_type == "可见光":
+            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
                 model_path = abs_path(
                     "../weights/yolo11s-visible.pt", path_type="current"
                 )
             else:
                 model_path = abs_path("../weights/yolo11s.pt", path_type="current")
         else:
-            if self.image_type == "红外":
+            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
                 model_path = abs_path(
                     "../weights/yolo11s-thermo-seg.pt", path_type="current"
                 )
-            elif self.image_type == "可见光":
+            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
                 model_path = abs_path(
                     "../weights/yolo11s-visible-seg.pt", path_type="current"
                 )
@@ -816,19 +816,27 @@ class Detection_UI:
 
         available_options = []
         # 添加提示信息
-        if self.model_type == "检测任务":
+        if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
             st.sidebar.caption(get_sidebar_hint("detection_task_hint"))
             # 检测任务也应该有矩形框选项
             self.rectangle_bounding_output = st.sidebar.checkbox(
                 get_sidebar_label("rectangle_output_checkbox"), value=True
             )
-            available_options = ["EL隐裂", "红外", "可见光", "其他"]
-        elif self.model_type == "分割任务":
+            available_options = [
+                SYSTEM_DEFAULTS["image_type_el"],
+                SYSTEM_DEFAULTS["image_type_thermal"],
+                SYSTEM_DEFAULTS["image_type_visible"],
+                "其他",
+            ]
+        elif self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]:
             self.rectangle_bounding_output = st.sidebar.checkbox(
                 get_sidebar_label("rectangle_output_checkbox"), value=True
             )
             st.sidebar.caption(get_sidebar_hint("segmentation_task_hint"))
-            available_options = ["红外", "可见光"]
+            available_options = [
+                SYSTEM_DEFAULTS["image_type_thermal"],
+                SYSTEM_DEFAULTS["image_type_visible"],
+            ]
 
         # 添加图像类型选择
         st.sidebar.header(get_sidebar_header("image_type_selection"))
@@ -838,20 +846,20 @@ class Detection_UI:
             index=0,  # 默认选择第一个选项
         )
 
-        if self.model_type == "检测任务":
-            if self.image_type == "红外":
+        if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
+            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
                 self.cls_name = Thermo_type
                 self.detect_class_color = Thermo_class_colors
-            elif self.image_type == "EL隐裂":
+            elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
                 self.cls_name = EL_type
                 self.detect_class_color = EL_class_colors
-            elif self.image_type == "可见光":
+            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
                 self.cls_name = Visible_type
                 self.detect_class_color = Visible_class_colors
             else:
                 self.cls_name = Other_type
                 self.detect_class_color = Other_class_colors
-        elif self.model_type == "分割任务":
+        elif self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]:
             self.cls_name = Segmentation_type
             self.detect_class_color = Segmentation_class_colors
 
@@ -912,43 +920,43 @@ class Detection_UI:
                     self.model.load_model(model_path=self.custom_model_file)
                 except Exception as e:
                     st.sidebar.error(
-                        STATUS_MESSAGES["model_load_error"].format(error=str(e))
+                        get_model_message("model_load_error", error=str(e))
                     )
                 # 检查模型类别是否与选定类别一致
                 if set(self.model.names) != set(self.available_class_keys):
-                    st.sidebar.error(STATUS_MESSAGES["model_class_mismatch"])
+                    st.sidebar.error(get_model_message("model_class_mismatch"))
                 else:
                     self.colors = [
                         self.detect_class_color.get(class_name, (0, 255, 0))
                         for class_name in self.cls_name.values()
                     ]
         elif model_file_option == "默认":
-            if self.model_type == "检测任务":
-                if self.image_type == "红外":
+            if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
+                if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
                     model_path = abs_path(
                         "../weights/yolo11s-thermo.pt", path_type="current"
                     )
-                elif self.image_type == "EL隐裂":
+                elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
                     model_path = abs_path(
                         "../weights/yolo11s-el.pt", path_type="current"
                     )
-                elif self.image_type == "可见光":
+                elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
                     model_path = abs_path(
                         "../weights/yolo11s-visible.pt", path_type="current"
                     )
                 else:
                     model_path = abs_path("../weights/yolo11s.pt", path_type="current")
             else:
-                if self.image_type == "红外":
+                if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
                     model_path = abs_path(
                         "../weights/yolo11s-thermo-seg.pt", path_type="current"
                     )
-                elif self.image_type == "可见光":
+                elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
                     model_path = abs_path(
                         "../weights/yolo11s-visible-seg.pt", path_type="current"
                     )
                 else:
-                    st.sidebar.error(STATUS_MESSAGES["unsupported_image_type"])
+                    st.sidebar.error(get_model_message("unsupported_image_type"))
 
             try:
                 self.model.load_model(model_path=model_path)
@@ -981,7 +989,7 @@ class Detection_UI:
 
             except Exception as e:
                 st.sidebar.error(
-                    STATUS_MESSAGES["default_model_load_error"].format(error=str(e))
+                    get_model_message("default_model_load_error", error=str(e))
                 )
 
             # 检查类别是否完全一致
@@ -1016,7 +1024,7 @@ class Detection_UI:
                 print(f"选定类别中缺失的类别: {missing_in_selected}")
 
                 # 在 Streamlit 侧边栏显示错误信息
-                st.sidebar.warning(STATUS_MESSAGES["model_class_auto_adjusted"])
+                st.sidebar.warning(get_model_message("model_class_auto_adjusted"))
             else:
                 # 为模型中的类别重新分配颜色
                 self.colors = [
@@ -1110,7 +1118,7 @@ class Detection_UI:
             if folder_path and os.path.isdir(folder_path):
                 # 显示扫描进度
                 with st.sidebar:
-                    st.info(STATUS_MESSAGES["scanning_folder"])
+                    st.info(get_file_message("scanning_folder"))
                     scan_progress = st.progress(0)
 
                 exts = tuple(f".{ext.lower()}" for ext in image_types)
@@ -1232,12 +1240,12 @@ class Detection_UI:
                 self.uploaded_video = [LocalFileObj(f) for f in video_files]
             else:
                 st.sidebar.caption(
-                    "💡 提示: 选择或输入本地视频文件夹路径，自动递归查找所有视频。"
+                    get_sidebar_hint("video_folder_selection_hint")
                 )
                 self.uploaded_video = []
 
         # 清空按钮
-        if st.sidebar.button("🗑️ 清空已上传文件"):
+        if st.sidebar.button(get_sidebar_label("clear_uploaded_files")):
             self.uploaded_file = None
             self.uploaded_video = None
 
@@ -1262,12 +1270,14 @@ class Detection_UI:
             # 重新运行 Streamlit 应用以更新状态
             st.rerun()
 
-            st.sidebar.success("已清空所有上传的文件！")
+            st.sidebar.success(get_sidebar_hint("clear_files_success"))
 
         if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
             # 添加视频输出和 RTSP 输出的启用复选框
             st.sidebar.header(get_sidebar_header("video_output_settings"))
-            self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
+            self.enable_video_output = st.sidebar.checkbox(
+                get_sidebar_label("enable_video_output"), value=True
+            )
 
         # 图像畸变校正参数设置
         st.sidebar.header(get_sidebar_header("image_processing_settings"))
@@ -1382,9 +1392,9 @@ class Detection_UI:
                     self.camera_matrix = np.array(calib_data["camera_matrix"])
                     self.dist_coeffs = np.array(calib_data["dist_coeffs"])
                     self.calibration_file = calibration_file.name
-                    st.sidebar.success("相机标定参数加载成功！")
+                    st.sidebar.success(get_camera_message("camera_calibration_success"))
                 except Exception as e:
-                    st.sidebar.error(f"标定文件解析失败: {e}")
+                    st.sidebar.error(get_camera_message("camera_calibration_failed", error=e))
             elif calibration_input.strip():
                 try:
                     # 尝试先用json解析，否则用eval（仅限受信环境）
@@ -1394,14 +1404,14 @@ class Detection_UI:
                         calib_data = eval(calibration_input, {"__builtins__": {}})
                     self.calibration_file = "sidebar_input"
                 except Exception as e:
-                    st.sidebar.error(f"标定参数解析失败: {e}")
+                    st.sidebar.error(get_camera_message("camera_calibration_failed", error=e))
             if calib_data is not None:
                 try:
                     self.camera_matrix = np.array(calib_data["camera_matrix"])
                     self.dist_coeffs = np.array(calib_data["dist_coeffs"])
-                    st.sidebar.success("相机标定参数加载成功！")
+                    st.sidebar.success(get_camera_message("camera_calibration_success"))
                 except Exception as e:
-                    st.sidebar.error(f"标定参数内容有误: {e}")
+                    st.sidebar.error(get_camera_message("camera_calibration_failed", error=e))
                     self.camera_matrix = None
                     self.dist_coeffs = None
                     self.calibration_file = None
@@ -1470,7 +1480,7 @@ class Detection_UI:
 
                 # 图片选择滑块
                 new_preview_index = st.sidebar.slider(
-                    "选择预览图片",
+                    get_sidebar_label("select_preview_image"),
                     min_value=0,
                     max_value=total_files - 1,
                     value=current_preview_index,
@@ -1501,7 +1511,9 @@ class Detection_UI:
                     image_ini = cv2.imdecode(file_bytes, 1)
 
                     if image_ini is None:
-                        st.sidebar.error(f"❌ 无法解码图片: {file_name}")
+                        st.sidebar.error(
+                            get_file_message("image_decode_error", filename=file_name)
+                        )
                     else:
                         # 应用各种图像处理
                         if self.enable_pseudo_color and is_black_and_white(image_ini):
@@ -1580,7 +1592,9 @@ class Detection_UI:
                         )
 
                 except Exception as e:
-                    st.sidebar.error(f"❌ 处理图片时出错: {str(e)}")
+                    st.sidebar.error(
+                        get_file_message("image_processing_error", filename=file_name, error=str(e))
+                    )
 
             else:  # Handle single file upload
                 source_img = self.uploaded_file.read()
@@ -1993,7 +2007,8 @@ class Detection_UI:
                 st.warning(get_detection_message("no_detection_results"))
                 if hasattr(self, "image_placeholder"):
                     self.image_placeholder.image(
-                        load_default_image(), caption="原始画面"
+                        load_default_image(),
+                        caption=get_image_display_label("original_view"),
                     )
                 if hasattr(self, "table_placeholder"):
                     self.table_placeholder.table(
@@ -2160,15 +2175,21 @@ class Detection_UI:
         if hasattr(self, "display_mode") and hasattr(self, "image_placeholder"):
             if self.display_mode == "叠加显示":
                 self.image_placeholder.image(
-                    resized_image, channels="BGR", caption="识别画面: " + img_name
+                    resized_image,
+                    channels="BGR",
+                    caption=f"{get_image_display_label('detection_view')}: {img_name}",
                 )
             else:  # "对比显示"
                 self.image_placeholder.image(
-                    resized_frame, channels="BGR", caption="原始画面: " + img_name
+                    resized_frame,
+                    channels="BGR",
+                    caption=f"{get_image_display_label('original_view')}: {img_name}",
                 )
                 if hasattr(self, "image_placeholder_res"):
                     self.image_placeholder_res.image(
-                        resized_image, channels="BGR", caption="识别画面: " + img_name
+                        resized_image,
+                        channels="BGR",
+                        caption=f"{get_image_display_label('detection_view')}: {img_name}",
                     )
 
     def frame_process(self, image, file_name, video_time=None, is_api=False):
@@ -2405,7 +2426,8 @@ class Detection_UI:
                     or not self.logTable.saved_images_ini
                 ) and (not st.session_state.get("saved_images_ini")):
                     self.image_placeholder.image(
-                        load_default_image(), caption="原始画面"
+                        load_default_image(),
+                        caption=get_image_display_label("original_view"),
                     )
             else:
                 # "双画面显示"
@@ -2414,10 +2436,12 @@ class Detection_UI:
                     or not self.logTable.saved_images_ini
                 ) and (not st.session_state.get("saved_images_ini")):
                     self.image_placeholder.image(
-                        load_default_image(), caption="原始画面"
+                        load_default_image(),
+                        caption=get_image_display_label("original_view"),
                     )
                     self.image_placeholder_res.image(
-                        load_default_image(), caption="识别画面"
+                        load_default_image(),
+                        caption=get_image_display_label("detection_view"),
                     )
             # 显示用的进度条
             self.progress_bar = st.progress(0)
@@ -2502,7 +2526,8 @@ class Detection_UI:
                     self.saved_log_data += ".csv"
                     self.logTable.save_to_csv(self.saved_log_data)
                     st.success(
-                        STATUS_MESSAGES["export_success"].format(
+                        get_export_message(
+                            "export_success",
                             file_type="CSV数据表",
                             filename=os.path.basename(self.saved_log_data),
                         )
@@ -2511,7 +2536,8 @@ class Detection_UI:
                     self.saved_log_data += ".xlsx"
                     self.logTable.save_to_excel(self.saved_log_data)
                     st.success(
-                        STATUS_MESSAGES["export_success"].format(
+                        get_export_message(
+                            "export_success",
                             file_type="Excel电子表格",
                             filename=os.path.basename(self.saved_log_data),
                         )
@@ -2520,7 +2546,8 @@ class Detection_UI:
                     self.saved_log_data += ".json"
                     self.logTable.save_to_json(self.saved_log_data)
                     st.success(
-                        STATUS_MESSAGES["export_success"].format(
+                        get_export_message(
+                            "export_success",
                             file_type="JSON数据文件",
                             filename=os.path.basename(self.saved_log_data),
                         )
@@ -2538,7 +2565,8 @@ class Detection_UI:
                     }
                     self.logTable.save_to_word(self.saved_log_data, detection_params)
                     st.success(
-                        STATUS_MESSAGES["export_success"].format(
+                        get_export_message(
+                            "export_success",
                             file_type="Word检测报告",
                             filename=os.path.basename(self.saved_log_data),
                         )
@@ -2638,15 +2666,17 @@ class Detection_UI:
             self.toggle_comboBox(st.session_state["image_play_index"])
 
         else:
-            st.info(STATUS_MESSAGES["no_detection_results"])
+            st.info(get_detection_message("no_detection_results"))
             # 显示默认图像
             if hasattr(self, "image_placeholder"):
-                self.image_placeholder.image(load_default_image(), caption="原始画面")
+                self.image_placeholder.image(
+                    load_default_image(), caption=get_image_display_label("original_view")
+                )
                 if self.display_mode == "对比显示" and hasattr(
                     self, "image_placeholder_res"
                 ):
                     self.image_placeholder_res.image(
-                        load_default_image(), caption="识别画面"
+                        load_default_image(), caption=get_image_display_label("detection_view")
                     )
 
         st.subheader(get_main_header("realtime_dashboard"))
@@ -2694,13 +2724,13 @@ class Detection_UI:
                 if self.uploaded_file:
                     self._process_image_input()
                 else:
-                    st.warning(STATUS_MESSAGES["upload_files_first"])
+                    st.warning(get_file_message("upload_files_first"))
 
             elif self.input_source == "视频文件" or self.input_source == "视频文件夹":
                 if hasattr(self, "uploaded_video") and self.uploaded_video:
                     self._process_video_input()
                 else:
-                    st.warning(STATUS_MESSAGES["upload_video_first"])
+                    st.warning(get_file_message("upload_video_first"))
 
             elif self.input_source == "摄像头":
                 if self.selected_camera is not None:
@@ -2711,23 +2741,23 @@ class Detection_UI:
                     )
                     self._process_camera_input(camera_id)
                 else:
-                    st.warning(STATUS_MESSAGES["select_camera_first"])
+                    st.warning(get_camera_message("select_camera_first"))
 
             elif self.input_source == "RTSP/RTMP流":
                 if self.rtsp_input_url:
                     self._process_rtsp_input(self.rtsp_input_url)
                 else:
-                    st.warning(STATUS_MESSAGES["input_rtsp_first"])
+                    st.warning(get_rtsp_message("input_rtsp_first"))
 
             else:
                 st.error(
-                    STATUS_MESSAGES["unsupported_input_source"].format(
-                        source=self.input_source
+                    get_warning_message(
+                        "unsupported_input_source", source=self.input_source
                     )
                 )
 
         except Exception as e:
-            st.error(STATUS_MESSAGES["input_processing_error"].format(error=str(e)))
+            st.error(get_warning_message("input_processing_error", error=str(e)))
 
     def _ensure_initialization(self):
         """
@@ -2781,7 +2811,7 @@ class Detection_UI:
         # 初始化进度显示
         progress_container = st.container()
         with progress_container:
-            st.info(STATUS_MESSAGES["image_detection_start"])
+            st.info(get_detection_message("image_detection_start"))
             overall_progress = st.progress(0)
             status_text = st.empty()
             current_image_info = st.empty()
@@ -2790,14 +2820,14 @@ class Detection_UI:
             # 批量处理多张图片
             total_files = len(self.uploaded_file)
             status_text.write(
-                STATUS_MESSAGES["processing_files"].format(count=total_files)
+                get_file_message("processing_files", count=total_files)
             )
 
             # 计算预估时间
             estimated_time_per_image = 2.0  # 假设每张图片需要2秒
             estimated_total_time = total_files * estimated_time_per_image
             status_text.write(
-                STATUS_MESSAGES["estimated_time"].format(time=estimated_total_time)
+                get_file_message("estimated_time", time=estimated_total_time)
             )
 
             start_time = time.time()
@@ -2813,7 +2843,8 @@ class Detection_UI:
                         else f"图片_{idx+1}"
                     )
                     current_image_info.info(
-                        STATUS_MESSAGES["processing_current"].format(
+                        get_detection_message(
+                            "processing_current",
                             filename=current_file_name,
                             current=idx + 1,
                             total=total_files,
@@ -2837,8 +2868,8 @@ class Detection_UI:
 
                     if image_ini is None:
                         st.error(
-                            STATUS_MESSAGES["image_decode_error"].format(
-                                filename=file_name
+                            get_file_message(
+                                "image_decode_error", filename=file_name
                             )
                         )
                         failed_count += 1
@@ -2884,19 +2915,19 @@ class Detection_UI:
                         self.image_placeholder.image(
                             resized_image,
                             channels="BGR",
-                            caption=f"识别画面: {file_name}",
+                            caption=f"{get_image_display_label('detection_view')}: {file_name}",
                         )
                     else:
                         self.image_placeholder.image(
                             resized_frame,
                             channels="BGR",
-                            caption=f"原始画面: {file_name}",
+                            caption=f"{get_image_display_label('original_view')}: {file_name}",
                         )
                         if hasattr(self, "image_placeholder_res"):
                             self.image_placeholder_res.image(
                                 resized_image,
                                 channels="BGR",
-                                caption=f"识别画面: {file_name}",
+                                caption=f"{get_image_display_label('detection_view')}: {file_name}",
                             )
 
                     # 添加到日志表
@@ -2915,7 +2946,8 @@ class Detection_UI:
                         remaining_images = total_files - (idx + 1)
                         remaining_time = remaining_images * avg_time_per_image
                         status_text.success(
-                            STATUS_MESSAGES["batch_processing_progress"].format(
+                            get_detection_message(
+                                "batch_processing_progress",
                                 current=idx + 1,
                                 total=total_files,
                                 remaining_time=round(remaining_time, 2),
@@ -2927,8 +2959,10 @@ class Detection_UI:
 
                 except Exception as e:
                     st.error(
-                        STATUS_MESSAGES["image_processing_error"].format(
-                            filename=current_file_name, error=str(e)
+                        get_file_message(
+                            "image_processing_error",
+                            filename=current_file_name,
+                            error=str(e),
                         )
                     )
                     failed_count += 1
@@ -2936,9 +2970,12 @@ class Detection_UI:
 
             # 完成后的总结
             total_time = time.time() - start_time
-            current_image_info.success(STATUS_MESSAGES["batch_processing_complete"])
+            current_image_info.success(
+                get_detection_message("batch_processing_complete")
+            )
             status_text.success(
-                STATUS_MESSAGES["batch_processing_summary"].format(
+                get_detection_message(
+                    "batch_processing_summary",
                     successful_count=successful_count,
                     failed_count=failed_count,
                     total_time=total_time,
@@ -2972,11 +3009,11 @@ class Detection_UI:
                 # 显示处理状态
                 progress_container = st.container()
                 with progress_container:
-                    st.info(STATUS_MESSAGES["single_image_processing_start"])
+                    st.info(get_file_message("single_image_processing_start"))
                     single_progress = st.progress(0)
                     status_info = st.empty()
 
-                status_info.write(STATUS_MESSAGES["reading_image_file"])
+                status_info.write(get_file_message("reading_image_file"))
                 single_progress.progress(0.2)
 
                 source_img = self.uploaded_file.read()
@@ -2984,16 +3021,16 @@ class Detection_UI:
                 image_ini = cv2.imdecode(file_bytes, 1)
 
                 if image_ini is None:
-                    st.error(STATUS_MESSAGES["image_decode_failed"])
+                    st.error(get_file_message("image_decode_failed"))
                     return
 
-                status_info.write(STATUS_MESSAGES["applying_image_processing"])
+                status_info.write(get_file_message("applying_image_processing"))
                 single_progress.progress(0.4)
 
                 # 应用图像处理
                 processed_image = self.apply_image_processing(image_ini)
 
-                status_info.write(STATUS_MESSAGES["ai_detection_running"])
+                status_info.write(get_general_message("ai_detection_running"))
                 single_progress.progress(0.6)
 
                 # 进行检测
@@ -3002,7 +3039,7 @@ class Detection_UI:
                     framecopy, self.uploaded_file.name
                 )
 
-                status_info.write(STATUS_MESSAGES["saving_detection_results"])
+                status_info.write(get_file_message("saving_detection_results"))
                 single_progress.progress(0.8)
 
                 # 保存结果
@@ -3036,19 +3073,19 @@ class Detection_UI:
                     self.image_placeholder.image(
                         resized_image,
                         channels="BGR",
-                        caption=f"识别画面: {self.uploaded_file.name}",
+                        caption=f"{get_image_display_label('detection_view')}: {self.uploaded_file.name}",
                     )
                 else:
                     self.image_placeholder.image(
                         resized_frame,
                         channels="BGR",
-                        caption=f"原始画面: {self.uploaded_file.name}",
+                        caption=f"{get_image_display_label('original_view')}: {self.uploaded_file.name}",
                     )
                     if hasattr(self, "image_placeholder_res"):
                         self.image_placeholder_res.image(
                             resized_image,
                             channels="BGR",
-                            caption=f"识别画面: {self.uploaded_file.name}",
+                            caption=f"{get_image_display_label('detection_view')}: {self.uploaded_file.name}",
                         )
 
                 # 添加到日志表
@@ -3056,7 +3093,7 @@ class Detection_UI:
                     image, detInfo, processed_image, self.uploaded_file.name
                 )
 
-                status_info.write(STATUS_MESSAGES["updating_interface"])
+                status_info.write(get_general_message("updating_interface"))
                 single_progress.progress(0.9)
 
                 # 立即更新session state以确保UI同步
@@ -3080,24 +3117,26 @@ class Detection_UI:
 
                 single_progress.progress(1.0)
                 status_info.success(
-                    STATUS_MESSAGES["single_image_detection_complete"].format(
-                        count=len(detInfo), time=self.detection_time
+                    get_detection_message(
+                        "single_image_detection_complete",
+                        count=len(detInfo),
+                        time=self.detection_time,
                     )
                 )
 
-                st.success(STATUS_MESSAGES["single_image_complete"])
+                st.success(get_detection_message("single_image_complete"))
                 # 立即刷新页面，让selectbox自动更新
                 st.rerun()
 
                 # 立即显示检测结果
                 self.toggle_comboBox(0)
 
-                st.success(STATUS_MESSAGES["image_detection_complete"])
+                st.success(get_detection_message("image_detection_complete"))
 
             except Exception as e:
                 st.error(
-                    STATUS_MESSAGES["single_image_processing_error"].format(
-                        error=str(e)
+                    get_file_message(
+                        "single_image_processing_error", error=str(e)
                     )
                 )
 
@@ -3106,7 +3145,7 @@ class Detection_UI:
         处理视频输入
         """
         if not hasattr(self, "uploaded_video") or not self.uploaded_video:
-            st.warning(STATUS_MESSAGES["upload_video_first"])
+            st.warning(get_file_message("upload_video_first"))
             return
 
         self.logTable.clear_frames()
@@ -3125,7 +3164,7 @@ class Detection_UI:
                 self._process_single_video(self.uploaded_video, 0)
 
         except Exception as e:
-            st.error(STATUS_MESSAGES["video_processing_error"].format(error=str(e)))
+            st.error(get_video_message("video_processing_error", error=str(e)))
 
     def _process_single_video(self, video_file, video_index):
         """处理单个视频文件"""
@@ -3138,8 +3177,8 @@ class Detection_UI:
             cap = cv2.VideoCapture(tfile.name)
             if not cap.isOpened():
                 st.error(
-                    STATUS_MESSAGES["video_open_failed"].format(
-                        video_name=video_file.name
+                    get_video_message(
+                        "video_open_failed", video_name=video_file.name
                     )
                 )
                 return
@@ -3150,8 +3189,10 @@ class Detection_UI:
             current_frame = 0
 
             st.info(
-                STATUS_MESSAGES["video_processing_start"].format(
-                    video_name=video_file.name, total_frames=total_frames
+                get_video_message(
+                    "video_processing_start",
+                    video_name=video_file.name,
+                    total_frames=total_frames,
                 )
             )
 
@@ -3202,19 +3243,19 @@ class Detection_UI:
                     self.image_placeholder.image(
                         resized_image,
                         channels="BGR",
-                        caption=f"识别画面: {video_file.name}",
+                        caption=f"{get_image_display_label('detection_view')}: {video_file.name}",
                     )
                 else:
                     self.image_placeholder.image(
                         resized_frame,
                         channels="BGR",
-                        caption=f"原始画面: {video_file.name}",
+                        caption=f"{get_image_display_label('original_view')}: {video_file.name}",
                     )
                     if hasattr(self, "image_placeholder_res"):
                         self.image_placeholder_res.image(
                             resized_image,
                             channels="BGR",
-                            caption=f"识别画面: {video_file.name}",
+                            caption=f"{get_image_display_label('detection_view')}: {video_file.name}",
                         )
 
                 # 添加到日志表
@@ -3236,8 +3277,10 @@ class Detection_UI:
 
         except Exception as e:
             st.error(
-                STATUS_MESSAGES["single_video_processing_error"].format(
-                    video_name=video_file.name, error=str(e)
+                get_video_message(
+                    "single_video_processing_error",
+                    video_name=video_file.name,
+                    error=str(e),
                 )
             )
 
@@ -3249,11 +3292,11 @@ class Detection_UI:
             cap = cv2.VideoCapture(camera_id)
             if not cap.isOpened():
                 st.error(
-                    STATUS_MESSAGES["camera_open_failed"].format(camera_id=camera_id)
+                    get_camera_message("camera_open_failed", camera_id=camera_id)
                 )
                 return
 
-            st.info(STATUS_MESSAGES["camera_started"].format(camera_id=camera_id))
+            st.info(get_camera_message("camera_started", camera_id=camera_id))
             self.close_flag = self.close_placeholder.button(
                 label=get_button_text("stop")
             )
@@ -3262,7 +3305,7 @@ class Detection_UI:
             while cap.isOpened() and not self.close_flag:
                 ret, frame = cap.read()
                 if not ret:
-                    st.error(STATUS_MESSAGES["camera_read_frame_failed"])
+                    st.error(get_camera_message("camera_read_frame_failed"))
                     break
 
                 # 应用图像处理
@@ -3328,7 +3371,7 @@ class Detection_UI:
             cap.release()
 
         except Exception as e:
-            st.error(STATUS_MESSAGES["camera_processing_error"].format(error=str(e)))
+            st.error(get_camera_message("camera_processing_error", error=str(e)))
 
     def _process_rtsp_input(self, rtsp_url):
         """
@@ -3338,11 +3381,11 @@ class Detection_UI:
             cap = cv2.VideoCapture(rtsp_url)
             if not cap.isOpened():
                 st.error(
-                    STATUS_MESSAGES["rtsp_connection_failed"].format(rtsp_url=rtsp_url)
+                    get_rtsp_message("rtsp_connection_failed", rtsp_url=rtsp_url)
                 )
                 return
 
-            st.info(STATUS_MESSAGES["rtsp_connected"].format(rtsp_url=rtsp_url))
+            st.info(get_rtsp_message("rtsp_connected", rtsp_url=rtsp_url))
             self.close_flag = self.close_placeholder.button(
                 label=get_button_text("stop")
             )
@@ -3351,7 +3394,7 @@ class Detection_UI:
             while cap.isOpened() and not self.close_flag:
                 ret, frame = cap.read()
                 if not ret:
-                    st.warning(STATUS_MESSAGES["rtsp_stream_interrupted"])
+                    st.warning(get_rtsp_message("rtsp_stream_interrupted"))
                     time.sleep(2)
                     continue
 
@@ -3416,4 +3459,4 @@ class Detection_UI:
             cap.release()
 
         except Exception as e:
-            st.error(STATUS_MESSAGES["rtsp_processing_error"].format(error=str(e)))
+            st.error(get_rtsp_message("rtsp_processing_error", error=str(e)))
