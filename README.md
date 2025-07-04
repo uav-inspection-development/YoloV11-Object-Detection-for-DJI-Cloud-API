@@ -297,7 +297,7 @@ User_Manual.md                # User manual for the application
 1. **Build with Git Information**:
     - Use the automated build script that includes Git commit information:
     ```shell
-    python build_with_git_info.py
+    python build_exe.py
     ```
     - This will automatically:
         - Collect Git repository information (commit hash, author, date, etc.)
@@ -309,10 +309,10 @@ User_Manual.md                # User manual for the application
     - To build a specific file with Git information:
     ```shell
     # Build main.py with Git info
-    python build_with_git_info.py --target main.py --name "YoloV11-Main"
+    python build_exe.py --target main.py --name "YoloV11-Main"
     
     # Build web interface with Git info
-    python build_with_git_info.py --target src/web.py --name "YoloV11-Web"
+    python build_exe.py --target src/web.py --name "YoloV11-Web"
     ```
 
 3. **Manual Git Information Collection**:
@@ -750,10 +750,10 @@ The "About" menu will show:
 #### Quick Build (Recommended)
 ```shell
 # Build all applications with Git information
-python build_with_git_info.py
+python build_exe.py
 
 # Build specific target
-python build_with_git_info.py --target main.py --name "YoloV11-Web"
+python build_exe.py --target main.py --name "YoloV11-Web"
 ```
 
 #### Manual Process
@@ -774,7 +774,7 @@ python tests/test_git_integration.py
 ### 📁 Related Files
 
 - `collect_git_info.py` - Git information collection script
-- `build_with_git_info.py` - Automated build script with Git integration
+- `build_exe.py` - Automated build script with Git integration
 - `src/git_info.py` - Auto-generated Git information module
 - `test_git_integration.py` - Integration test script
 - `GIT_BUILD_GUIDE.md` - Detailed documentation
