@@ -1452,7 +1452,7 @@ class Detection_UI:
 
     def toggle_comboBox(self, frame_id):
         """
-        🚀 优化版本：处理并显示指定帧的检测结果。
+        处理并显示指定帧的检测结果。
 
         Args:
             frame_id (int): 指定要显示检测结果的帧ID。
@@ -1490,55 +1490,60 @@ class Detection_UI:
             return
 
         # 获取当前选中的目标过滤选项
-        selected_target = st.session_state.get('selectbox_target', "全部目标")
+        selected_target = st.session_state.get('selectbox_target', SYSTEM_CONFIG["target_all"])
 
-        # 🚀 性能优化：缓存图像调整大小的结果
-        cache_key = f"frame_{frame_id}_{self.display_width}_{self.display_height}_{selected_target}"
-        
+        # 获取原始帧
         frame = saved_images_ini[frame_id]  # 获取指定帧的初始图像
-        
-        # 强制重新绘制检测框，避免缓存导致的显示问题
-        # 创建图像副本并调整大小
-        image = frame.copy()
-        detection_results = self.logTable.saved_results[frame_id]
-        
-        # 获取当前选中的目标过滤选项
-        selected_target = st.session_state.get('selectbox_target', "全部目标")
 
-        # 确保检测框正确绘制
-        if detection_results:
-            cnt = 0
-            for detInfo in detection_results:
-                if isinstance(detInfo, list) and len(detInfo) == 6:
-                    name, chinese_name, bbox, conf, use_time, cls_id = detInfo
+        # 缓存图像调整大小的结果
+        cache_key = f"frame_{frame_id}_{self.display_width}_{self.display_height}_{selected_target}"
+        if cache_key in self.image_cache:
+            image = self.image_cache[cache_key]
+        else:
+            # 创建图像副本并处理检测框
+            image = frame.copy()
+            
+            # 绘制检测框
+            detection_results = self.logTable.saved_results[frame_id]
+            if detection_results:
+                cnt = 0
+                for detInfo in detection_results:
+                    if isinstance(detInfo, list) and len(detInfo) == 6:
+                        name, chinese_name, bbox, conf, use_time, cls_id = detInfo
 
-                    # 如果选择了目标过滤，跳过不匹配的目标
-                    if selected_target != "全部目标" and selected_target != chinese_name:
-                        continue
+                        # 如果选择了目标过滤，跳过不匹配的目标
+                        if selected_target != SYSTEM_CONFIG["target_all"] and selected_target != chinese_name:
+                            continue
 
-                    # 确保 cls_id 在范围内
-                    if cls_id < len(self.colors):
-                        color = self.colors[cls_id]
-                    else:
-                        color = (255, 0, 0)  # 默认红色
+                        # 确保 cls_id 在范围内
+                        if cls_id < len(self.colors):
+                            color = self.colors[cls_id]
+                        else:
+                            color = (255, 0, 0)  # 默认红色
 
-                    # 确保矩形框绘制参数正确
-                    info = {
-                        'class_name': name,
-                        'bbox': bbox,
-                        'score': conf,
-                        'class_id': cls_id,
-                        'mask': None
-                    }
-                    # 使用更明显的参数来绘制检测框
-                    image, _ = draw_detections(
-                        image, info, 
-                        color=color, 
-                        alpha=0.3,  # 增加透明度使框更明显
-                        line_number=cnt,
-                        rectangle_bbox=getattr(self, 'rectangle_bounding_output', True)
-                    )
-                    cnt += 1
+                        # 确保矩形框绘制参数正确
+                        info = {
+                            'class_name': name,
+                            'bbox': bbox,
+                            'score': conf,
+                            'class_id': cls_id,
+                            'mask': None
+                        }
+                        # 使用更明显的参数来绘制检测框
+                        image, _ = draw_detections(
+                            image, info, 
+                            color=color, 
+                            alpha=0.3,  # 增加透明度使框更明显
+                            line_number=cnt,
+                            rectangle_bbox=getattr(self, 'rectangle_bounding_output', True)
+                        )
+                        cnt += 1
+            
+            # 缓存处理后的图像
+            self.manage_cache_size(self.image_cache)
+            self.image_cache[cache_key] = image.copy()
+
+        # 现在不需要重复绘制检测框，因为已经在缓存逻辑中处理了
 
         # 调整图像大小
         if hasattr(self, 'optimized_image_resize'):
@@ -1548,7 +1553,7 @@ class Detection_UI:
             resized_image = cv2.resize(image, (self.display_width, self.display_height))
             resized_frame = cv2.resize(frame, (self.display_width, self.display_height))
 
-        # 🚀 性能优化：异步更新表格数据
+        # 更新表格数据
         detection_results = saved_results[frame_id] if frame_id < len(saved_results) else []
         
         if detection_results:
@@ -1556,7 +1561,7 @@ class Detection_UI:
             filtered_results = [
                 detInfo for detInfo in detection_results
                 if isinstance(detInfo, list) and len(detInfo) == 6 and
-                (selected_target == "全部目标" or selected_target == detInfo[1])
+                (selected_target == SYSTEM_CONFIG["target_all"] or selected_target == detInfo[1])
             ]
             
             if filtered_results and hasattr(self, 'table_placeholder'):
@@ -1579,7 +1584,7 @@ class Detection_UI:
         if hasattr(self, 'display_mode') and hasattr(self, 'image_placeholder'):
             if self.display_mode == "叠加显示":
                 self.image_placeholder.image(resized_image, channels="BGR", caption="识别画面: " + img_name)
-            else:
+            else:  # "对比显示"
                 self.image_placeholder.image(resized_frame, channels="BGR", caption="原始画面: " + img_name)
                 if hasattr(self, 'image_placeholder_res'):
                     self.image_placeholder_res.image(resized_image, channels="BGR", caption="识别画面: " + img_name)
@@ -2068,7 +2073,7 @@ class Detection_UI:
         if isinstance(self.uploaded_file, list):
             # 批量处理多张图片
             total_files = len(self.uploaded_file)
-            status_text.write(STATUS_MESSAGES["processing_files"].format(total_files=total_files))
+            status_text.write(STATUS_MESSAGES["processing_files"].format(count=total_files))
             
             # 计算预估时间
             estimated_time_per_image = 2.0  # 假设每张图片需要2秒
