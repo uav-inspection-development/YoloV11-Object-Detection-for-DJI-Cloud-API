@@ -12,7 +12,7 @@
 SYSTEM_INFO = {
     "title": "光伏云组件检测系统",
     "description": "本系统可以检测光伏面板可见光故障、红外热故障、EL隐裂故障以及其他异物入侵等问题。",
-    "version_info_not_found": "### 📊 版本信息\n未找到Git仓库信息",
+    "version_info_not_found": "📊 版本信息\n未找到Git仓库信息",
     "unknown_version": "未知版本",
     "separator": "--------",
 }
@@ -84,7 +84,7 @@ SIDEBAR_LABELS = {
     "rtsp_input": "输入RTSP/RTMP地址",
     "upload_images": "上传图片",
     "upload_videos": "上传视频",
-    "select_image_type": "选择图像类型",
+    "display_uploaded_files": "显示已上传文件",
     "select_image_folder": "选择图片文件夹",
     "input_folder_path": "输入文件夹路径",
     "display_uploaded_images": "显示已上传的图片",
@@ -181,8 +181,8 @@ MAIN_HEADERS = {
     "realtime_dashboard": "📊 实时监控仪表盘",
     "image_preprocessing_preview": "🖼️ 图片预处理预览",
     # 调试相关
-    "current_config": "### 当前配置",
-    "class_settings": "### 类别设置",
+    "current_config": "当前配置",
+    "class_settings": "类别设置",
     "session_state_data": "Session State 图像数据",
     "logtable_data": "LogTable 图像数据",
     "display_mode": "显示模式",

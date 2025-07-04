@@ -1701,7 +1701,7 @@ class Detection_UI:
                     f"{get_main_label('config_label_iou_threshold')}: {getattr(self, 'iou_threshold', 'None')}"
                 )
 
-                st.write(get_main_header("class_settings"))
+                st.subheader(get_main_header("class_settings"))
                 st.write(
                     f"{get_main_label('config_label_available_classes')}: {getattr(self, 'available_classes', [])}"
                 )
@@ -1734,7 +1734,7 @@ class Detection_UI:
                         f"- 类别匹配状态: {getattr(self, '_debug_class_matches', {})}"
                     )
 
-                st.write(get_main_header("color_settings"))
+                st.subheader(get_main_header("color_settings"))
                 st.write(f"- 颜色列表长度: {len(getattr(self, 'colors', []))}")
                 if hasattr(self, "colors") and len(self.colors) > 0:
                     st.write(f"- 前3个颜色: {self.colors[:3]}")
