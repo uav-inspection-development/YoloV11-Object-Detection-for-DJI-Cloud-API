@@ -30,11 +30,28 @@ from concurrent.futures import ThreadPoolExecutor
 from streamlit_config import optimize_streamlit_performance, setup_image_optimization, add_performance_css
 
 # 📝 命名配置模块导入
-from naming_config import (
-    get_image_type_name, get_task_type_name, get_export_format_name,
-    generate_filename, get_status_message,
-    SIDEBAR_HEADERS, BUTTON_TEXTS, SIDEBAR_HINTS, STATUS_MESSAGES, MAIN_LABELS,
-    SYSTEM_CONFIG, SIDEBAR_OPTIONS, SIDEBAR_LABELS, MAIN_HEADERS, get_main_label
+from naming_config_new import (
+    # 系统配置
+    SYSTEM_INFO, SYSTEM_DEFAULTS,
+    # 侧边栏配置
+    SIDEBAR_HEADERS, SIDEBAR_LABELS, SIDEBAR_OPTIONS, SIDEBAR_HINTS,
+    # 主界面配置
+    MAIN_HEADERS, MAIN_LABELS, MAIN_OPTIONS,
+    # 按钮配置
+    BUTTON_TEXTS,
+    # 消息配置
+    DETECTION_MESSAGES, FILE_MESSAGES, VIDEO_MESSAGES, CAMERA_MESSAGES,
+    RTSP_MESSAGES, MODEL_MESSAGES, WARNING_MESSAGES, GENERAL_MESSAGES, EXPORT_MESSAGES,
+    # 显示配置
+    IMAGE_DISPLAY_LABELS, STATISTICS_LABELS, METRICS_LABELS,
+    # 数据映射
+    IMAGE_TYPE_MAP, TASK_TYPE_MAP, EXPORT_FORMAT_MAP,
+    # 工具函数
+    get_detection_message, get_file_message, get_video_message, get_camera_message,
+    get_rtsp_message, get_model_message, get_warning_message, get_general_message,
+    get_export_message, get_statistic_message, get_metric_label, generate_filename,
+    # 兼容性支持
+    STATUS_MESSAGES, UI_LABELS, UI_OPTIONS, get_status_message
 )
 from image_optimizer import get_image_optimizer, optimize_image_display, process_uploaded_images
 
@@ -85,10 +102,10 @@ except ImportError:
     GIT_INFO_AVAILABLE = False
     
     def format_git_info_for_about():
-        return STATUS_MESSAGES["git_info_not_found"]
+        return SYSTEM_INFO["version_info_not_found"]
     
     def get_version_string():
-        return STATUS_MESSAGES["unknown_version"]
+        return SYSTEM_INFO["unknown_version"]
 
 
 class Detection_UI:
@@ -166,7 +183,7 @@ class Detection_UI:
         self.selected_class_ids = None  # 选定的类别索引
 
         # 设置页面标题
-        self.title = SYSTEM_CONFIG["title"]
+        self.title = SYSTEM_INFO["title"]
         if self.from_streamlit:
             self.setup_page()  # 初始化页面布局
             def_css_html()  # 应用 CSS 样式
@@ -187,10 +204,10 @@ class Detection_UI:
             )
 
         # 初始化检测相关的配置参数
-        self.model_type = SYSTEM_CONFIG["model_type_detection"]
+        self.model_type = SYSTEM_DEFAULTS["model_type_detection"]
         self.conf_threshold = 0.15  # 默认置信度阈值
         self.iou_threshold = 0.5  # 默认IOU阈值
-        self.image_type = SYSTEM_CONFIG["image_type_visible"]  # 图像类型
+        self.image_type = SYSTEM_DEFAULTS["image_type_visible"]  # 图像类型
 
         # 初始化检测类别相关的配置参数
         self.available_classes = None  # 可用的检测类别
@@ -215,7 +232,7 @@ class Detection_UI:
         self.keystone_scale = 1.0  # 缩放比例
         self.scale_factor_keystone = 0.1  # 自动梯形校正的最小面积比例
         self.scale_factor_fill = 0.1  # 背景填充的最小面积比例
-        self.image_enhancement_method = SYSTEM_CONFIG["image_enhancement_none"]  # 图像增强方法
+        self.image_enhancement_method = SYSTEM_DEFAULTS["image_enhancement_none"]  # 图像增强方法
 
         # 初始化检测结果相关的变量
         self.detection_result = None
@@ -253,7 +270,7 @@ class Detection_UI:
         self.timenow = 0
 
         # 初始化相机参数
-        self.undistortion_method = SYSTEM_CONFIG["undistortion_none"]
+        self.undistortion_method = SYSTEM_DEFAULTS["undistortion_none"]
         self.camera_matrix = None
         self.dist_coeffs = None
         self.calibration_file = None
@@ -323,18 +340,18 @@ class Detection_UI:
 
         self.conf_threshold = float(self.api_params.get("conf_threshold", 0.15))
         self.iou_threshold = float(self.api_params.get("iou_threshold", 0.25))
-        self.model_type = self.api_params.get("model_type", SYSTEM_CONFIG["model_type_detection"])
-        self.image_type = self.api_params.get("image_type", SYSTEM_CONFIG["image_type_visible"])
+        self.model_type = self.api_params.get("model_type", SYSTEM_DEFAULTS["model_type_detection"])
+        self.image_type = self.api_params.get("image_type", SYSTEM_DEFAULTS["image_type_visible"])
         self.selected_classes = self.api_params.get("selected_classes", list(Visible_type.keys()))
         self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
         self.enable_rotate_correction = self.api_params.get("enable_rotate_correction", False)
         self.enable_auto_keystone_correction = self.api_params.get("enable_auto_keystone_correction", False)
         self.enable_background_fill = self.api_params.get("enable_background_fill", False)
-        self.image_enhancement_method = self.api_params.get("image_enhancement_method", SYSTEM_CONFIG["image_enhancement_none"])
-        self.undistortion_method = self.api_params.get("undistortion_method", SYSTEM_CONFIG["undistortion_none"])
+        self.image_enhancement_method = self.api_params.get("image_enhancement_method", SYSTEM_DEFAULTS["image_enhancement_none"])
+        self.undistortion_method = self.api_params.get("undistortion_method", SYSTEM_DEFAULTS["undistortion_none"])
 
         # 通过API方式上传相机标定文件
-        if self.undistortion_method == SYSTEM_CONFIG["undistortion_camera_calc"]:
+        if self.undistortion_method == SYSTEM_DEFAULTS["undistortion_camera_calc"]:
             calibration_file = self.api_params.get("calibration_file", None)
             if calibration_file is not None:
                 try:
@@ -351,9 +368,9 @@ class Detection_UI:
                     self.camera_matrix = np.array(calib_data["camera_matrix"])
                     self.dist_coeffs = np.array(calib_data["dist_coeffs"])
                     self.calibration_file = calibration_file if isinstance(calibration_file, str) else "api_upload"
-                    print(STATUS_MESSAGES["camera_calibration_success"])
+                    print(get_camera_message("camera_calibration_success"))
                 except Exception as e:
-                    print(get_status_message("camera_calibration_failed", error=str(e)))
+                    print(get_camera_message("camera_calibration_failed", error=str(e)))
                     self.camera_matrix = None
                     self.dist_coeffs = None
                     self.calibration_file = None
@@ -361,7 +378,7 @@ class Detection_UI:
                 self.camera_matrix = None
                 self.dist_coeffs = None
                 self.calibration_file = None
-        elif self.undistortion_method == SYSTEM_CONFIG["undistortion_manual"]:
+        elif self.undistortion_method == SYSTEM_DEFAULTS["undistortion_manual"]:
             # 从API参数中获取畸变系数
             self.image_k1 = float(self.api_params.get("image_k1", 0.0))
         
@@ -381,14 +398,14 @@ class Detection_UI:
             self.scale_factor_fill = float(self.api_params.get("scale_factor_fill", 0.1))
 
         # 设置类别标签
-        if self.model_type == SYSTEM_CONFIG["model_type_segmentation"]:
+        if self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]:
             self.cls_name = Segmentation_type
             self.detect_class_color = Segmentation_class_colors
         else:
-            if self.image_type == SYSTEM_CONFIG["image_type_thermal"]:
+            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
                 self.cls_name = Thermo_type
                 self.detect_class_color = Thermo_class_colors
-            elif self.image_type == SYSTEM_CONFIG["image_type_el"]:
+            elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
                 self.cls_name = EL_type
                 self.detect_class_color = EL_class_colors
             elif self.image_type == "可见光":
@@ -433,7 +450,7 @@ class Detection_UI:
 
             # 确保颜色列表长度与模型类别一致
             if len(self.colors) != len(self.model.names):
-                st.warning(STATUS_MESSAGES["color_list_warning"])
+                st.warning(get_warning_message("color_list_warning"))
 
         except Exception as e:
             print(f"无法加载模型文件，请检查文件路径或文件是否存在！错误信息: {str(e)}")
@@ -583,7 +600,7 @@ class Detection_UI:
 
         self.available_cameras = st.session_state['available_cameras']
         if len(self.available_cameras) == 1:
-            st.write(STATUS_MESSAGES["no_camera_found"])
+            st.write(get_camera_message("no_camera_found"))
 
         # 初始化或获取识别结果的表格
         self.logTable = st.session_state['logTable']
@@ -722,7 +739,7 @@ class Detection_UI:
 
                 # 确保颜色列表长度与模型类别一致
                 if len(self.colors) != len(self.model.names):
-                    st.warning(STATUS_MESSAGES["color_list_warning"])
+                    st.warning(get_warning_message("color_list_warning"))
 
             except Exception as e:
                 st.sidebar.error(STATUS_MESSAGES["default_model_load_error"].format(error=str(e)))
@@ -844,12 +861,12 @@ class Detection_UI:
                             ext = os.path.splitext(file)[1].lower()
                             type_count[ext] = type_count.get(ext, 0) + 1
                         
-                        st.write("按类型统计:")
+                        st.write(get_statistic_message("statistics_by_type"))
                         for ext, count in type_count.items():
                             st.write(f"  {ext}: {count} 张")
                         
                         # 显示前几个文件名
-                        st.write("示例文件:")
+                        st.write(get_statistic_message("example_files"))
                         for i, file in enumerate(image_files[:5]):
                             st.write(f"  {i+1}. {os.path.basename(file)}")
                         if len(image_files) > 5:
@@ -878,8 +895,8 @@ class Detection_UI:
                         total_size += video_size
                         st.write(f"{i+1}. {video.name} ({video_size:.1f} MB)")
                     if num_videos > 5:
-                        st.write(STATUS_MESSAGES["more_videos_remaining"].format(count=num_videos - 5))
-                    st.write(SIDEBAR_HINTS["total_size"].format(size=total_size))
+                        st.write(get_file_message("more_videos_remaining", count=num_videos - 5))
+                    st.write(get_statistic_message("total_size", size=total_size))
             else:
                 st.sidebar.info(SIDEBAR_HINTS["video_upload_hint"])
                 
@@ -950,64 +967,64 @@ class Detection_UI:
 
         if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
             # 添加视频输出和 RTSP 输出的启用复选框
-            st.sidebar.header("🎥 视频输出设置")
+            st.sidebar.header(SIDEBAR_HEADERS["video_output_settings"])
             self.enable_video_output = st.sidebar.checkbox("启用视频输出", value=True)
 
         # 图像畸变校正参数设置
-        st.sidebar.header("🖼️ 输入图像或视频处理")
+        st.sidebar.header(SIDEBAR_HEADERS["image_processing_settings"])
         # 添加伪彩色转换选项
-        self.enable_pseudo_color = st.sidebar.checkbox("启用伪彩色转换", value=False)
-        st.sidebar.caption("💡 提示: 伪彩色转换针对于输入图像为黑白图像且图像类型为红外热图。")
+        self.enable_pseudo_color = st.sidebar.checkbox(SIDEBAR_LABELS["enable_pseudo_color"], value=False)
+        st.sidebar.caption(SIDEBAR_HINTS["false_color_hint"])
         # 如果启用伪彩色转换，显示对比度和亮度调整选项
         if self.enable_pseudo_color:
-            self.image_contrast = st.sidebar.slider("对比度调整", min_value=0.5, max_value=3.0, value=1.0, step=0.1)
-            self.image_brightness = st.sidebar.slider("亮度调整", min_value=-255, max_value=255, value=0, step=1)
+            self.image_contrast = st.sidebar.slider(SIDEBAR_LABELS["contrast_adjustment"], min_value=0.5, max_value=3.0, value=1.0, step=0.1)
+            self.image_brightness = st.sidebar.slider(SIDEBAR_LABELS["brightness_adjustment"], min_value=-255, max_value=255, value=0, step=1)
 
         # 添加图像旋转校正选项
-        self.enable_rotate_correction = st.sidebar.checkbox("启用图像旋转校正", value=False)
+        self.enable_rotate_correction = st.sidebar.checkbox(SIDEBAR_LABELS["enable_rotate_correction"], value=False)
         if self.enable_rotate_correction:
             # 滑动条调整水平和垂直旋转角度，以及缩放比例
-            self.rot_angle_x = st.sidebar.slider("垂直旋转角度（绕X轴）", min_value=-90, max_value=90, value=0, step=1)
-            self.rot_angle_y = st.sidebar.slider("水平旋转角度（绕Y轴）", min_value=-90, max_value=90, value=0, step=1)
-            self.keystone_scale = st.sidebar.slider("缩放比例", min_value=0.5, max_value=2.0, value=1.0, step=0.01)
-        st.sidebar.caption("💡 提示: 图像旋转校正用于修正图像的倾斜角度，适用于拍摄角度不正的图像。")
+            self.rot_angle_x = st.sidebar.slider(SIDEBAR_LABELS["vertical_rotation_angle"], min_value=-90, max_value=90, value=0, step=1)
+            self.rot_angle_y = st.sidebar.slider(SIDEBAR_LABELS["horizontal_rotation_angle"], min_value=-90, max_value=90, value=0, step=1)
+            self.keystone_scale = st.sidebar.slider(SIDEBAR_LABELS["scale_ratio"], min_value=0.5, max_value=2.0, value=1.0, step=0.01)
+        st.sidebar.caption(SIDEBAR_HINTS["rotation_correction_hint"])
 
         # 添加梯形校正选项
-        self.enable_auto_keystone_correction = st.sidebar.checkbox("启用自动梯形校正", value=False)
+        self.enable_auto_keystone_correction = st.sidebar.checkbox(SIDEBAR_LABELS["enable_auto_keystone_correction"], value=False)
         if self.enable_auto_keystone_correction:
             # 滑动条调整最小面积比例
-            self.scale_factor_keystone = st.sidebar.slider("梯形校正轮廓检测最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
-        st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
+            self.scale_factor_keystone = st.sidebar.slider(SIDEBAR_LABELS["keystone_correction_min_area"], min_value=0.1, max_value=0.8, value=0.1, step=0.05)
+        st.sidebar.caption(SIDEBAR_HINTS["perspective_correction_hint"])
 
         # 添加背景填充选项
-        self.enable_background_fill = st.sidebar.checkbox("启用自动背景填充", value=False)
+        self.enable_background_fill = st.sidebar.checkbox(SIDEBAR_LABELS["enable_background_fill"], value=False)
         if self.enable_background_fill:
             # 滑动条调整最小面积比例
-            self.scale_factor_fill = st.sidebar.slider("背景填充轮廓检测最小面积比例 ", min_value=0.1, max_value=0.8, value=0.1, step=0.05)
-        st.sidebar.caption("💡 提示: 梯形校正用于修正图像的透视畸变，适用于拍摄角度不正的图像。目前仅适用于EL图像检测。")
+            self.scale_factor_fill = st.sidebar.slider(SIDEBAR_LABELS["background_fill_min_area"], min_value=0.1, max_value=0.8, value=0.1, step=0.05)
+        st.sidebar.caption(SIDEBAR_HINTS["background_fill_hint"])
 
         # 添加图像增强选项
         self.image_enhancement_method = st.sidebar.radio(
-            "选择图像增强方法",
-            options=["不处理", "CLAHE", "Histogram Equalization"],
+            SIDEBAR_LABELS["image_enhancement_method"],
+            options=SIDEBAR_OPTIONS["image_enhancement_methods"],
             index=0  # 默认选择不处理
         )
-        st.sidebar.caption("💡 提示: 图像增强可以改善图像的对比度和细节，使检测结果更加准确。")
+        st.sidebar.caption(SIDEBAR_HINTS["image_enhancement_hint"])
 
         # 添加图像畸变校正选项
         self.undistortion_method = st.sidebar.radio(
-            "选择相机畸变校正类型",
-            options=["不去除", "相机参数计算", "手动调整参数"],
+            SIDEBAR_LABELS["undistortion_method"],
+            options=SIDEBAR_OPTIONS["undistortion_methods"],
             index=0  # 默认选择第一个选项
         )
-        st.sidebar.caption("💡 提示: 相机参数计算需要用户输入相机标定文件，手动调整参数需要保证输入图像包含较为明显的线条用于修正畸变。")
+        st.sidebar.caption(SIDEBAR_HINTS["camera_calibration_hint"])
 
-        if self.undistortion_method == "相机参数计算":
+        if self.undistortion_method == SYSTEM_DEFAULTS["undistortion_camera_calc"]:
             calibration_file = st.sidebar.file_uploader(
-                "上传相机标定文件 (JSON, 包含camera_matrix和dist_coeffs)", type=["json"]
+                SIDEBAR_LABELS["upload_calibration_file"], type=["json"]
             )
             calibration_input = st.sidebar.text_area(
-                "或直接粘贴标定参数（JSON字符串或Python字典）", value="", height=150
+                SIDEBAR_LABELS["paste_calibration_params"], value="", height=150
             )
             calib_data = None
             if calibration_file is not None:
@@ -1043,10 +1060,10 @@ class Detection_UI:
                 self.camera_matrix = None
                 self.dist_coeffs = None
                 self.calibration_file = None
-        elif self.undistortion_method == "手动调整参数":
+        elif self.undistortion_method == SYSTEM_DEFAULTS["undistortion_manual"]:
             # Add slider for distortion coefficient
-            self.image_k1 = st.sidebar.slider("调整畸变系数 (k1)", min_value=-0.5, max_value=0.5, value=0.0, step=0.01)
-            st.sidebar.caption("💡 提示: 畸变系数用于描述镜头的径向畸变。畸变系数大于0：桶形畸变，图像边缘向外扩展；畸变系数小于0：枕形畸变，图像边缘向内收缩。")
+            self.image_k1 = st.sidebar.slider(SIDEBAR_LABELS["adjust_distortion_coefficient"], min_value=-0.5, max_value=0.5, value=0.0, step=0.01)
+            st.sidebar.caption(SIDEBAR_HINTS["distortion_coefficient_hint"])
 
         # Apply distortion adjustment using the slider value
         if self.uploaded_file:
@@ -1228,15 +1245,15 @@ class Detection_UI:
         if self.from_streamlit:
             with st.sidebar.expander(MAIN_LABELS["debug_messages"], expanded=False):
                 st.subheader(MAIN_HEADERS["current_config"])
-                st.write(f"- 模型类型: {getattr(self, 'model_type', 'None')}")
-                st.write(f"- 图像类型: {getattr(self, 'image_type', 'None')}")
-                st.write(f"- 矩形框输出: {getattr(self, 'rectangle_bounding_output', 'None')}")
-                st.write(f"- 置信度阈值: {getattr(self, 'conf_threshold', 'None')}")
-                st.write(f"- IOU阈值: {getattr(self, 'iou_threshold', 'None')}")
+                st.write(f"{MAIN_LABELS['config_label_model_type']}: {getattr(self, 'model_type', 'None')}")
+                st.write(f"{MAIN_LABELS['config_label_image_type']}: {getattr(self, 'image_type', 'None')}")
+                st.write(f"{MAIN_LABELS['config_label_rectangle_output']}: {getattr(self, 'rectangle_bounding_output', 'None')}")
+                st.write(f"{MAIN_LABELS['config_label_conf_threshold']}: {getattr(self, 'conf_threshold', 'None')}")
+                st.write(f"{MAIN_LABELS['config_label_iou_threshold']}: {getattr(self, 'iou_threshold', 'None')}")
                 
                 st.write(MAIN_HEADERS["class_settings"])
-                st.write(f"- 可用类别(中文): {getattr(self, 'available_classes', [])}")
-                st.write(f"- 选择的类别(英文): {getattr(self, 'selected_classes', [])}")
+                st.write(f"{MAIN_LABELS['config_label_available_classes']}: {getattr(self, 'available_classes', [])}")
+                st.write(f"{MAIN_LABELS['config_label_selected_classes']}: {getattr(self, 'selected_classes', [])}")
                 
                 if hasattr(self, 'model') and hasattr(self.model, 'names'):
                     # 处理不同类型的 model.names
@@ -1246,7 +1263,7 @@ class Detection_UI:
                         model_classes = self.model.names
                     else:
                         model_classes = str(self.model.names)
-                    st.write(f"- 模型类别: {model_classes}")
+                    st.write(f"{MAIN_LABELS['config_label_model_classes']}: {model_classes}")
                     
                 if hasattr(self, 'cls_name'):
                     st.write(f"- 类别映射: {self.cls_name}")
@@ -1477,7 +1494,7 @@ class Detection_UI:
         
         if frame_id == -1:  # 显示所有目标
             if not saved_images_ini:
-                st.warning(STATUS_MESSAGES["no_detection_results"])
+                st.warning(get_detection_message("no_detection_results"))
                 if hasattr(self, 'image_placeholder'):
                     self.image_placeholder.image(load_default_image(), caption="原始画面")
                 if hasattr(self, 'table_placeholder'):
@@ -1486,11 +1503,11 @@ class Detection_UI:
             frame_id = 0  # 默认显示第一帧
 
         if frame_id >= len(saved_images_ini) or frame_id >= len(saved_results):
-            st.warning(STATUS_MESSAGES["frame_id_out_of_range_warning"].format(frame_id=frame_id, total=len(saved_images_ini)))
+            st.warning(get_warning_message("frame_id_out_of_range_warning", frame_id=frame_id, total=len(saved_images_ini)))
             return
 
         # 获取当前选中的目标过滤选项
-        selected_target = st.session_state.get('selectbox_target', SYSTEM_CONFIG["target_all"])
+        selected_target = st.session_state.get('selectbox_target', SYSTEM_DEFAULTS["target_all"])
 
         # 获取原始帧
         frame = saved_images_ini[frame_id]  # 获取指定帧的初始图像
@@ -1512,7 +1529,7 @@ class Detection_UI:
                         name, chinese_name, bbox, conf, use_time, cls_id = detInfo
 
                         # 如果选择了目标过滤，跳过不匹配的目标
-                        if selected_target != SYSTEM_CONFIG["target_all"] and selected_target != chinese_name:
+                        if selected_target != SYSTEM_DEFAULTS["target_all"] and selected_target != chinese_name:
                             continue
 
                         # 确保 cls_id 在范围内
@@ -1561,7 +1578,7 @@ class Detection_UI:
             filtered_results = [
                 detInfo for detInfo in detection_results
                 if isinstance(detInfo, list) and len(detInfo) == 6 and
-                (selected_target == SYSTEM_CONFIG["target_all"] or selected_target == detInfo[1])
+                (selected_target == SYSTEM_DEFAULTS["target_all"] or selected_target == detInfo[1])
             ]
             
             if filtered_results and hasattr(self, 'table_placeholder'):
@@ -1649,7 +1666,7 @@ class Detection_UI:
 
                     # Ensure cls_id is within bounds
                     if cls_id >= len(self.colors):
-                        st.warning(STATUS_MESSAGES["index_out_of_range_warning"].format(cls_id=cls_id))
+                        st.warning(get_warning_message("index_out_of_range_warning", cls_id=cls_id))
                         color = (255, 0, 0)  # 默认红色
                     else:
                         color = self.colors[cls_id]
@@ -1735,9 +1752,9 @@ class Detection_UI:
         )
 
         # st.title(self.title) # 显示系统标题
-        st.write("--------")
-        st.write("本系统可以检测光伏面板可见光故障、红外热故障、EL隐裂故障以及其他异物入侵等问题。")
-        st.write("--------")
+        st.write(SYSTEM_INFO["separator"])
+        st.write(SYSTEM_INFO["description"])
+        st.write(SYSTEM_INFO["separator"])
         # 插入一条分割线
 
         # 创建列布局，将表格移到最右侧
@@ -1746,7 +1763,7 @@ class Detection_UI:
         # 在第一列设置显示模式的选择
         with col1:
             st.subheader(MAIN_HEADERS["video_image_detection_system"])
-            self.display_mode = st.radio(MAIN_LABELS["display_mode_selection"], ["叠加显示", "对比显示"])
+            self.display_mode = st.radio(MAIN_LABELS["display_mode_selection"], MAIN_OPTIONS["display_modes"])
             self.image_placeholder = st.empty()
             self.image_placeholder_res = st.empty()
             # 根据显示模式创建用于显示视频画面的空容器，优化默认图像显示逻辑，避免覆盖检测结果
@@ -1899,7 +1916,7 @@ class Detection_UI:
         
         if len(saved_images_ini) > 0:
             total_imgs = len(saved_images_ini)
-            st.info(STATUS_MESSAGES["total_images_info"].format(count=total_imgs))
+            st.info(get_statistic_message("total_images_info", count=total_imgs))
             
             # 初始化或验证图片索引
             if 'image_play_index' not in st.session_state:
@@ -1918,11 +1935,11 @@ class Detection_UI:
                     st.rerun()
             
             with col_info:
-                st.write(STATUS_MESSAGES["image_index_info"].format(current=current_index + 1, total=total_imgs))
+                st.write(get_statistic_message("image_index_info", current=current_index + 1, total=total_imgs))
                 # 显示当前图片名称
                 if current_index < len(st.session_state.get('saved_names', [])):
                     img_name = st.session_state['saved_names'][current_index]
-                    st.caption(STATUS_MESSAGES["filename_info"].format(filename=img_name))
+                    st.caption(get_statistic_message("filename_info", filename=img_name))
             
             with col_next:
                 if st.button(BUTTON_TEXTS["next_image"], key="next_btn", disabled=(current_index >= total_imgs - 1)):
@@ -1966,10 +1983,10 @@ class Detection_UI:
             self.detection_time_placeholder = st.empty()
 
         # 初始化默认值
-        self.frame_count_placeholder.metric(STATUS_MESSAGES["current_frame_metric"], st.session_state['current_frame_count'])
-        self.fps_placeholder.metric(STATUS_MESSAGES["current_fps_metric"], st.session_state['current_fps'])
-        self.target_count_placeholder.metric(STATUS_MESSAGES["target_count_metric"], st.session_state['current_target_count'])
-        self.detection_time_placeholder.metric(STATUS_MESSAGES["detection_time_metric"], st.session_state['current_detection_time'])
+        self.frame_count_placeholder.metric(get_metric_label("current_frame"), st.session_state['current_frame_count'])
+        self.fps_placeholder.metric(get_metric_label("current_fps"), st.session_state['current_fps'])
+        self.target_count_placeholder.metric(get_metric_label("target_count"), st.session_state['current_target_count'])
+        self.detection_time_placeholder.metric(get_metric_label("detection_time"), st.session_state['current_detection_time'])
 
         # 🔧 添加调试信息
         self.debug_display_state()
