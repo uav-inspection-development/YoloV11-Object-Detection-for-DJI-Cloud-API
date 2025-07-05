@@ -2511,6 +2511,7 @@ class Detection_UI:
                     )
             # 显示用的进度条
             self.progress_bar = st.progress(0)
+            self.gps_info_placeholder = st.empty()
 
         # 创建一个空的结果表格
         res = concat_results("None", "[0, 0, 0, 0]", "0.00", "0.00s")

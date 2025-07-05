@@ -656,9 +656,6 @@ def extract_gps_info(image_path):
         dict: 包含GPS信息的字典，包括经度、纬度、高度等
     """
     try:
-        from PIL import Image
-        from PIL.ExifTags import TAGS, GPSTAGS
-        
         # 打开图片
         image = Image.open(image_path)
         
