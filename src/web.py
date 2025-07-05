@@ -878,7 +878,9 @@ class Detection_UI:
             self.detect_class_color = Segmentation_class_colors
 
         # 提示用户选择的图像类型
-        st.sidebar.caption(get_sidebar_hint("image_type_hint"))
+        st.sidebar.caption(get_sidebar_hint("image_type_hint").format(
+            type=self.image_type
+        ))
 
         # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
         st.sidebar.header(get_sidebar_header("target_class_selection"))
