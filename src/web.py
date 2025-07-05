@@ -2117,20 +2117,14 @@ class Detection_UI:
 
         # 调整图像大小
         if hasattr(self, "optimized_image_resize"):
-            resized_image = self.optimized_image_resize(
-                image, self.display_width, self.display_height
-            )
-            resized_frame = self.optimized_image_resize(
-                frame, self.display_width, self.display_height
-            )
+            resized_image = self.optimized_image_resize(image, self.display_width, self.display_height)
+            resized_frame = self.optimized_image_resize(frame, self.display_width, self.display_height)
         else:
             resized_image = cv2.resize(image, (self.display_width, self.display_height))
             resized_frame = cv2.resize(frame, (self.display_width, self.display_height))
 
         # 更新表格数据
-        detection_results = (
-            saved_results[frame_id] if frame_id < len(saved_results) else []
-        )
+        detection_results = (saved_results[frame_id] if frame_id < len(saved_results) else [])
 
         if detection_results:
             # 使用列表推导式提高性能
@@ -2245,18 +2239,10 @@ class Detection_UI:
                                     ts = f"{int(ts[0]):02d}:{int(ts[1]):02d}:{int(ts[2]):02d}"
                                 gps_time = f"{gps['gps_datestamp']} {ts}"
 
-            self.gps_lat_placeholder.metric(
-                get_metric_label("gps_latitude"), lat
-            )
-            self.gps_lon_placeholder.metric(
-                get_metric_label("gps_longitude"), lon
-            )
-            self.gps_alt_placeholder.metric(
-                get_metric_label("gps_altitude"), alt
-            )
-            self.gps_time_placeholder.metric(
-                get_metric_label("gps_time"), gps_time
-            )
+            self.gps_lat_placeholder.metric(get_metric_label("gps_latitude"), lat)
+            self.gps_lon_placeholder.metric(get_metric_label("gps_longitude"), lon)
+            self.gps_alt_placeholder.metric(get_metric_label("gps_altitude"), alt)
+            self.gps_time_placeholder.metric(get_metric_label("gps_time"), gps_time)
 
     def frame_process(self, image, file_name, video_time=None, is_api=False):
         """
@@ -2436,9 +2422,7 @@ class Detection_UI:
         detection_time = "0.00s"
 
         # 使用 display_detection_results 函数显示结果
-        res = concat_results(
-            detection_result, detection_location, detection_confidence, detection_time
-        )
+        res = concat_results(detection_result, detection_location, detection_confidence, detection_time)
         self.table_placeholder.table(res)
         # 添加适当的延迟
         cv2.waitKey(1)
@@ -2552,9 +2536,7 @@ class Detection_UI:
                 current_index = detected_targets.index(current_selected)
             except ValueError:
                 current_index = 0
-                current_selected = (
-                    detected_targets[0] if detected_targets else "全部目标"
-                )
+                current_selected = (detected_targets[0] if detected_targets else "全部目标")
                 st.session_state["selectbox_target"] = current_selected
 
             selectbox_target = self.selectbox_placeholder.selectbox(
@@ -2662,9 +2644,7 @@ class Detection_UI:
             saved_images_ini = self.logTable.saved_images_ini
             # 同步到session state
             st.session_state["saved_images_ini"] = saved_images_ini
-            st.session_state["saved_images"] = getattr(
-                self.logTable, "saved_images", []
-            )
+            st.session_state["saved_images"] = getattr(self.logTable, "saved_images", [])
             st.session_state["saved_names"] = getattr(self.logTable, "saved_names", [])
 
         if len(saved_images_ini) > 0:
@@ -2692,17 +2672,11 @@ class Detection_UI:
                     st.rerun()
 
             with col_info:
-                st.write(
-                    get_statistic_message(
-                        "image_index_info", current=current_index + 1, total=total_imgs
-                    )
-                )
+                st.write(get_statistic_message("image_index_info", current=current_index + 1, total=total_imgs))
                 # 显示当前图片名称
                 if current_index < len(st.session_state.get("saved_names", [])):
                     img_name = st.session_state["saved_names"][current_index]
-                    st.caption(
-                        get_statistic_message("filename_info", filename=img_name)
-                    )
+                    st.caption(get_statistic_message("filename_info", filename=img_name))
 
             with col_next:
                 if st.button(
@@ -2710,9 +2684,7 @@ class Detection_UI:
                     key="next_btn",
                     disabled=(current_index >= total_imgs - 1),
                 ):
-                    st.session_state["image_play_index"] = min(
-                        total_imgs - 1, current_index + 1
-                    )
+                    st.session_state["image_play_index"] = min(total_imgs - 1, current_index + 1)
                     st.rerun()
 
             # 添加滑块控制
@@ -2733,15 +2705,11 @@ class Detection_UI:
             st.info(get_detection_message("no_detection_results"))
             # 显示默认图像
             if hasattr(self, "image_placeholder"):
-                self.image_placeholder.image(
-                    load_default_image(), caption=get_image_display_label("original_view")
-                )
+                self.image_placeholder.image(load_default_image(), caption=get_image_display_label("original_view"))
                 if self.display_mode == "对比显示" and hasattr(
                     self, "image_placeholder_res"
                 ):
-                    self.image_placeholder_res.image(
-                        load_default_image(), caption=get_image_display_label("detection_view")
-                    )
+                    self.image_placeholder_res.image(load_default_image(), caption=get_image_display_label("detection_view"))
 
         st.subheader(get_main_header("realtime_dashboard"))
         col1, col2, col3, col4 = st.columns(4)
@@ -2833,11 +2801,7 @@ class Detection_UI:
                     st.warning(get_rtsp_message("input_rtsp_first"))
 
             else:
-                st.error(
-                    get_warning_message(
-                        "unsupported_input_source", source=self.input_source
-                    )
-                )
+                st.error(get_warning_message("unsupported_input_source", source=self.input_source))
 
         except Exception as e:
             st.error(get_warning_message("input_processing_error", error=str(e)))
@@ -2902,16 +2866,12 @@ class Detection_UI:
         if isinstance(self.uploaded_file, list):
             # 批量处理多张图片
             total_files = len(self.uploaded_file)
-            status_text.write(
-                get_file_message("processing_files", count=total_files)
-            )
+            status_text.write(get_file_message("processing_files", count=total_files))
 
             # 计算预估时间
             estimated_time_per_image = 2.0  # 假设每张图片需要2秒
             estimated_total_time = total_files * estimated_time_per_image
-            status_text.write(
-                get_file_message("estimated_time", time=estimated_total_time)
-            )
+            status_text.write(get_file_message("estimated_time", time=estimated_total_time))
 
             start_time = time.time()
             successful_count = 0
@@ -2934,27 +2894,35 @@ class Detection_UI:
                         )
                     )
 
-                    # 读取图片数据
+                    # 读取图片数据和获取路径
+                    img_path = None
                     if hasattr(uploaded_file, "read"):
+                        # 这是通过文件上传器上传的文件
                         uploaded_file.seek(0)
                         source_img = uploaded_file.read()
                         file_name = uploaded_file.name
+                        
+                        # 为上传的文件创建临时文件以获取完整路径
+                        if getattr(self, "enable_gps_parsing", False):
+                            # 创建临时文件保存图片，以便GPS解析
+                            temp_dir = tempfile.mkdtemp()
+                            temp_file_path = os.path.join(temp_dir, file_name)
+                            with open(temp_file_path, 'wb') as temp_file:
+                                temp_file.write(source_img)
+                            img_path = temp_file_path
                     else:
-                        # 处理 LocalFileObj
+                        # 这是LocalFileObj，name包含完整路径
                         with open(uploaded_file.name, "rb") as f:
                             source_img = f.read()
                         file_name = os.path.basename(uploaded_file.name)
+                        img_path = uploaded_file.name  # 完整路径
 
                     # 解码图片
                     file_bytes = np.asarray(bytearray(source_img), dtype=np.uint8)
                     image_ini = cv2.imdecode(file_bytes, 1)
 
                     if image_ini is None:
-                        st.error(
-                            get_file_message(
-                                "image_decode_error", filename=file_name
-                            )
-                        )
+                        st.error(get_file_message("image_decode_error", filename=file_name))
                         failed_count += 1
                         continue
 
@@ -2963,9 +2931,7 @@ class Detection_UI:
 
                     # 进行检测
                     framecopy = processed_image.copy()
-                    image, detInfo, select_info = self.frame_process(
-                        framecopy, file_name
-                    )
+                    image, detInfo, select_info = self.frame_process(framecopy, file_name)
 
                     # 保存结果
                     save_chinese_image(self.output_path + "/image/" + file_name, image)
@@ -2976,23 +2942,13 @@ class Detection_UI:
                     st.session_state["current_detection_time"] = self.detection_time
 
                     # 更新显示
-                    self.frame_count_placeholder.metric(
-                        get_main_label("current_frame"), idx + 1
-                    )
-                    self.target_count_placeholder.metric(
-                        get_main_label("target_count"), len(detInfo)
-                    )
-                    self.detection_time_placeholder.metric(
-                        get_main_label("detection_time"), self.detection_time
-                    )
+                    self.frame_count_placeholder.metric(get_main_label("current_frame"), idx + 1)
+                    self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                    self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                     # 显示图片
-                    resized_image = cv2.resize(
-                        image, (self.display_width, self.display_height)
-                    )
-                    resized_frame = cv2.resize(
-                        processed_image, (self.display_width, self.display_height)
-                    )
+                    resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                    resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
 
                     if self.display_mode == "叠加显示":
                         self.image_placeholder.image(
@@ -3013,13 +2969,7 @@ class Detection_UI:
                                 caption=f"{get_image_display_label('detection_view')}: {file_name}",
                             )
 
-                    # 获取图片路径
-                    img_path = None
-                    if hasattr(uploaded_file, "name") and not hasattr(uploaded_file, "read"):
-                        # 这是LocalFileObj，name包含完整路径
-                        img_path = uploaded_file.name
-                    
-                    # 添加到日志表
+                    # 添加到日志表（现在img_path不为None）
                     self.logTable.add_frames(image, detInfo, processed_image, file_name, img_path)
 
                     successful_count += 1
@@ -3059,9 +3009,7 @@ class Detection_UI:
 
             # 完成后的总结
             total_time = time.time() - start_time
-            current_image_info.success(
-                get_detection_message("batch_processing_complete")
-            )
+            current_image_info.success(get_detection_message("batch_processing_complete"))
             status_text.success(
                 get_detection_message(
                     "batch_processing_summary",
@@ -3078,9 +3026,7 @@ class Detection_UI:
             st.session_state["saved_names"] = self.logTable.saved_names.copy()
             # 同步每张图片的目标信息
             if hasattr(self.logTable, "saved_targets_info"):
-                st.session_state["saved_targets_info"] = (
-                    self.logTable.saved_targets_info.copy()
-                )
+                st.session_state["saved_targets_info"] = self.logTable.saved_targets_info.copy()
 
             # 确保索引重置为0以显示第一张图片
             st.session_state["image_play_index"] = 0
@@ -3113,6 +3059,15 @@ class Detection_UI:
                     st.error(get_file_message("image_decode_failed"))
                     return
 
+                # 为单张上传的图片创建临时文件
+                img_path = None
+                if getattr(self, "enable_gps_parsing", False):
+                    temp_dir = tempfile.mkdtemp()
+                    temp_file_path = os.path.join(temp_dir, self.uploaded_file.name)
+                    with open(temp_file_path, 'wb') as temp_file:
+                        temp_file.write(source_img)
+                    img_path = temp_file_path
+
                 status_info.write(get_file_message("applying_image_processing"))
                 single_progress.progress(0.4)
 
@@ -3124,17 +3079,13 @@ class Detection_UI:
 
                 # 进行检测
                 framecopy = processed_image.copy()
-                image, detInfo, select_info = self.frame_process(
-                    framecopy, self.uploaded_file.name
-                )
+                image, detInfo, select_info = self.frame_process(framecopy, self.uploaded_file.name)
 
                 status_info.write(get_file_message("saving_detection_results"))
                 single_progress.progress(0.8)
 
                 # 保存结果
-                save_chinese_image(
-                    self.output_path + "/image/" + self.uploaded_file.name, image
-                )
+                save_chinese_image(self.output_path + "/image/" + self.uploaded_file.name, image)
 
                 # 更新状态
                 st.session_state["current_frame_count"] = 1
@@ -3143,20 +3094,12 @@ class Detection_UI:
 
                 # 更新显示
                 self.frame_count_placeholder.metric(get_main_label("current_frame"), 1)
-                self.target_count_placeholder.metric(
-                    get_main_label("target_count"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("detection_time"), self.detection_time
-                )
+                self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_image, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
@@ -3177,25 +3120,19 @@ class Detection_UI:
                             caption=f"{get_image_display_label('detection_view')}: {self.uploaded_file.name}",
                         )
 
-                # 添加到日志表（单张图片没有完整路径）
-                self.logTable.add_frames(
-                    image, detInfo, processed_image, self.uploaded_file.name, None
-                )
+                # 添加到日志表（现在img_path不为None）
+                self.logTable.add_frames(image, detInfo, processed_image, self.uploaded_file.name, img_path)
 
                 status_info.write(get_general_message("updating_interface"))
                 single_progress.progress(0.9)
 
                 # 立即更新session state以确保UI同步
-                st.session_state["saved_images_ini"] = (
-                    self.logTable.saved_images_ini.copy()
-                )
+                st.session_state["saved_images_ini"] = self.logTable.saved_images_ini.copy()
                 st.session_state["saved_images"] = self.logTable.saved_images.copy()
                 st.session_state["saved_names"] = self.logTable.saved_names.copy()
                 # 同步每张图片的目标信息
                 if hasattr(self.logTable, "saved_targets_info"):
-                    st.session_state["saved_targets_info"] = (
-                        self.logTable.saved_targets_info.copy()
-                    )
+                    st.session_state["saved_targets_info"] = self.logTable.saved_targets_info.copy()
 
                 # 确保索引重置为0
                 st.session_state["image_play_index"] = 0
@@ -3223,11 +3160,7 @@ class Detection_UI:
                 st.success(get_detection_message("image_detection_complete"))
 
             except Exception as e:
-                st.error(
-                    get_file_message(
-                        "single_image_processing_error", error=str(e)
-                    )
-                )
+                st.error(get_file_message("single_image_processing_error", error=str(e)))
 
     def _process_video_input(self):
         """
@@ -3265,11 +3198,7 @@ class Detection_UI:
 
             cap = cv2.VideoCapture(tfile.name)
             if not cap.isOpened():
-                st.error(
-                    get_video_message(
-                        "video_open_failed", video_name=video_file.name
-                    )
-                )
+                st.error(get_video_message("video_open_failed", video_name=video_file.name))
                 return
 
             # 获取视频信息
@@ -3310,23 +3239,13 @@ class Detection_UI:
                 st.session_state["current_detection_time"] = self.detection_time
 
                 # 更新显示
-                self.frame_count_placeholder.metric(
-                    get_main_label("current_frame"), current_frame + 1
-                )
-                self.target_count_placeholder.metric(
-                    get_main_label("target_count"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("detection_time"), self.detection_time
-                )
+                self.frame_count_placeholder.metric(get_main_label("current_frame"), current_frame + 1)
+                self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_frame, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
@@ -3381,9 +3300,7 @@ class Detection_UI:
         try:
             cap = cv2.VideoCapture(camera_id)
             if not cap.isOpened():
-                st.error(
-                    get_camera_message("camera_open_failed", camera_id=camera_id)
-                )
+                st.error(get_camera_message("camera_open_failed", camera_id=camera_id))
                 return
 
             st.info(get_camera_message("camera_started", camera_id=camera_id))
@@ -3403,9 +3320,7 @@ class Detection_UI:
 
                 # 进行检测
                 framecopy = processed_frame.copy()
-                image, detInfo, _ = self.frame_process(
-                    framecopy, f"camera_{frame_count}"
-                )
+                image, detInfo, _ = self.frame_process(framecopy, f"camera_{frame_count}")
 
                 # 更新状态
                 st.session_state["current_frame_count"] = frame_count + 1
@@ -3413,23 +3328,13 @@ class Detection_UI:
                 st.session_state["current_detection_time"] = self.detection_time
 
                 # 更新显示
-                self.frame_count_placeholder.metric(
-                    get_main_label("current_frame"), frame_count + 1
-                )
-                self.target_count_placeholder.metric(
-                    get_main_label("target_count"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("detection_time"), self.detection_time
-                )
+                self.frame_count_placeholder.metric(get_main_label("current_frame"), frame_count + 1)
+                self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_frame, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
@@ -3470,15 +3375,11 @@ class Detection_UI:
         try:
             cap = cv2.VideoCapture(rtsp_url)
             if not cap.isOpened():
-                st.error(
-                    get_rtsp_message("rtsp_connection_failed", rtsp_url=rtsp_url)
-                )
+                st.error(get_rtsp_message("rtsp_connection_failed", rtsp_url=rtsp_url))
                 return
 
             st.info(get_rtsp_message("rtsp_connected", rtsp_url=rtsp_url))
-            self.close_flag = self.close_placeholder.button(
-                label=get_button_text("stop")
-            )
+            self.close_flag = self.close_placeholder.button(label=get_button_text("stop"))
 
             frame_count = 0
             while cap.isOpened() and not self.close_flag:
@@ -3501,23 +3402,13 @@ class Detection_UI:
                 st.session_state["current_detection_time"] = self.detection_time
 
                 # 更新显示
-                self.frame_count_placeholder.metric(
-                    get_main_label("current_frame"), frame_count + 1
-                )
-                self.target_count_placeholder.metric(
-                    get_main_label("current_target"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("current_detection_time"), self.detection_time
-                )
+                self.frame_count_placeholder.metric(get_main_label("current_frame"), frame_count + 1)
+                self.target_count_placeholder.metric(get_main_label("current_target"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("current_detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_frame, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
