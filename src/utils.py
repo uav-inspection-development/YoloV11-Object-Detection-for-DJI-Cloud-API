@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from PIL import ImageFont, ImageDraw, Image
 from PIL.ExifTags import TAGS, GPSTAGS
+import exifread
 from hashlib import md5
 from QtFusion.path import abs_path
 from matplotlib.colors import LinearSegmentedColormap
@@ -656,78 +657,66 @@ def extract_gps_info(image_path):
         dict: 包含GPS信息的字典，包括经度、纬度、高度等
     """
     try:
-        # 打开图片
-        image = Image.open(image_path)
-        
-        # 获取EXIF信息
-        exif_data = image._getexif()
-        
-        if exif_data is None:
+        with open(image_path, "rb") as f:
+            tags = exifread.process_file(f, details=False)
+
+        if not tags:
             return None
-            
-        gps_info = {}
-        
-        # 查找GPS信息
-        for tag, value in exif_data.items():
-            tag_name = TAGS.get(tag, tag)
-            
-            if tag_name == 'GPSInfo':
-                for gps_tag, gps_value in value.items():
-                    gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
-                    gps_info[gps_tag_name] = gps_value
-        
-        if not gps_info:
-            return None
-            
-        # 解析GPS坐标
+
         def convert_to_degrees(value):
-            """将GPS坐标从分数格式((num, den), ...)转换为十进制度数"""
-            if (
-                isinstance(value, (list, tuple))
-                and len(value) == 3
-                and all(isinstance(v, (list, tuple)) and len(v) == 2 for v in value)
-            ):
-                degrees = value[0][0] / value[0][1]
-                minutes = value[1][0] / value[1][1]
-                seconds = value[2][0] / value[2][1]
-                return degrees + (minutes / 60.0) + (seconds / 3600.0)
-            return value
-        
+            """将GPS坐标转换为十进制度数"""
+            if value and hasattr(value, "values") and len(value.values) == 3:
+                d, m, s = [float(v.num) / float(v.den) for v in value.values]
+                return d + m / 60.0 + s / 3600.0
+            return None
+
+        def get_tag(name):
+            return tags.get(name)
+
         result = {}
-        
-        # 解析纬度
-        if 'GPSLatitude' in gps_info and 'GPSLatitudeRef' in gps_info:
-            lat = convert_to_degrees(gps_info['GPSLatitude'])
-            if gps_info['GPSLatitudeRef'] == 'S':
-                lat = -lat
-            result['latitude'] = lat
-            result['latitude_ref'] = gps_info['GPSLatitudeRef']
-        
-        # 解析经度
-        if 'GPSLongitude' in gps_info and 'GPSLongitudeRef' in gps_info:
-            lon = convert_to_degrees(gps_info['GPSLongitude'])
-            if gps_info['GPSLongitudeRef'] == 'W':
-                lon = -lon
-            result['longitude'] = lon
-            result['longitude_ref'] = gps_info['GPSLongitudeRef']
-        
-        # 解析高度
-        if 'GPSAltitude' in gps_info:
-            altitude = float(gps_info['GPSAltitude'])
-            result['altitude'] = altitude
-            if 'GPSAltitudeRef' in gps_info:
-                result['altitude_ref'] = gps_info['GPSAltitudeRef']
-        
-        # 解析时间戳
-        if 'GPSTimeStamp' in gps_info:
-            result['gps_timestamp'] = gps_info['GPSTimeStamp']
-        
-        # 解析日期
-        if 'GPSDateStamp' in gps_info:
-            result['gps_datestamp'] = gps_info['GPSDateStamp']
-        
+
+        lat = get_tag("GPS GPSLatitude")
+        lat_ref = get_tag("GPS GPSLatitudeRef")
+        if lat and lat_ref:
+            lat_val = convert_to_degrees(lat)
+            if lat_val is not None:
+                if str(lat_ref.values[0]).upper() == "S":
+                    lat_val = -lat_val
+                result["latitude"] = lat_val
+                result["latitude_ref"] = str(lat_ref.values[0])
+
+        lon = get_tag("GPS GPSLongitude")
+        lon_ref = get_tag("GPS GPSLongitudeRef")
+        if lon and lon_ref:
+            lon_val = convert_to_degrees(lon)
+            if lon_val is not None:
+                if str(lon_ref.values[0]).upper() == "W":
+                    lon_val = -lon_val
+                result["longitude"] = lon_val
+                result["longitude_ref"] = str(lon_ref.values[0])
+
+        alt = get_tag("GPS GPSAltitude")
+        alt_ref = get_tag("GPS GPSAltitudeRef")
+        if alt:
+            try:
+                alt_value = float(alt.values[0].num) / float(alt.values[0].den)
+                result["altitude"] = alt_value
+                if alt_ref:
+                    result["altitude_ref"] = alt_ref.values[0]
+            except Exception:
+                pass
+
+        timestamp = get_tag("GPS GPSTimeStamp")
+        datestamp = get_tag("GPS GPSDate")
+        if timestamp:
+            result["gps_timestamp"] = tuple(
+                float(v.num) / float(v.den) for v in timestamp.values
+            )
+        if datestamp:
+            result["gps_datestamp"] = str(datestamp)
+
         return result if result else None
-        
+
     except Exception as e:
         print(f"提取GPS信息时出错: {e}")
         return None
