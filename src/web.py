@@ -749,16 +749,13 @@ class Detection_UI:
             )
         )
 
-        # 添加GPS经纬度解析选项（仅在Word导出时显示）
-        if self.export_format == "Word":
-            self.enable_gps_parsing = st.sidebar.checkbox(
-                get_sidebar_label("enable_gps_parsing"),
-                value=False,
-                help="勾选时，生成Word报表将解析DJI图片的RTK GPS信息并写入报表"
-            )
-            st.sidebar.caption(get_sidebar_hint("gps_parsing_hint"))
-        else:
-            self.enable_gps_parsing = False
+        # 添加GPS经纬度解析选项
+        self.enable_gps_parsing = st.sidebar.checkbox(
+            get_sidebar_label("enable_gps_parsing"),
+            value=True,
+            help="勾选时，将解析图片的RTK GPS信息并在主页面显示"
+        )
+        st.sidebar.caption(get_sidebar_hint("gps_parsing_hint"))
 
         # 根据用户选择的导出格式设置文件后缀
         if self.export_format == "CSV":
@@ -2220,30 +2217,31 @@ class Detection_UI:
             ]
         ):
             lat = lon = alt = gps_time = "--"
-            if frame_id < len(getattr(self.logTable, "saved_image_paths", [])):
-                img_path = self.logTable.saved_image_paths[frame_id]
-                if img_path and os.path.exists(img_path):
-                    gps = extract_gps_info(img_path)
-                    if gps:
-                        if "latitude" in gps:
-                            lat = f"{gps['latitude']:.6f}°"
-                            if 'latitude_ref' in gps:
-                                lat += f" {gps['latitude_ref']}"
-                        if "longitude" in gps:
-                            lon = f"{gps['longitude']:.6f}°"
-                            if 'longitude_ref' in gps:
-                                lon += f" {gps['longitude_ref']}"
-                        if "altitude" in gps:
-                            alt = f"{gps['altitude']:.1f}m"
-                            if gps.get('altitude_ref') == 1:
-                                alt += " (海平面以下)"
-                            else:
-                                alt += " (海平面以上)"
-                        if "gps_timestamp" in gps and "gps_datestamp" in gps:
-                            ts = gps["gps_timestamp"]
-                            if isinstance(ts, tuple) and len(ts) == 3:
-                                ts = f"{int(ts[0]):02d}:{int(ts[1]):02d}:{int(ts[2]):02d}"
-                            gps_time = f"{gps['gps_datestamp']} {ts}"
+            if getattr(self, "enable_gps_parsing", False):
+                if frame_id < len(getattr(self.logTable, "saved_image_paths", [])):
+                    img_path = self.logTable.saved_image_paths[frame_id]
+                    if img_path and os.path.exists(img_path):
+                        gps = extract_gps_info(img_path)
+                        if gps:
+                            if "latitude" in gps:
+                                lat = f"{gps['latitude']:.6f}°"
+                                if 'latitude_ref' in gps:
+                                    lat += f" {gps['latitude_ref']}"
+                            if "longitude" in gps:
+                                lon = f"{gps['longitude']:.6f}°"
+                                if 'longitude_ref' in gps:
+                                    lon += f" {gps['longitude_ref']}"
+                            if "altitude" in gps:
+                                alt = f"{gps['altitude']:.1f}m"
+                                if gps.get('altitude_ref') == 1:
+                                    alt += " (海平面以下)"
+                                else:
+                                    alt += " (海平面以上)"
+                            if "gps_timestamp" in gps and "gps_datestamp" in gps:
+                                ts = gps["gps_timestamp"]
+                                if isinstance(ts, tuple) and len(ts) == 3:
+                                    ts = f"{int(ts[0]):02d}:{int(ts[1]):02d}:{int(ts[2]):02d}"
+                                gps_time = f"{gps['gps_datestamp']} {ts}"
 
             self.gps_lat_placeholder.metric(
                 get_metric_label("gps_latitude"), lat
