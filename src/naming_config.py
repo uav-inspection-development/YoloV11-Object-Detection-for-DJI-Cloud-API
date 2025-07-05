@@ -207,6 +207,7 @@ MAIN_LABELS = {
     "config_label_available_classes": "- 可用类别(中文)",
     "config_label_selected_classes": "- 选择的类别(英文)",
     "config_label_model_classes": "- 模型类别",
+    "image_slider_label": "选择图片",
 }
 
 # 主界面选项配置
@@ -351,7 +352,6 @@ STATISTICS_LABELS = {
     "total_images_info": "共有 {count} 张检测结果图片",
     "image_index_info": "**第 {current} / {total} 张图片**",
     "filename_info": "文件名: {filename}",
-    "image_slider_label": "选择图片",
     "total_files": "📊 总文件数",
     "file_size": "📊 总大小",
     "total_size": "📊 总大小: {size:.1f} MB",
