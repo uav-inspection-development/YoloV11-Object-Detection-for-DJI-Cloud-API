@@ -681,11 +681,15 @@ def extract_gps_info(image_path):
             
         # 解析GPS坐标
         def convert_to_degrees(value):
-            """将GPS坐标从度分秒格式转换为十进制度数"""
-            if isinstance(value, tuple) and len(value) == 3:
-                degrees = float(value[0])
-                minutes = float(value[1])
-                seconds = float(value[2])
+            """将GPS坐标从分数格式((num, den), ...)转换为十进制度数"""
+            if (
+                isinstance(value, (list, tuple))
+                and len(value) == 3
+                and all(isinstance(v, (list, tuple)) and len(v) == 2 for v in value)
+            ):
+                degrees = value[0][0] / value[0][1]
+                minutes = value[1][0] / value[1][1]
+                seconds = value[2][0] / value[2][1]
                 return degrees + (minutes / 60.0) + (seconds / 3600.0)
             return value
         
