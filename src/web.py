@@ -40,6 +40,8 @@ from utils import (
     auto_keystone_correction,
     enhance_texture,
     fill_largest_polygon_white,
+    extract_gps_info,
+    format_gps_info,
 )
 import tempfile
 from datetime import datetime
@@ -742,6 +744,17 @@ class Detection_UI:
                 format=self.export_format, path=self.csv_output_path
             )
         )
+
+        # 添加GPS经纬度解析选项（仅在Word导出时显示）
+        if self.export_format == "Word":
+            self.enable_gps_parsing = st.sidebar.checkbox(
+                get_sidebar_label("enable_gps_parsing"),
+                value=False,
+                help="勾选时，生成Word报表将解析DJI图片的RTK GPS信息并写入报表"
+            )
+            st.sidebar.caption(get_sidebar_hint("gps_parsing_hint"))
+        else:
+            self.enable_gps_parsing = False
 
         # 根据用户选择的导出格式设置文件后缀
         if self.export_format == "CSV":
@@ -2562,6 +2575,7 @@ class Detection_UI:
                         "iou_threshold": self.iou_threshold,
                         "selected_classes": getattr(self, "selected_classes", []),
                         "cls_name": getattr(self, "cls_name", {}),
+                        "enable_gps_parsing": getattr(self, "enable_gps_parsing", False),
                     }
                     self.logTable.save_to_word(self.saved_log_data, detection_params)
                     st.success(
@@ -2930,8 +2944,14 @@ class Detection_UI:
                                 caption=f"{get_image_display_label('detection_view')}: {file_name}",
                             )
 
+                    # 获取图片路径
+                    img_path = None
+                    if hasattr(uploaded_file, "name") and not hasattr(uploaded_file, "read"):
+                        # 这是LocalFileObj，name包含完整路径
+                        img_path = uploaded_file.name
+                    
                     # 添加到日志表
-                    self.logTable.add_frames(image, detInfo, processed_image, file_name)
+                    self.logTable.add_frames(image, detInfo, processed_image, file_name, img_path)
 
                     successful_count += 1
 
@@ -3088,9 +3108,9 @@ class Detection_UI:
                             caption=f"{get_image_display_label('detection_view')}: {self.uploaded_file.name}",
                         )
 
-                # 添加到日志表
+                # 添加到日志表（单张图片没有完整路径）
                 self.logTable.add_frames(
-                    image, detInfo, processed_image, self.uploaded_file.name
+                    image, detInfo, processed_image, self.uploaded_file.name, None
                 )
 
                 status_info.write(get_general_message("updating_interface"))
@@ -3258,12 +3278,13 @@ class Detection_UI:
                             caption=f"{get_image_display_label('detection_view')}: {video_file.name}",
                         )
 
-                # 添加到日志表
+                # 添加到日志表（视频帧没有完整路径）
                 self.logTable.add_frames(
                     image,
                     detInfo,
                     processed_frame,
                     f"{video_file.name}_{current_frame}",
+                    None,
                 )
 
                 # 更新进度条
@@ -3360,9 +3381,9 @@ class Detection_UI:
                             caption=get_sidebar_label("camera_detection_view"),
                         )
 
-                # 添加到日志表
+                # 添加到日志表（摄像头帧没有完整路径）
                 self.logTable.add_frames(
-                    image, detInfo, processed_frame, f"camera_{frame_count}"
+                    image, detInfo, processed_frame, f"camera_{frame_count}", None
                 )
 
                 frame_count += 1
@@ -3448,9 +3469,9 @@ class Detection_UI:
                             caption=get_sidebar_label("rtsp_detection_view"),
                         )
 
-                # 添加到日志表
+                # 添加到日志表（RTSP帧没有完整路径）
                 self.logTable.add_frames(
-                    image, detInfo, processed_frame, f"rtsp_{frame_count}"
+                    image, detInfo, processed_frame, f"rtsp_{frame_count}", None
                 )
 
                 frame_count += 1

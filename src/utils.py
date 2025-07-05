@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from PIL import ImageFont, ImageDraw, Image
+from PIL.ExifTags import TAGS, GPSTAGS
 from hashlib import md5
 from QtFusion.path import abs_path
 from matplotlib.colors import LinearSegmentedColormap
@@ -643,3 +644,138 @@ def enhance_texture(image, method="clahe"):
     enhanced_rgb = cv2.cvtColor(enhanced_gray, cv2.COLOR_GRAY2BGR)
 
     return enhanced_rgb
+
+def extract_gps_info(image_path):
+    """
+    从图片EXIF信息中提取GPS经纬度信息
+    
+    Args:
+        image_path (str): 图片文件路径
+        
+    Returns:
+        dict: 包含GPS信息的字典，包括经度、纬度、高度等
+    """
+    try:
+        from PIL import Image
+        from PIL.ExifTags import TAGS, GPSTAGS
+        
+        # 打开图片
+        image = Image.open(image_path)
+        
+        # 获取EXIF信息
+        exif_data = image._getexif()
+        
+        if exif_data is None:
+            return None
+            
+        gps_info = {}
+        
+        # 查找GPS信息
+        for tag, value in exif_data.items():
+            tag_name = TAGS.get(tag, tag)
+            
+            if tag_name == 'GPSInfo':
+                for gps_tag, gps_value in value.items():
+                    gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
+                    gps_info[gps_tag_name] = gps_value
+        
+        if not gps_info:
+            return None
+            
+        # 解析GPS坐标
+        def convert_to_degrees(value):
+            """将GPS坐标从度分秒格式转换为十进制度数"""
+            if isinstance(value, tuple) and len(value) == 3:
+                degrees = float(value[0])
+                minutes = float(value[1])
+                seconds = float(value[2])
+                return degrees + (minutes / 60.0) + (seconds / 3600.0)
+            return value
+        
+        result = {}
+        
+        # 解析纬度
+        if 'GPSLatitude' in gps_info and 'GPSLatitudeRef' in gps_info:
+            lat = convert_to_degrees(gps_info['GPSLatitude'])
+            if gps_info['GPSLatitudeRef'] == 'S':
+                lat = -lat
+            result['latitude'] = lat
+            result['latitude_ref'] = gps_info['GPSLatitudeRef']
+        
+        # 解析经度
+        if 'GPSLongitude' in gps_info and 'GPSLongitudeRef' in gps_info:
+            lon = convert_to_degrees(gps_info['GPSLongitude'])
+            if gps_info['GPSLongitudeRef'] == 'W':
+                lon = -lon
+            result['longitude'] = lon
+            result['longitude_ref'] = gps_info['GPSLongitudeRef']
+        
+        # 解析高度
+        if 'GPSAltitude' in gps_info:
+            altitude = float(gps_info['GPSAltitude'])
+            result['altitude'] = altitude
+            if 'GPSAltitudeRef' in gps_info:
+                result['altitude_ref'] = gps_info['GPSAltitudeRef']
+        
+        # 解析时间戳
+        if 'GPSTimeStamp' in gps_info:
+            result['gps_timestamp'] = gps_info['GPSTimeStamp']
+        
+        # 解析日期
+        if 'GPSDateStamp' in gps_info:
+            result['gps_datestamp'] = gps_info['GPSDateStamp']
+        
+        return result if result else None
+        
+    except Exception as e:
+        print(f"提取GPS信息时出错: {e}")
+        return None
+
+def format_gps_info(gps_info):
+    """
+    格式化GPS信息为可读的字符串
+    
+    Args:
+        gps_info (dict): GPS信息字典
+        
+    Returns:
+        str: 格式化后的GPS信息字符串
+    """
+    if not gps_info:
+        return "未找到GPS信息"
+    
+    parts = []
+    
+    # 格式化纬度
+    if 'latitude' in gps_info:
+        lat_str = f"{gps_info['latitude']:.6f}°"
+        if 'latitude_ref' in gps_info:
+            lat_str += f" {gps_info['latitude_ref']}"
+        parts.append(f"纬度: {lat_str}")
+    
+    # 格式化经度
+    if 'longitude' in gps_info:
+        lon_str = f"{gps_info['longitude']:.6f}°"
+        if 'longitude_ref' in gps_info:
+            lon_str += f" {gps_info['longitude_ref']}"
+        parts.append(f"经度: {lon_str}")
+    
+    # 格式化高度
+    if 'altitude' in gps_info:
+        alt_str = f"{gps_info['altitude']:.1f}m"
+        if 'altitude_ref' in gps_info:
+            if gps_info['altitude_ref'] == 1:
+                alt_str += " (海平面以下)"
+            else:
+                alt_str += " (海平面以上)"
+        parts.append(f"高度: {alt_str}")
+    
+    # 格式化时间戳
+    if 'gps_timestamp' in gps_info and 'gps_datestamp' in gps_info:
+        timestamp = gps_info['gps_timestamp']
+        datestamp = gps_info['gps_datestamp']
+        if isinstance(timestamp, tuple) and len(timestamp) == 3:
+            time_str = f"{int(timestamp[0]):02d}:{int(timestamp[1]):02d}:{int(timestamp[2]):02d}"
+            parts.append(f"GPS时间: {datestamp} {time_str}")
+    
+    return "\n".join(parts) if parts else "GPS信息不完整"

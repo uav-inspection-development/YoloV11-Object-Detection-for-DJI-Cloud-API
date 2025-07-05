@@ -10,6 +10,16 @@ from docx import Document
 from docx.shared import Inches
 from io import BytesIO
 
+try:
+    from utils import extract_gps_info, format_gps_info
+    GPS_PARSING_AVAILABLE = True
+except ImportError:
+    GPS_PARSING_AVAILABLE = False
+    def extract_gps_info(image_path):
+        return None
+    def format_gps_info(gps_info):
+        return "GPS解析功能不可用"
+
 def save_chinese_image(file_path, image_array):
     """
     保存带有中文路径的图片文件
@@ -81,11 +91,12 @@ class LogTable:
         self.saved_results = []
         self.saved_names = []
         self.saved_targets_info = []  # 存储每张图片的目标类别信息
+        self.saved_image_paths = []  # 存储原始图片路径，用于GPS信息解析
 
         self.columns = ['文件路径', '识别结果', '类型', '位置(pixel)', '面积(pixel)', '时间(s)']
         self.data = pd.DataFrame(columns=self.columns)
 
-    def add_frames(self, image, detInfo, img_ini, img_name=None):
+    def add_frames(self, image, detInfo, img_ini, img_name=None, img_path=None):
         """
         将检测到的图像和检测信息添加到列表中。
 
@@ -94,11 +105,13 @@ class LogTable:
             detInfo (list): 检测信息。
             img_ini (numpy.ndarray): 初始图像。
             img_name (str): 图像名称。
+            img_path (str): 原始图像路径，用于GPS信息解析。
         """
         self.saved_images.append(image)
         self.saved_images_ini.append(img_ini)
         self.saved_results.append(detInfo)
         self.saved_names.append(img_name)
+        self.saved_image_paths.append(img_path)  # 保存原始图片路径
         
         # 提取并保存当前图片的目标类别信息
         current_targets = ["全部目标"]  # 默认包含"全部目标"选项
@@ -126,6 +139,7 @@ class LogTable:
         self.saved_target_images = []
         self.saved_names = []
         self.saved_targets_info = []
+        self.saved_image_paths = []
 
     def save_frames_file(self, fps=30, video_name='save', video_time=None, output_path='output/frame/'):
         """
@@ -286,6 +300,7 @@ class LogTable:
             iou_threshold = detection_params.get('iou_threshold', 0.25)
             selected_classes = detection_params.get('selected_classes', [])
             cls_name = detection_params.get('cls_name', {})
+            enable_gps_parsing = detection_params.get('enable_gps_parsing', False)
             
             # 创建一个 Word 文档
             doc = Document()
@@ -553,14 +568,36 @@ class LogTable:
                     detail_table.cell(0, i).text = header
                 
                 for idx, (detection_results, img_name) in enumerate(zip(self.saved_results, self.saved_names)):
+                    # 尝试从图片路径获取GPS信息
+                    gps_info = None
+                    latitude_str = "未知"
+                    longitude_str = "未知"
+                    
+                    if enable_gps_parsing and GPS_PARSING_AVAILABLE:
+                        # 尝试从保存的图片路径中获取GPS信息
+                        try:
+                            img_path = None
+                            if hasattr(self, 'saved_image_paths') and idx < len(self.saved_image_paths):
+                                img_path = self.saved_image_paths[idx]
+                            
+                            if img_path and os.path.exists(img_path):
+                                gps_info = extract_gps_info(img_path)
+                                if gps_info:
+                                    if 'latitude' in gps_info:
+                                        latitude_str = f"{gps_info['latitude']:.8f}"
+                                    if 'longitude' in gps_info:
+                                        longitude_str = f"{gps_info['longitude']:.8f}"
+                        except Exception as e:
+                            print(f"解析GPS信息时出错: {e}")
+                    
                     for detInfo in detection_results:
                         if isinstance(detInfo, list) and len(detInfo) >= 6:
                             row_cells = detail_table.add_row().cells
                             row_cells[0].text = f"{idx + 1:06d}"  # 组串编号
                             row_cells[1].text = str(detInfo[1])  # 缺陷类型
                             row_cells[2].text = report_time  # 检测时间
-                            row_cells[3].text = "110.30989252777778"  # 模拟经度
-                            row_cells[4].text = "39.57314513888889"   # 模拟纬度
+                            row_cells[3].text = longitude_str  # 经度
+                            row_cells[4].text = latitude_str   # 纬度
                             row_cells[5].text = f"{float(detInfo[3]) if isinstance(detInfo[3], (int, float, str)) else 0.95:.2f}"  # 置信度
 
             # 添加图片检测结果
@@ -611,10 +648,32 @@ class LogTable:
                             doc.add_paragraph(f"  {i+1}. {detInfo[1]} - 置信度: {detInfo[3] if len(detInfo) > 3 else 'N/A'}")
                 else:
                     if model_type == "分割任务":
-                        doc.add_paragraph('未分割到目标组件')
+                        doc.add_paragraph('未检测到目标')
                     else:
-                        doc.add_paragraph('未检测到故障')
-
+                        doc.add_paragraph('未检测到异常')
+                
+                # 添加GPS信息（如果启用了GPS解析）
+                if enable_gps_parsing and GPS_PARSING_AVAILABLE:
+                    try:
+                        img_path = None
+                        if hasattr(self, 'saved_image_paths') and idx < len(self.saved_image_paths):
+                            img_path = self.saved_image_paths[idx]
+                        
+                        if img_path and os.path.exists(img_path):
+                            gps_info = extract_gps_info(img_path)
+                            if gps_info:
+                                doc.add_paragraph("GPS信息:")
+                                gps_text = format_gps_info(gps_info)
+                                doc.add_paragraph(gps_text)
+                            else:
+                                doc.add_paragraph("GPS信息: 未找到GPS信息")
+                        else:
+                            doc.add_paragraph("GPS信息: 图片路径无效或文件不存在")
+                    except Exception as e:
+                        doc.add_paragraph(f"GPS信息: 解析失败 - {str(e)}")
+                elif enable_gps_parsing:
+                    doc.add_paragraph("GPS信息: GPS解析功能不可用")
+                
                 doc.add_paragraph("")  # 添加间距
 
             # 保存 Word 文件
