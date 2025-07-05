@@ -41,7 +41,6 @@ from utils import (
     enhance_texture,
     fill_largest_polygon_white,
     extract_gps_info,
-    format_gps_info,
 )
 import tempfile
 from datetime import datetime
@@ -349,6 +348,11 @@ class Detection_UI:
         self.target_count_placeholder = None  # 目标计数显示区域
         self.detection_time_placeholder = None  # 检测时间显示区域
         self.selectbox_placeholder = None
+        # GPS 信息指标占位符
+        self.gps_lat_placeholder = None
+        self.gps_lon_placeholder = None
+        self.gps_alt_placeholder = None
+        self.gps_time_placeholder = None
 
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
@@ -2205,6 +2209,55 @@ class Detection_UI:
                         caption=f"{get_image_display_label('detection_view')}: {img_name}",
                     )
 
+        # 更新GPS信息显示
+        if all(
+            hasattr(self, name)
+            for name in [
+                "gps_lat_placeholder",
+                "gps_lon_placeholder",
+                "gps_alt_placeholder",
+                "gps_time_placeholder",
+            ]
+        ):
+            lat = lon = alt = gps_time = "--"
+            if frame_id < len(getattr(self.logTable, "saved_image_paths", [])):
+                img_path = self.logTable.saved_image_paths[frame_id]
+                if img_path and os.path.exists(img_path):
+                    gps = extract_gps_info(img_path)
+                    if gps:
+                        if "latitude" in gps:
+                            lat = f"{gps['latitude']:.6f}°"
+                            if 'latitude_ref' in gps:
+                                lat += f" {gps['latitude_ref']}"
+                        if "longitude" in gps:
+                            lon = f"{gps['longitude']:.6f}°"
+                            if 'longitude_ref' in gps:
+                                lon += f" {gps['longitude_ref']}"
+                        if "altitude" in gps:
+                            alt = f"{gps['altitude']:.1f}m"
+                            if gps.get('altitude_ref') == 1:
+                                alt += " (海平面以下)"
+                            else:
+                                alt += " (海平面以上)"
+                        if "gps_timestamp" in gps and "gps_datestamp" in gps:
+                            ts = gps["gps_timestamp"]
+                            if isinstance(ts, tuple) and len(ts) == 3:
+                                ts = f"{int(ts[0]):02d}:{int(ts[1]):02d}:{int(ts[2]):02d}"
+                            gps_time = f"{gps['gps_datestamp']} {ts}"
+
+            self.gps_lat_placeholder.metric(
+                get_metric_label("gps_latitude"), lat
+            )
+            self.gps_lon_placeholder.metric(
+                get_metric_label("gps_longitude"), lon
+            )
+            self.gps_alt_placeholder.metric(
+                get_metric_label("gps_altitude"), alt
+            )
+            self.gps_time_placeholder.metric(
+                get_metric_label("gps_time"), gps_time
+            )
+
     def frame_process(self, image, file_name, video_time=None, is_api=False):
         """
         处理并预测单个图像帧的内容。
@@ -2718,6 +2771,22 @@ class Detection_UI:
             get_metric_label("detection_time"),
             st.session_state["current_detection_time"],
         )
+
+        st.subheader(get_main_header("gps_info"))
+        g1, g2, g3, g4 = st.columns(4)
+        with g1:
+            self.gps_lat_placeholder = st.empty()
+        with g2:
+            self.gps_lon_placeholder = st.empty()
+        with g3:
+            self.gps_alt_placeholder = st.empty()
+        with g4:
+            self.gps_time_placeholder = st.empty()
+
+        self.gps_lat_placeholder.metric(get_metric_label("gps_latitude"), "--")
+        self.gps_lon_placeholder.metric(get_metric_label("gps_longitude"), "--")
+        self.gps_alt_placeholder.metric(get_metric_label("gps_altitude"), "--")
+        self.gps_time_placeholder.metric(get_metric_label("gps_time"), "--")
 
         # 🔧 添加调试信息
         self.debug_display_state()

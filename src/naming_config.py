@@ -182,6 +182,7 @@ MAIN_HEADERS = {
     "history_log": "📜 历史日志",
     "image_browser_control": "📸 图片浏览控制",
     "realtime_dashboard": "📊 实时监控仪表盘",
+    "gps_info": "🛰️ GPS 信息",
     "image_preprocessing_preview": "🖼️ 图片预处理预览",
     # 调试相关
     "current_config": "当前配置",
@@ -365,6 +366,11 @@ METRICS_LABELS = {
     "current_fps": "⚡ 当前帧率 (FPS)",
     "target_count": "🎯 检测目标数量",
     "detection_time": "⏱️ 检测用时 (秒)",
+    # GPS 指标
+    "gps_latitude": "🌐 纬度",
+    "gps_longitude": "🌐 经度",
+    "gps_altitude": "🏔️ 高度",
+    "gps_time": "🕒 GPS时间",
 }
 
 # =============================================================================
