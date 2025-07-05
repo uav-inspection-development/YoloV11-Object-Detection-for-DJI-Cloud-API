@@ -56,6 +56,8 @@ def streamlit_login_page():
         # 保存到 session_state 和本地缓存文件
         st.session_state['login_params'] = login_data
         st.session_state['logged_in'] = True
+        # 登录后重置成功提示标记
+        st.session_state['license_message_shown'] = False
 
         with open("login_cache.json", "w", encoding="utf-8") as f:
             json.dump(login_data, f)
@@ -120,16 +122,22 @@ if __name__ == "__main__":
     # 将 SECRET_KEY 转换为字节
     secret_key = args.secret_key.encode()
     ret, message = check_license(secret_key, args.license_file, args.bind_info_file)
+
     # 使用 st.empty() 创建占位符
     message_placeholder = st.empty()
 
+    # 确保 session_state 中存在标记变量
+    if len(sys.argv) == 1 and 'license_message_shown' not in st.session_state:
+        st.session_state['license_message_shown'] = False
+
     if ret == 0:
         if len(sys.argv) == 1:
-            # 在占位符中显示成功消息
-            message_placeholder.success(f"Success: {message}")
-            # 等待 3 秒后清除消息
-            time.sleep(3)
-            message_placeholder.empty()
+            # 仅在首次切换到主页面时显示成功消息
+            if not st.session_state.get('license_message_shown', False):
+                message_placeholder.success(f"Success: {message}")
+                time.sleep(3)
+                message_placeholder.empty()
+                st.session_state['license_message_shown'] = True
         else:
             print(f"Success: {message}")
     else:
