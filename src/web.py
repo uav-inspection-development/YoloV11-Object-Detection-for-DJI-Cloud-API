@@ -2211,7 +2211,7 @@ class Detection_UI:
 
         # 更新GPS信息显示
         if all(
-            hasattr(self, name)
+            getattr(self, name, None) is not None
             for name in [
                 "gps_lat_placeholder",
                 "gps_lon_placeholder",
@@ -2729,9 +2729,6 @@ class Detection_UI:
                 st.session_state["image_play_index"] = new_index
                 st.rerun()
 
-            # 显示检测结果
-            self.toggle_comboBox(st.session_state["image_play_index"])
-
         else:
             st.info(get_detection_message("no_detection_results"))
             # 显示默认图像
@@ -2787,6 +2784,9 @@ class Detection_UI:
         self.gps_lon_placeholder.metric(get_metric_label("gps_longitude"), "--")
         self.gps_alt_placeholder.metric(get_metric_label("gps_altitude"), "--")
         self.gps_time_placeholder.metric(get_metric_label("gps_time"), "--")
+
+        # 初始化完成后显示检测结果
+        self.toggle_comboBox(st.session_state.get("image_play_index", 0))
 
         # 🔧 添加调试信息
         self.debug_display_state()
