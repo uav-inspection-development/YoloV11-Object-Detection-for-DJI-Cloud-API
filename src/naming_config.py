@@ -134,7 +134,7 @@ SIDEBAR_OPTIONS = {
         "摄像头",
         "RTSP/RTMP流",
     ],
-    "image_enhancement_methods": ["不处理", "CLAHE", "Histogram Equalization"],
+    "image_enhancement_methods": ["不处理", "CLAHE", "直方图均衡化"],
     "undistortion_methods": ["不去除", "相机参数计算", "手动调整参数"],
 }
 

@@ -1566,7 +1566,7 @@ class Detection_UI:
                             corrected_image = enhance_texture(
                                 corrected_image, method="clahe"
                             )
-                        elif self.image_enhancement_method == "Histogram Equalization":
+                        elif self.image_enhancement_method == "直方图均衡化":
                             corrected_image = enhance_texture(
                                 corrected_image, method="histogram_equalization"
                             )
@@ -1649,7 +1649,7 @@ class Detection_UI:
 
                 if self.image_enhancement_method == "CLAHE":
                     corrected_image = enhance_texture(corrected_image, method="clahe")
-                elif self.image_enhancement_method == "Histogram Equalization":
+                elif self.image_enhancement_method == "直方图均衡化":
                     corrected_image = enhance_texture(
                         corrected_image, method="histogram_equalization"
                     )
@@ -1972,7 +1972,7 @@ class Detection_UI:
         if hasattr(self, "image_enhancement_method"):
             if self.image_enhancement_method == "CLAHE":
                 processed = enhance_texture(processed, method="clahe")
-            elif self.image_enhancement_method == "Histogram Equalization":
+            elif self.image_enhancement_method == "直方图均衡化":
                 processed = enhance_texture(processed, method="histogram_equalization")
 
         # 伪彩色处理

@@ -454,7 +454,7 @@ Detect objects in a single image.
 - `enable_rotate_correction`: Whether to enable rotation correction (default: false).
 - `enable_auto_keystone_correction`: Whether to enable automatic keystone correction (default: false).
 - `enable_background_fill`: Whether to enable background fill (default: false).
-- `image_enhancement_method`: Method for enhancing the image (default: "不处理" for no enhancement, "CLAHE" for Contrast Limited Adaptive Histogram Equalization, "Histogram Equalization" for histogram equalization).
+- `image_enhancement_method`: Method for enhancing the image (default: "不处理" for no enhancement, "CLAHE" for Contrast Limited Adaptive Histogram Equalization, "直方图均衡化" for histogram equalization).
 
 #### Example
 
@@ -559,7 +559,7 @@ Detect objects in a single video.
 - `enable_rotate_correction`: Whether to enable rotation correction (default: false).
 - `enable_auto_keystone_correction`: Whether to enable automatic keystone correction (default: false).
 - `enable_background_fill`: Whether to enable background fill (default: false).
-- `image_enhancement_method`: Method for enhancing the image (default: "不处理" for no enhancement, "CLAHE" for Contrast Limited Adaptive Histogram Equalization, "Histogram Equalization" for histogram equalization).
+- `image_enhancement_method`: Method for enhancing the image (default: "不处理" for no enhancement, "CLAHE" for Contrast Limited Adaptive Histogram Equalization, "直方图均衡化" for histogram equalization).
 
 #### Example
 
