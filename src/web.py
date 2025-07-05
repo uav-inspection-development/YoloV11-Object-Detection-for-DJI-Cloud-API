@@ -349,6 +349,7 @@ class Detection_UI:
         self.target_count_placeholder = None  # 目标计数显示区域
         self.detection_time_placeholder = None  # 检测时间显示区域
         self.selectbox_placeholder = None
+        self.gps_info_placeholder = None  # GPS信息显示区域
 
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
@@ -2205,6 +2206,17 @@ class Detection_UI:
                         caption=f"{get_image_display_label('detection_view')}: {img_name}",
                     )
 
+        # 更新GPS信息显示
+        if hasattr(self, "gps_info_placeholder"):
+            gps_text = "GPS信息: 未找到GPS信息"
+            if frame_id < len(getattr(self.logTable, "saved_image_paths", [])):
+                img_path = self.logTable.saved_image_paths[frame_id]
+                if img_path and os.path.exists(img_path):
+                    gps = extract_gps_info(img_path)
+                    if gps:
+                        gps_text = format_gps_info(gps)
+            self.gps_info_placeholder.caption(gps_text)
+
     def frame_process(self, image, file_name, video_time=None, is_api=False):
         """
         处理并预测单个图像帧的内容。
@@ -2458,6 +2470,7 @@ class Detection_UI:
                     )
             # 显示用的进度条
             self.progress_bar = st.progress(0)
+            self.gps_info_placeholder = st.empty()
 
         # 创建一个空的结果表格
         res = concat_results("None", "[0, 0, 0, 0]", "0.00", "0.00s")
