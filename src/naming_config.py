@@ -117,7 +117,7 @@ SIDEBAR_LABELS = {
     "enable_rtsp_output": "启用RTSP输出",
     "rtsp_output_url": "RTSP输出地址",
     # GPS经纬度设置
-    "enable_gps_parsing": "解析经纬度",
+    "enable_gps_parsing": "解析并显示经纬度",
 }
 
 # 侧边栏选项配置
@@ -168,7 +168,7 @@ SIDEBAR_HINTS = {
     "upload_image_to_adjust_distortion": "⚠️ 请先上传图片以预览畸变校正效果",
     "rtsp_output_hint": "💡 提示: 输入RTSP/RTMP推流地址，用于实时推送检测结果视频流。",
     "clear_files_success": "已清空所有上传的文件！",
-    "gps_parsing_hint": "💡 提示: 勾选时，生成Word报表将解析DJI图片的RTK GPS信息并写入报表。",
+    "gps_parsing_hint": "💡 提示: 勾选后将解析图片的RTK GPS信息，在主页面与导出的报表中显示。",
 }
 
 # =============================================================================
