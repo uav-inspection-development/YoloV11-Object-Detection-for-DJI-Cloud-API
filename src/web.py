@@ -1,62 +1,135 @@
-import base64
-import hashlib
-import json
-import os
 import random
 import tempfile
-import threading
 import time
-import tkinter as tk
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-from functools import lru_cache
-from tkinter import filedialog
-
+import os
 import cv2
+import json
 import numpy as np
 import pandas as pd
 import streamlit as st
 from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
-
-from auth import get_access_token, verify_token
-from chinese_name_list import (EL_class_colors, EL_type, Other_class_colors,
-                               Other_type, Segmentation_class_colors,
-                               Segmentation_type, Thermo_class_colors,
-                               Thermo_type, Visible_class_colors, Visible_type)
-from image_optimizer import (get_image_optimizer, optimize_image_display,
-                             process_uploaded_images)
-from log import LogTable, ResultLogger
+from log import ResultLogger, LogTable
 from model import Web_Detector
-# 📝 命名配置模块导入
-from naming_config import (  # 系统配置; 侧边栏配置; 主界面配置; 按钮配置; 消息配置; 显示配置; 数据映射; 工具函数; UI 获取函数; 兼容性支持
-    BUTTON_TEXTS, CAMERA_MESSAGES, DETECTION_MESSAGES, EXPORT_FORMAT_MAP,
-    EXPORT_MESSAGES, FILE_MESSAGES, GENERAL_MESSAGES, IMAGE_DISPLAY_LABELS,
-    IMAGE_TYPE_MAP, MAIN_HEADERS, MAIN_LABELS, MAIN_OPTIONS, METRICS_LABELS,
-    MODEL_MESSAGES, RTSP_MESSAGES, SIDEBAR_HEADERS, SIDEBAR_HINTS,
-    SIDEBAR_LABELS, SIDEBAR_OPTIONS, STATISTICS_LABELS, STATUS_MESSAGES,
-    SYSTEM_DEFAULTS, SYSTEM_INFO, TASK_TYPE_MAP, UI_LABELS, UI_OPTIONS,
-    VIDEO_MESSAGES, WARNING_MESSAGES, generate_filename, get_button_text,
-    get_camera_message, get_detection_message, get_export_message,
-    get_file_message, get_general_message, get_image_display_label,
-    get_main_header, get_main_label, get_main_option, get_metric_label,
-    get_model_message, get_rtsp_message, get_sidebar_header, get_sidebar_hint,
-    get_sidebar_label, get_sidebar_option, get_statistic_label,
-    get_statistic_message, get_status_message, get_video_message,
-    get_warning_message)
-# 🚀 性能优化模块导入
-from streamlit_config import (add_performance_css,
-                              optimize_streamlit_performance,
-                              setup_image_optimization)
+from chinese_name_list import (
+    EL_type,
+    EL_class_colors,
+    Thermo_type,
+    Other_type,
+    Thermo_class_colors,
+    Visible_type,
+    Visible_class_colors,
+    Segmentation_type,
+    Segmentation_class_colors,
+    Other_class_colors,
+)
 from ui_style import def_css_html
-from utils import (LocalFileObj, auto_keystone_correction,
-                   auto_undistort_image, camera_undistortion,
-                   compute_inclusion_relations, concat_results,
-                   convert_to_pseudo_colorizer, draw_detections,
-                   enhance_texture, extract_gps_info,
-                   fill_largest_polygon_white, format_time, get_camera_names,
-                   is_black_and_white, load_default_image, rotate_image,
-                   save_chinese_image, save_uploaded_file)
+from utils import (
+    is_black_and_white,
+    save_uploaded_file,
+    concat_results,
+    load_default_image,
+    get_camera_names,
+    draw_detections,
+    save_chinese_image,
+    format_time,
+    convert_to_pseudo_colorizer,
+    camera_undistortion,
+    auto_undistort_image,
+    rotate_image,
+    auto_keystone_correction,
+    enhance_texture,
+    fill_largest_polygon_white,
+    extract_gps_info,
+    compute_inclusion_relations,
+)
+from datetime import datetime
+from auth import verify_token, get_access_token
+import tkinter as tk
+from tkinter import filedialog
+from utils import LocalFileObj
+import base64
+import hashlib
+from functools import lru_cache
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+# 🚀 性能优化模块导入
+from streamlit_config import (
+    optimize_streamlit_performance,
+    setup_image_optimization,
+    add_performance_css,
+)
+
+# 📝 命名配置模块导入
+from naming_config import (
+    # 系统配置
+    SYSTEM_INFO,
+    SYSTEM_DEFAULTS,
+    # 侧边栏配置
+    SIDEBAR_HEADERS,
+    SIDEBAR_LABELS,
+    SIDEBAR_OPTIONS,
+    SIDEBAR_HINTS,
+    # 主界面配置
+    MAIN_HEADERS,
+    MAIN_LABELS,
+    MAIN_OPTIONS,
+    # 按钮配置
+    BUTTON_TEXTS,
+    # 消息配置
+    DETECTION_MESSAGES,
+    FILE_MESSAGES,
+    VIDEO_MESSAGES,
+    CAMERA_MESSAGES,
+    RTSP_MESSAGES,
+    MODEL_MESSAGES,
+    WARNING_MESSAGES,
+    GENERAL_MESSAGES,
+    EXPORT_MESSAGES,
+    # 显示配置
+    IMAGE_DISPLAY_LABELS,
+    STATISTICS_LABELS,
+    METRICS_LABELS,
+    # 数据映射
+    IMAGE_TYPE_MAP,
+    TASK_TYPE_MAP,
+    EXPORT_FORMAT_MAP,
+    # 工具函数
+    get_detection_message,
+    get_file_message,
+    get_video_message,
+    get_camera_message,
+    get_rtsp_message,
+    get_model_message,
+    get_warning_message,
+    get_general_message,
+    get_export_message,
+    get_statistic_message,
+    get_metric_label,
+    generate_filename,
+    # UI 获取函数
+    get_sidebar_header,
+    get_sidebar_label,
+    get_sidebar_option,
+    get_sidebar_hint,
+    get_main_header,
+    get_main_label,
+    get_main_option,
+    get_button_text,
+    get_image_display_label,
+    get_statistic_label,
+    # 兼容性支持
+    STATUS_MESSAGES,
+    UI_LABELS,
+    UI_OPTIONS,
+    get_status_message,
+)
+from image_optimizer import (
+    get_image_optimizer,
+    optimize_image_display,
+    process_uploaded_images,
+)
 
 
 # 🚀 性能优化：添加缓存装饰器
@@ -281,9 +354,7 @@ class Detection_UI:
         self.gps_lon_placeholder = None
         self.gps_alt_placeholder = None
         self.gps_time_placeholder = None
-        # 包含关系表格占位符
         self.inclusion_table_placeholder = None
-        # 是否显示包含关系
         self.show_inclusion = False
 
         self.new_width = 1080
@@ -685,11 +756,10 @@ class Detection_UI:
         self.enable_gps_parsing = st.sidebar.checkbox(
             get_sidebar_label("enable_gps_parsing"),
             value=True,
-            help="勾选时，将解析图片的RTK GPS信息并在主页面显示",
+            help="勾选时，将解析图片的RTK GPS信息并在主页面显示"
         )
         st.sidebar.caption(get_sidebar_hint("gps_parsing_hint"))
 
-        # 是否显示分割包含关系
         self.show_inclusion = st.sidebar.checkbox(
             get_sidebar_label("show_inclusion_relationship"),
             value=False,
@@ -817,9 +887,9 @@ class Detection_UI:
             self.detect_class_color = Segmentation_class_colors
 
         # 提示用户选择的图像类型
-        st.sidebar.caption(
-            get_sidebar_hint("image_type_hint").format(type=self.image_type)
-        )
+        st.sidebar.caption(get_sidebar_hint("image_type_hint").format(
+            type=self.image_type
+        ))
 
         # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
         st.sidebar.header(get_sidebar_header("target_class_selection"))
@@ -1194,7 +1264,9 @@ class Detection_UI:
                 # 转为文件对象
                 self.uploaded_video = [LocalFileObj(f) for f in video_files]
             else:
-                st.sidebar.caption(get_sidebar_hint("video_folder_selection_hint"))
+                st.sidebar.caption(
+                    get_sidebar_hint("video_folder_selection_hint")
+                )
                 self.uploaded_video = []
 
         # 清空按钮
@@ -1347,9 +1419,7 @@ class Detection_UI:
                     self.calibration_file = calibration_file.name
                     st.sidebar.success(get_camera_message("camera_calibration_success"))
                 except Exception as e:
-                    st.sidebar.error(
-                        get_camera_message("camera_calibration_failed", error=e)
-                    )
+                    st.sidebar.error(get_camera_message("camera_calibration_failed", error=e))
             elif calibration_input.strip():
                 try:
                     # 尝试先用json解析，否则用eval（仅限受信环境）
@@ -1359,18 +1429,14 @@ class Detection_UI:
                         calib_data = eval(calibration_input, {"__builtins__": {}})
                     self.calibration_file = "sidebar_input"
                 except Exception as e:
-                    st.sidebar.error(
-                        get_camera_message("camera_calibration_failed", error=e)
-                    )
+                    st.sidebar.error(get_camera_message("camera_calibration_failed", error=e))
             if calib_data is not None:
                 try:
                     self.camera_matrix = np.array(calib_data["camera_matrix"])
                     self.dist_coeffs = np.array(calib_data["dist_coeffs"])
                     st.sidebar.success(get_camera_message("camera_calibration_success"))
                 except Exception as e:
-                    st.sidebar.error(
-                        get_camera_message("camera_calibration_failed", error=e)
-                    )
+                    st.sidebar.error(get_camera_message("camera_calibration_failed", error=e))
                     self.camera_matrix = None
                     self.dist_coeffs = None
                     self.calibration_file = None
@@ -1552,9 +1618,7 @@ class Detection_UI:
 
                 except Exception as e:
                     st.sidebar.error(
-                        get_file_message(
-                            "image_processing_error", filename=file_name, error=str(e)
-                        )
+                        get_file_message("image_processing_error", filename=file_name, error=str(e))
                     )
 
             else:  # Handle single file upload
@@ -1997,7 +2061,9 @@ class Detection_UI:
             return
 
         # 获取当前选中的目标过滤选项（多选）
-        selected_targets = st.session_state.get("multiselect_target", [])
+        selected_targets = st.session_state.get(
+            "multiselect_target", []
+        )
 
         # 获取原始帧
         frame = saved_images_ini[frame_id]  # 获取指定帧的初始图像
@@ -2021,8 +2087,7 @@ class Detection_UI:
                         # 如果选择了目标过滤，跳过不匹配的目标
                         if (
                             selected_targets  # 如果有选中的目标
-                            and chinese_name
-                            not in selected_targets  # 且当前目标不在选中列表中
+                            and chinese_name not in selected_targets  # 且当前目标不在选中列表中
                         ):
                             continue
 
@@ -2061,20 +2126,14 @@ class Detection_UI:
 
         # 调整图像大小
         if hasattr(self, "optimized_image_resize"):
-            resized_image = self.optimized_image_resize(
-                image, self.display_width, self.display_height
-            )
-            resized_frame = self.optimized_image_resize(
-                frame, self.display_width, self.display_height
-            )
+            resized_image = self.optimized_image_resize(image, self.display_width, self.display_height)
+            resized_frame = self.optimized_image_resize(frame, self.display_width, self.display_height)
         else:
             resized_image = cv2.resize(image, (self.display_width, self.display_height))
             resized_frame = cv2.resize(frame, (self.display_width, self.display_height))
 
         # 更新表格数据
-        detection_results = (
-            saved_results[frame_id] if frame_id < len(saved_results) else []
-        )
+        detection_results = (saved_results[frame_id] if frame_id < len(saved_results) else [])
 
         if detection_results:
             # 使用列表推导式提高性能
@@ -2099,7 +2158,7 @@ class Detection_UI:
                 self.table_placeholder.table(disp_res.results_df)
                 self.update_category_counts(frame_id)
                 if (
-                    getattr(self, "show_inclusion", False)
+                    self.show_inclusion
                     and self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]
                 ):
                     inclusion_df = compute_inclusion_relations(filtered_results)
@@ -2139,6 +2198,8 @@ class Detection_UI:
                     )
                 )
             self.update_category_counts(frame_id)
+            if hasattr(self, "inclusion_table_placeholder"):
+                self.inclusion_table_placeholder.empty()
 
         # 获取图像名称
         img_name = (
@@ -2187,15 +2248,15 @@ class Detection_UI:
                         if gps:
                             if "latitude" in gps:
                                 lat = f"{gps['latitude']:.6f}°"
-                                if "latitude_ref" in gps:
+                                if 'latitude_ref' in gps:
                                     lat += f" {gps['latitude_ref']}"
                             if "longitude" in gps:
                                 lon = f"{gps['longitude']:.6f}°"
-                                if "longitude_ref" in gps:
+                                if 'longitude_ref' in gps:
                                     lon += f" {gps['longitude_ref']}"
                             if "altitude" in gps:
                                 alt = f"{gps['altitude']:.1f}m"
-                                if gps.get("altitude_ref") == 1:
+                                if gps.get('altitude_ref') == 1:
                                     alt += " (海平面以下)"
                                 else:
                                     alt += " (海平面以上)"
@@ -2389,9 +2450,7 @@ class Detection_UI:
         detection_time = "0.00s"
 
         # 使用 display_detection_results 函数显示结果
-        res = concat_results(
-            detection_result, detection_location, detection_confidence, detection_time
-        )
+        res = concat_results(detection_result, detection_location, detection_confidence, detection_time)
         self.table_placeholder.table(res)
         # 注意：这里是演示模式，不需要更新类别统计
         # 添加适当的延迟
@@ -2400,21 +2459,15 @@ class Detection_UI:
     def update_category_counts(self, current_frame_id=None):
         """更新并显示类别计数表格"""
         # 🔧 修复：添加安全检查，确保占位符存在
-        if (
-            not hasattr(self, "current_image_category_placeholder")
-            or self.current_image_category_placeholder is None
-        ):
+        if not hasattr(self, "current_image_category_placeholder") or self.current_image_category_placeholder is None:
             return
-        if (
-            not hasattr(self, "total_category_placeholder")
-            or self.total_category_placeholder is None
-        ):
+        if not hasattr(self, "total_category_placeholder") or self.total_category_placeholder is None:
             return
 
         # 获取当前图片的类别统计
         if current_frame_id is not None:
             self.update_current_image_category_counts(current_frame_id)
-
+        
         # 获取总体类别统计
         self.update_total_category_counts()
 
@@ -2424,24 +2477,20 @@ class Detection_UI:
             # 获取当前图片的检测结果
             saved_results = getattr(self.logTable, "saved_results", [])
             saved_names = st.session_state.get("saved_names", [])
-
+            
             if frame_id >= len(saved_results) or not saved_results[frame_id]:
                 # 如果没有检测结果，显示空表格
                 empty_df = pd.DataFrame(columns=["类别", "数量"])
                 self.current_image_category_placeholder.table(empty_df)
                 return
-
+            
             # 获取当前图片名称
-            img_name = (
-                saved_names[frame_id]
-                if frame_id < len(saved_names)
-                else f"图片_{frame_id+1}"
-            )
-
+            img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"图片_{frame_id+1}"
+            
             # 统计当前图片的类别
             current_results = saved_results[frame_id]
             category_counts = {}
-
+            
             for detInfo in current_results:
                 if isinstance(detInfo, list) and len(detInfo) >= 2:
                     category = detInfo[1]  # 类别名称在索引1
@@ -2449,58 +2498,44 @@ class Detection_UI:
                         category_counts[category] += 1
                     else:
                         category_counts[category] = 1
-
+            
             # 转换为DataFrame
             if category_counts:
-                current_counts = pd.DataFrame(
-                    list(category_counts.items()), columns=["类别", "数量"]
-                )
+                current_counts = pd.DataFrame(list(category_counts.items()), columns=["类别", "数量"])
                 current_counts = current_counts.sort_values("数量", ascending=False)
             else:
                 current_counts = pd.DataFrame(columns=["类别", "数量"])
-
+            
             # 添加表格标题信息
             if not current_counts.empty:
-                self.current_image_category_placeholder.write(
-                    f"📊 **{img_name}** 中检测到的目标:"
-                )
+                self.current_image_category_placeholder.write(f"📊 **{img_name}** 中检测到的目标:")
                 self.current_image_category_placeholder.table(current_counts)
             else:
-                self.current_image_category_placeholder.write(
-                    f"📊 **{img_name}** 中未检测到目标"
-                )
-                self.current_image_category_placeholder.table(
-                    pd.DataFrame(columns=["类别", "数量"])
-                )
-
+                self.current_image_category_placeholder.write(f"📊 **{img_name}** 中未检测到目标")
+                self.current_image_category_placeholder.table(pd.DataFrame(columns=["类别", "数量"]))
+                
         except Exception as e:
             st.error(f"更新当前图片类别统计时出错: {str(e)}")
-            self.current_image_category_placeholder.table(
-                pd.DataFrame(columns=["类别", "数量"])
-            )
+            self.current_image_category_placeholder.table(pd.DataFrame(columns=["类别", "数量"]))
 
     def update_total_category_counts(self):
         """更新总体类别统计，包含图片来源信息"""
         try:
             saved_results = getattr(self.logTable, "saved_results", [])
             saved_names = st.session_state.get("saved_names", [])
-
+            
             if not saved_results:
                 # 如果没有检测结果，显示空表格
                 empty_df = pd.DataFrame(columns=["类别", "总数量", "分布图片"])
                 self.total_category_placeholder.table(empty_df)
                 return
-
+            
             # 统计每个类别在各图片中的分布
             category_distribution = {}
-
+            
             for frame_id, results in enumerate(saved_results):
-                img_name = (
-                    saved_names[frame_id]
-                    if frame_id < len(saved_names)
-                    else f"图片_{frame_id+1}"
-                )
-
+                img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"图片_{frame_id+1}"
+                
                 if results:
                     frame_categories = {}
                     for detInfo in results:
@@ -2510,43 +2545,33 @@ class Detection_UI:
                                 frame_categories[category] += 1
                             else:
                                 frame_categories[category] = 1
-
+                    
                     # 记录每个类别在当前图片中的分布
                     for category, count in frame_categories.items():
                         if category not in category_distribution:
                             category_distribution[category] = []
                         category_distribution[category].append(f"{img_name}({count})")
-
+            
             # 转换为DataFrame
             if category_distribution:
                 total_data = []
                 for category, distribution in category_distribution.items():
-                    total_count = sum(
-                        int(item.split("(")[1].split(")")[0]) for item in distribution
-                    )
+                    total_count = sum(int(item.split('(')[1].split(')')[0]) for item in distribution)
                     distribution_str = ", ".join(distribution)
                     total_data.append([category, total_count, distribution_str])
-
-                total_counts = pd.DataFrame(
-                    total_data, columns=["类别", "总数量", "分布图片"]
-                )
+                
+                total_counts = pd.DataFrame(total_data, columns=["类别", "总数量", "分布图片"])
                 total_counts = total_counts.sort_values("总数量", ascending=False)
-
-                self.total_category_placeholder.write(
-                    f"📈 **总体统计** (共{len(saved_results)}张图片):"
-                )
+                
+                self.total_category_placeholder.write(f"📈 **总体统计** (共{len(saved_results)}张图片):")
                 self.total_category_placeholder.table(total_counts)
             else:
                 self.total_category_placeholder.write("📈 **总体统计**: 暂无检测结果")
-                self.total_category_placeholder.table(
-                    pd.DataFrame(columns=["类别", "总数量", "分布图片"])
-                )
-
+                self.total_category_placeholder.table(pd.DataFrame(columns=["类别", "总数量", "分布图片"]))
+                
         except Exception as e:
             st.error(f"更新总体类别统计时出错: {str(e)}")
-            self.total_category_placeholder.table(
-                pd.DataFrame(columns=["类别", "总数量", "分布图片"])
-            )
+            self.total_category_placeholder.table(pd.DataFrame(columns=["类别", "总数量", "分布图片"]))
 
     def setupMainWindow(self):
         """
@@ -2626,7 +2651,7 @@ class Detection_UI:
             st.subheader(get_main_header("current_image_results"))
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
-
+            
             # 在当前图片检测结果下方添加当前图片类别统计
             st.subheader(get_main_header("current_category_statistics"))
             self.current_image_category_placeholder = st.empty()
@@ -2654,23 +2679,15 @@ class Detection_UI:
                 detected_targets = st.session_state.get("select_info", ["全部目标"])
 
             # 从检测目标列表中移除"全部目标"，只保留实际的类别名称
-            available_targets = [
-                target for target in detected_targets if target != "全部目标"
-            ]
+            available_targets = [target for target in detected_targets if target != "全部目标"]
 
             # multiselect动态key，确保当目标列表变化时multiselect会刷新
-            multiselect_key = (
-                f"multiselect_target_{idx}_{hash(tuple(available_targets))}"
-            )
+            multiselect_key = f"multiselect_target_{idx}_{hash(tuple(available_targets))}"
 
             # 确保当前选中的目标在新的目标列表中，默认选择所有可用目标
-            current_selected = st.session_state.get(
-                "multiselect_target", available_targets.copy()
-            )
+            current_selected = st.session_state.get("multiselect_target", available_targets.copy())
             # 过滤掉不在当前目标列表中的选项
-            current_selected = [
-                target for target in current_selected if target in available_targets
-            ]
+            current_selected = [target for target in current_selected if target in available_targets]
             # 如果没有选中任何目标，默认选择所有目标
             if not current_selected:
                 current_selected = available_targets.copy()
@@ -2680,9 +2697,7 @@ class Detection_UI:
                 col_select_all, col_select_none = st.columns(2)
                 with col_select_all:
                     if st.button("全选", key=f"select_all_{idx}"):
-                        st.session_state["multiselect_target"] = (
-                            available_targets.copy()
-                        )
+                        st.session_state["multiselect_target"] = available_targets.copy()
                         st.rerun()
                 with col_select_none:
                     if st.button("全不选", key=f"select_none_{idx}"):
@@ -2705,14 +2720,14 @@ class Detection_UI:
                 st.session_state["multiselect_target"] = selected_targets
                 st.session_state["last_selected_targets"] = selected_targets
                 self.toggle_comboBox(idx)
-
+            
         # 图片浏览控制（移动到总体类别统计上方）
         st.markdown("---")
-
+        
         # 显示批量处理汇总信息（如果存在）
         if st.session_state.get("batch_processing_summary"):
             st.success(st.session_state["batch_processing_summary"])
-
+        
         st.subheader(get_main_header("image_browser_control"))
 
         # 检查是否有检测结果（优先检查session state，然后检查logTable）
@@ -2721,9 +2736,7 @@ class Detection_UI:
             saved_images_ini = self.logTable.saved_images_ini
             # 同步到session state
             st.session_state["saved_images_ini"] = saved_images_ini
-            st.session_state["saved_images"] = getattr(
-                self.logTable, "saved_images", []
-            )
+            st.session_state["saved_images"] = getattr(self.logTable, "saved_images", [])
             st.session_state["saved_names"] = getattr(self.logTable, "saved_names", [])
 
         if len(saved_images_ini) > 0:
@@ -2751,17 +2764,11 @@ class Detection_UI:
                     st.rerun()
 
             with col_info:
-                st.write(
-                    get_statistic_message(
-                        "image_index_info", current=current_index + 1, total=total_imgs
-                    )
-                )
+                st.write(get_statistic_message("image_index_info", current=current_index + 1, total=total_imgs))
                 # 显示当前图片名称
                 if current_index < len(st.session_state.get("saved_names", [])):
                     img_name = st.session_state["saved_names"][current_index]
-                    st.caption(
-                        get_statistic_message("filename_info", filename=img_name)
-                    )
+                    st.caption(get_statistic_message("filename_info", filename=img_name))
 
             with col_next:
                 if st.button(
@@ -2769,9 +2776,7 @@ class Detection_UI:
                     key="next_btn",
                     disabled=(current_index >= total_imgs - 1),
                 ):
-                    st.session_state["image_play_index"] = min(
-                        total_imgs - 1, current_index + 1
-                    )
+                    st.session_state["image_play_index"] = min(total_imgs - 1, current_index + 1)
                     st.rerun()
 
             # 添加滑块控制
@@ -2792,24 +2797,18 @@ class Detection_UI:
             st.info(get_detection_message("no_detection_results"))
             # 显示默认图像
             if hasattr(self, "image_placeholder"):
-                self.image_placeholder.image(
-                    load_default_image(),
-                    caption=get_image_display_label("original_view"),
-                )
+                self.image_placeholder.image(load_default_image(), caption=get_image_display_label("original_view"))
                 if self.display_mode == "对比显示" and hasattr(
                     self, "image_placeholder_res"
                 ):
-                    self.image_placeholder_res.image(
-                        load_default_image(),
-                        caption=get_image_display_label("detection_view"),
-                    )
+                    self.image_placeholder_res.image(load_default_image(), caption=get_image_display_label("detection_view"))
 
         # 🔧 修复：在创建占位符后再调用update_category_counts
         st.subheader(get_main_header("total_category_statistics"))
-
+        
         # 总体类别统计
         self.total_category_placeholder = st.empty()
-
+        
         # 初始化类别统计（使用当前图片索引）
         current_idx = st.session_state.get("image_play_index", 0)
         self.update_category_counts(current_idx)
@@ -2889,9 +2888,7 @@ class Detection_UI:
 
         with col1:
             st.write("")
-            run_button = st.button(
-                get_button_text("start_detection"), key="main_start_detection"
-            )
+            run_button = st.button(get_button_text("start_detection"), key="main_start_detection")
             self.close_placeholder = st.empty()
 
         st.subheader(get_main_header("realtime_dashboard"))
@@ -2984,11 +2981,7 @@ class Detection_UI:
                     st.warning(get_rtsp_message("input_rtsp_first"))
 
             else:
-                st.error(
-                    get_warning_message(
-                        "unsupported_input_source", source=self.input_source
-                    )
-                )
+                st.error(get_warning_message("unsupported_input_source", source=self.input_source))
 
         except Exception as e:
             st.error(get_warning_message("input_processing_error", error=str(e)))
@@ -3058,9 +3051,7 @@ class Detection_UI:
             # 计算预估时间
             estimated_time_per_image = 2.0  # 假设每张图片需要2秒
             estimated_total_time = total_files * estimated_time_per_image
-            status_text.write(
-                get_file_message("estimated_time", time=estimated_total_time)
-            )
+            status_text.write(get_file_message("estimated_time", time=estimated_total_time))
 
             start_time = time.time()
             successful_count = 0
@@ -3090,13 +3081,13 @@ class Detection_UI:
                         uploaded_file.seek(0)
                         source_img = uploaded_file.read()
                         file_name = uploaded_file.name
-
+                        
                         # 为上传的文件创建临时文件以获取完整路径
                         if getattr(self, "enable_gps_parsing", False):
                             # 创建临时文件保存图片，以便GPS解析
                             temp_dir = tempfile.mkdtemp()
                             temp_file_path = os.path.join(temp_dir, file_name)
-                            with open(temp_file_path, "wb") as temp_file:
+                            with open(temp_file_path, 'wb') as temp_file:
                                 temp_file.write(source_img)
                             img_path = temp_file_path
                     else:
@@ -3111,9 +3102,7 @@ class Detection_UI:
                     image_ini = cv2.imdecode(file_bytes, 1)
 
                     if image_ini is None:
-                        st.error(
-                            get_file_message("image_decode_error", filename=file_name)
-                        )
+                        st.error(get_file_message("image_decode_error", filename=file_name))
                         failed_count += 1
                         continue
 
@@ -3122,9 +3111,7 @@ class Detection_UI:
 
                     # 进行检测
                     framecopy = processed_image.copy()
-                    image, detInfo, select_info = self.frame_process(
-                        framecopy, file_name
-                    )
+                    image, detInfo, select_info = self.frame_process(framecopy, file_name)
 
                     # 保存结果
                     save_chinese_image(self.output_path + "/image/" + file_name, image)
@@ -3135,23 +3122,13 @@ class Detection_UI:
                     st.session_state["current_detection_time"] = self.detection_time
 
                     # 更新显示
-                    self.frame_count_placeholder.metric(
-                        get_main_label("current_frame"), idx + 1
-                    )
-                    self.target_count_placeholder.metric(
-                        get_main_label("target_count"), len(detInfo)
-                    )
-                    self.detection_time_placeholder.metric(
-                        get_main_label("detection_time"), self.detection_time
-                    )
+                    self.frame_count_placeholder.metric(get_main_label("current_frame"), idx + 1)
+                    self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                    self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                     # 显示图片
-                    resized_image = cv2.resize(
-                        image, (self.display_width, self.display_height)
-                    )
-                    resized_frame = cv2.resize(
-                        processed_image, (self.display_width, self.display_height)
-                    )
+                    resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                    resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
 
                     if self.display_mode == "叠加显示":
                         self.image_placeholder.image(
@@ -3173,9 +3150,7 @@ class Detection_UI:
                             )
 
                     # 添加到日志表（现在img_path不为None）
-                    self.logTable.add_frames(
-                        image, detInfo, processed_image, file_name, img_path
-                    )
+                    self.logTable.add_frames(image, detInfo, processed_image, file_name, img_path)
 
                     successful_count += 1
 
@@ -3214,7 +3189,7 @@ class Detection_UI:
 
             # 完成后的总结
             total_time = time.time() - start_time
-
+            
             # 🔧 在终端输出完成信息
             print(f"🎉 批量检测完成！")
             print(f"🏁 批量处理完成")
@@ -3223,13 +3198,13 @@ class Detection_UI:
             print(f"   - 失败处理: {failed_count}张")
             print(f"   - 总耗时: {total_time:.2f}秒")
             print(f"   - 平均耗时: {total_time/total_files:.2f}秒/张")
-
+            
             if failed_count > 0:
                 print(f"⚠️  有{failed_count}张图片处理失败，请检查上述错误信息")
-
+            
             # 生成汇总信息用于界面显示
             summary_msg = f"📊 处理完成: 成功 {successful_count} 张，失败 {failed_count} 张，总用时 {total_time:.2f} 秒"
-
+            
             # 仅在处理过程中显示完成消息，不保存到session_state
             current_image_info.success("批量处理完成！")
             status_text.success(summary_msg)
@@ -3244,9 +3219,7 @@ class Detection_UI:
             st.session_state["saved_names"] = self.logTable.saved_names.copy()
             # 同步每张图片的目标信息
             if hasattr(self.logTable, "saved_targets_info"):
-                st.session_state["saved_targets_info"] = (
-                    self.logTable.saved_targets_info.copy()
-                )
+                st.session_state["saved_targets_info"] = self.logTable.saved_targets_info.copy()
 
             # 确保索引重置为0以显示第一张图片
             st.session_state["image_play_index"] = 0
@@ -3284,7 +3257,7 @@ class Detection_UI:
                 if getattr(self, "enable_gps_parsing", False):
                     temp_dir = tempfile.mkdtemp()
                     temp_file_path = os.path.join(temp_dir, self.uploaded_file.name)
-                    with open(temp_file_path, "wb") as temp_file:
+                    with open(temp_file_path, 'wb') as temp_file:
                         temp_file.write(source_img)
                     img_path = temp_file_path
 
@@ -3299,17 +3272,13 @@ class Detection_UI:
 
                 # 进行检测
                 framecopy = processed_image.copy()
-                image, detInfo, select_info = self.frame_process(
-                    framecopy, self.uploaded_file.name
-                )
+                image, detInfo, select_info = self.frame_process(framecopy, self.uploaded_file.name)
 
                 status_info.write(get_file_message("saving_detection_results"))
                 single_progress.progress(0.8)
 
                 # 保存结果
-                save_chinese_image(
-                    self.output_path + "/image/" + self.uploaded_file.name, image
-                )
+                save_chinese_image(self.output_path + "/image/" + self.uploaded_file.name, image)
 
                 # 更新状态
                 st.session_state["current_frame_count"] = 1
@@ -3318,20 +3287,12 @@ class Detection_UI:
 
                 # 更新显示
                 self.frame_count_placeholder.metric(get_main_label("current_frame"), 1)
-                self.target_count_placeholder.metric(
-                    get_main_label("target_count"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("detection_time"), self.detection_time
-                )
+                self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_image, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
@@ -3353,24 +3314,18 @@ class Detection_UI:
                         )
 
                 # 添加到日志表（现在img_path不为None）
-                self.logTable.add_frames(
-                    image, detInfo, processed_image, self.uploaded_file.name, img_path
-                )
+                self.logTable.add_frames(image, detInfo, processed_image, self.uploaded_file.name, img_path)
 
                 status_info.write(get_general_message("updating_interface"))
                 single_progress.progress(0.9)
 
                 # 立即更新session state以确保UI同步
-                st.session_state["saved_images_ini"] = (
-                    self.logTable.saved_images_ini.copy()
-                )
+                st.session_state["saved_images_ini"] = self.logTable.saved_images_ini.copy()
                 st.session_state["saved_images"] = self.logTable.saved_images.copy()
                 st.session_state["saved_names"] = self.logTable.saved_names.copy()
                 # 同步每张图片的目标信息
                 if hasattr(self.logTable, "saved_targets_info"):
-                    st.session_state["saved_targets_info"] = (
-                        self.logTable.saved_targets_info.copy()
-                    )
+                    st.session_state["saved_targets_info"] = self.logTable.saved_targets_info.copy()
 
                 # 确保索引重置为0
                 st.session_state["image_play_index"] = 0
@@ -3398,9 +3353,7 @@ class Detection_UI:
                 st.success(get_detection_message("image_detection_complete"))
 
             except Exception as e:
-                st.error(
-                    get_file_message("single_image_processing_error", error=str(e))
-                )
+                st.error(get_file_message("single_image_processing_error", error=str(e)))
 
     def _process_video_input(self):
         """
@@ -3438,9 +3391,7 @@ class Detection_UI:
 
             cap = cv2.VideoCapture(tfile.name)
             if not cap.isOpened():
-                st.error(
-                    get_video_message("video_open_failed", video_name=video_file.name)
-                )
+                st.error(get_video_message("video_open_failed", video_name=video_file.name))
                 return
 
             # 获取视频信息
@@ -3481,23 +3432,13 @@ class Detection_UI:
                 st.session_state["current_detection_time"] = self.detection_time
 
                 # 更新显示
-                self.frame_count_placeholder.metric(
-                    get_main_label("current_frame"), current_frame + 1
-                )
-                self.target_count_placeholder.metric(
-                    get_main_label("target_count"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("detection_time"), self.detection_time
-                )
+                self.frame_count_placeholder.metric(get_main_label("current_frame"), current_frame + 1)
+                self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_frame, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
@@ -3572,9 +3513,7 @@ class Detection_UI:
 
                 # 进行检测
                 framecopy = processed_frame.copy()
-                image, detInfo, _ = self.frame_process(
-                    framecopy, f"camera_{frame_count}"
-                )
+                image, detInfo, _ = self.frame_process(framecopy, f"camera_{frame_count}")
 
                 # 更新状态
                 st.session_state["current_frame_count"] = frame_count + 1
@@ -3582,23 +3521,13 @@ class Detection_UI:
                 st.session_state["current_detection_time"] = self.detection_time
 
                 # 更新显示
-                self.frame_count_placeholder.metric(
-                    get_main_label("current_frame"), frame_count + 1
-                )
-                self.target_count_placeholder.metric(
-                    get_main_label("target_count"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("detection_time"), self.detection_time
-                )
+                self.frame_count_placeholder.metric(get_main_label("current_frame"), frame_count + 1)
+                self.target_count_placeholder.metric(get_main_label("target_count"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_frame, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
@@ -3643,9 +3572,7 @@ class Detection_UI:
                 return
 
             st.info(get_rtsp_message("rtsp_connected", rtsp_url=rtsp_url))
-            self.close_flag = self.close_placeholder.button(
-                label=get_button_text("stop")
-            )
+            self.close_flag = self.close_placeholder.button(label=get_button_text("stop"))
 
             frame_count = 0
             while cap.isOpened() and not self.close_flag:
@@ -3668,23 +3595,13 @@ class Detection_UI:
                 st.session_state["current_detection_time"] = self.detection_time
 
                 # 更新显示
-                self.frame_count_placeholder.metric(
-                    get_main_label("current_frame"), frame_count + 1
-                )
-                self.target_count_placeholder.metric(
-                    get_main_label("current_target"), len(detInfo)
-                )
-                self.detection_time_placeholder.metric(
-                    get_main_label("current_detection_time"), self.detection_time
-                )
+                self.frame_count_placeholder.metric(get_main_label("current_frame"), frame_count + 1)
+                self.target_count_placeholder.metric(get_main_label("current_target"), len(detInfo))
+                self.detection_time_placeholder.metric(get_main_label("current_detection_time"), self.detection_time)
 
                 # 显示图片
-                resized_image = cv2.resize(
-                    image, (self.display_width, self.display_height)
-                )
-                resized_frame = cv2.resize(
-                    processed_frame, (self.display_width, self.display_height)
-                )
+                resized_image = cv2.resize(image, (self.display_width, self.display_height))
+                resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
                 if self.display_mode == "叠加显示":
                     self.image_placeholder.image(
