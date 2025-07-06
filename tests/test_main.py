@@ -8,11 +8,11 @@ from unittest.mock import MagicMock
 MOCK_MODULES = [
     'QtFusion', 'QtFusion.path', 'QtFusion.utils', 'QtFusion.models',
     'ultralytics', 'ultralytics.utils', 'ultralytics.utils.torch_utils',
-    'IMcore', 'efficientnet_pytorch', 'pandas', 'PIL', 'docx', 'docx.shared',
+    'IMcore', 'efficientnet_pytorch', 'pandas', 'PIL', 'PIL.ExifTags', 'docx', 'docx.shared',
     'matplotlib', 'matplotlib.colors', 'scipy', 'scipy.optimize', 'requests',
     'Crypto', 'Crypto.Cipher', 'Crypto.Util', 'Crypto.Util.Padding', 'psutil',
     'cv2', 'torch', 'streamlit', 'streamlit.web', 'streamlit.web.cli', 'numpy',
-    'cryptography', '_cffi_backend'
+    'cryptography', '_cffi_backend', 'exifread'
 ]
 
 
@@ -37,6 +37,9 @@ sys.modules['QtFusion.utils'].drawRectBox = lambda *a, **k: None
 sys.modules['PIL'].Image = MagicMock()
 sys.modules['PIL'].ImageFont = MagicMock()
 sys.modules['PIL'].ImageDraw = MagicMock()
+sys.modules['PIL'].ImageEnhance = MagicMock()
+sys.modules['PIL.ExifTags'].TAGS = {}
+sys.modules['PIL.ExifTags'].GPSTAGS = {}
 sys.modules['docx'].Document = MagicMock()
 sys.modules['docx.shared'].Inches = MagicMock()
 sys.modules['QtFusion.models'].Detector = MagicMock()
@@ -51,6 +54,7 @@ sys.modules['matplotlib.colors'].LinearSegmentedColormap = MagicMock()
 sys.modules['streamlit.web.cli'].main = MagicMock()
 sys.modules['torch'].cuda = MagicMock(is_available=lambda: False)
 sys.modules['scipy.optimize'].minimize = MagicMock()
+sys.modules["streamlit"].cache_data = lambda *a, **k: (lambda f: f)
 # Provide abs_path function used in main.py
 sys.modules['QtFusion.path'].abs_path = lambda x: x
 

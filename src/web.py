@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
+from src.license_features import DEFAULT_FEATURES
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import (
@@ -204,7 +205,7 @@ class Detection_UI:
         detection_time (str): 检测用时。
     """
 
-    def __init__(self, from_streamlit=False, api_params=None):
+    def __init__(self, from_streamlit=False, api_params=None, enabled_features=None):
         """
         初始化光伏云组件检测系统的参数。
         """
@@ -234,6 +235,7 @@ class Detection_UI:
 
         self.from_streamlit = from_streamlit
         self.api_params = api_params or {}
+        self.enabled_features = enabled_features or DEFAULT_FEATURES
         self.input_source = None
         self.rtsp_input_url = None
         self.enable_video_output = None
@@ -831,9 +833,16 @@ class Detection_UI:
         # 设置侧边栏的模型设置部分
         st.sidebar.header(get_sidebar_header("model_settings"))
         # 选择模型类型的下拉菜单
+        task_options = [
+            t for t in get_sidebar_option("task_types") if t in self.enabled_features
+        ]
+        if not task_options:
+            st.error("No licensed task types available")
+            st.stop()
+
         self.model_type = st.sidebar.radio(
             get_sidebar_label("task_type_selection"),
-            options=get_sidebar_option("task_types"),
+            options=task_options,
             index=0,
         )
 
@@ -860,6 +869,11 @@ class Detection_UI:
                 SYSTEM_DEFAULTS["image_type_thermal"],
                 SYSTEM_DEFAULTS["image_type_visible"],
             ]
+
+        available_options = [opt for opt in available_options if opt in self.enabled_features or opt == "其他"]
+        if not available_options:
+            st.error("No licensed image types available")
+            st.stop()
 
         # 添加图像类型选择
         st.sidebar.header(get_sidebar_header("image_type_selection"))

@@ -5,6 +5,7 @@ Git信息集成测试脚本
 
 import sys
 import os
+import pytest
 
 # 添加src目录到路径
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -32,43 +33,26 @@ def test_git_info_import():
         print(about_info[:200] + "..." if len(about_info) > 200 else about_info)
         print("-" * 50)
         
-        return True
-        
     except ImportError as e:
-        print(f"❌ Git信息模块导入失败: {e}")
-        return False
+        pytest.fail(f"Git信息模块导入失败: {e}")
     except Exception as e:
-        print(f"❌ Git信息测试失败: {e}")
-        return False
+        pytest.fail(f"Git信息测试失败: {e}")
 
 
 def test_web_integration():
     """测试Web应用集成"""
     try:
-        # 测试web.py中的Git信息集成
         sys.path.append('src')
-        
-        # 模拟导入测试
         print("\n🔍 测试Web应用集成...")
-        
-        # 检查是否可以成功导入
         try:
             from git_info import format_git_info_for_about, get_version_string
             print("✅ Web应用可以成功导入Git信息")
-            
-            # 模拟web.py中的使用
             version_string = get_version_string()
             print(f"🏷️  版本标签将显示为: ({version_string})")
-            
-            return True
-            
         except ImportError:
             print("⚠️  Web应用将使用默认Git信息（这是正常的备选方案）")
-            return True
-            
     except Exception as e:
-        print(f"❌ Web集成测试失败: {e}")
-        return False
+        pytest.fail(f"Web集成测试失败: {e}")
 
 
 def main():
