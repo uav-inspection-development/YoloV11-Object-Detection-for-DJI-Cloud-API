@@ -1,17 +1,17 @@
+import io
 import os
+from hashlib import md5
+from pathlib import Path
 
 import cv2
+import exifread
 import numpy as np
 import pandas as pd
-from PIL import ImageFont, ImageDraw, Image
-from PIL.ExifTags import TAGS, GPSTAGS
-import exifread
-from hashlib import md5
-from QtFusion.path import abs_path
 from matplotlib.colors import LinearSegmentedColormap
-from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
+from PIL.ExifTags import GPSTAGS, TAGS
+from QtFusion.path import abs_path
 from scipy.optimize import minimize
-import io
 
 
 class LocalFileObj(io.BytesIO):
@@ -19,6 +19,7 @@ class LocalFileObj(io.BytesIO):
         with open(file_path, "rb") as f:
             super().__init__(f.read())
         self.name = os.path.basename(file_path)
+
 
 def save_uploaded_file(uploaded_file):
     """
@@ -66,7 +67,7 @@ def concat_results(result, location, confidence, time):
         "识别结果": [result],
         "位置": [location],
         "置信度": [confidence],
-        "用时": [time]
+        "用时": [time],
     }
 
     results_df = pd.DataFrame(result_data)
@@ -176,7 +177,15 @@ def adjust_parameter(image_size, base_size=1000):
     return max_size / base_size
 
 
-def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None, is_api=False, rectangle_bbox=False):
+def draw_detections(
+    image,
+    info,
+    color=(0, 0, 255),
+    alpha=0.2,
+    line_number=None,
+    is_api=False,
+    rectangle_bbox=False,
+):
     """
     在图像上绘制检测结果，包括边界框、类别名称和掩码（如果有）
 
@@ -188,15 +197,29 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
         line_number (int): 行号，用于在检测框中间绘制行号，默认为 None
         rectangle_bbox (bool): 是否绘制掩码的最小外接矩形，默认为 False
     """
-    name, bbox, conf, cls_id, mask = info['class_name'], info['bbox'], info['score'], info['class_id'], info['mask']
+    name, bbox, conf, cls_id, mask = (
+        info["class_name"],
+        info["bbox"],
+        info["score"],
+        info["class_id"],
+        info["mask"],
+    )
     adjust_param = adjust_parameter(image.shape[:2])
     spacing = int(20 * adjust_param)
 
     if mask is None:
         x1, y1, x2, y2 = bbox
         aim_frame_area = (x2 - x1) * (y2 - y1)
-        cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
-        image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+        cv2.rectangle(
+            image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param)
+        )
+        image = draw_with_chinese(
+            image,
+            name,
+            (x1, y1 - int(30 * adjust_param)),
+            font_size=int(35 * adjust_param),
+            color=color,
+        )
         y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
     else:
         mask_points = np.concatenate(mask)
@@ -206,35 +229,49 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
             overlay = image.copy()
             cv2.fillPoly(overlay, [mask_points.astype(np.int32)], mask_color)
             image = cv2.addWeighted(overlay, 0.3, image, 0.7, 0)
-            cv2.drawContours(image, [mask_points.astype(np.int32)], -1, color=color, thickness=int(8 * adjust_param))
+            cv2.drawContours(
+                image,
+                [mask_points.astype(np.int32)],
+                -1,
+                color=color,
+                thickness=int(8 * adjust_param),
+            )
 
             # 绘制矩形包围框（如果启用）
             if rectangle_bbox:
                 x, y, w, h = cv2.boundingRect(mask_points.astype(np.int32))
                 cv2.rectangle(
-                    image, 
-                    (x, y), 
-                    (x + w, y + h), 
-                    color=color, 
-                    thickness=int(5 * adjust_param)
+                    image,
+                    (x, y),
+                    (x + w, y + h),
+                    color=color,
+                    thickness=int(5 * adjust_param),
                 )
 
             # 计算面积、周长、圆度
             area = cv2.contourArea(mask_points.astype(np.int32))
             perimeter = cv2.arcLength(mask_points.astype(np.int32), True)
-            circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
+            circularity = 4 * np.pi * area / (perimeter**2) if perimeter > 0 else 0
 
             # 计算色彩
             mask = np.zeros(image.shape[:2], dtype=np.uint8)
             cv2.drawContours(mask, [mask_points.astype(np.int32)], -1, 255, -1)
             color_points = cv2.findNonZero(mask)
-            selected_points = color_points[np.random.choice(color_points.shape[0], 5, replace=False)]
+            selected_points = color_points[
+                np.random.choice(color_points.shape[0], 5, replace=False)
+            ]
             colors = np.mean([image[y, x] for x, y in selected_points[:, 0]], axis=0)
             color_str = f"({colors[0]:.1f}, {colors[1]:.1f}, {colors[2]:.1f})"
 
             # 绘制类别名称
             x, y = np.min(mask_points, axis=0).astype(int)
-            image = draw_with_chinese(image, name, (x, y - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+            image = draw_with_chinese(
+                image,
+                name,
+                (x, y - int(30 * adjust_param)),
+                font_size=int(35 * adjust_param),
+                color=color,
+            )
             y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
 
             # 绘制面积、周长、圆度和色彩值
@@ -252,7 +289,13 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
         x1, y1, x2, y2 = bbox
         center_x = int((x1 + x2) / 2)
         center_y = int((y1 + y2) / 2)
-        image = draw_with_chinese(image, str(line_number), (center_x, center_y), font_size=int(20 * adjust_param), color=color)
+        image = draw_with_chinese(
+            image,
+            str(line_number),
+            (center_x, center_y),
+            font_size=int(20 * adjust_param),
+            color=color,
+        )
 
     return image, aim_frame_area
 
@@ -327,12 +370,17 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
         (0.0, (128, 128, 128)),  # 最低温度：黑色
         (0.3, (128, 0, 128)),  # 低温温度：紫色
         (0.8, (255, 50, 0)),  # 高温区域：红色
-        (1.0, (255, 255, 0))  # 最高温度：黄色
+        (1.0, (255, 255, 0)),  # 最高温度：黄色
     ]
 
     # 创建自定义颜色映射
-    colors = sorted([(pos, tuple(np.array(color) / 255)) for pos, color in colors], key=lambda x: x[0])
-    colormap = LinearSegmentedColormap.from_list("custom", [(pos, color) for pos, color in colors])
+    colors = sorted(
+        [(pos, tuple(np.array(color) / 255)) for pos, color in colors],
+        key=lambda x: x[0],
+    )
+    colormap = LinearSegmentedColormap.from_list(
+        "custom", [(pos, color) for pos, color in colors]
+    )
 
     # 将图像转换为灰度图像
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -341,7 +389,9 @@ def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
     img_array = np.array(image)
 
     # 应用对比度和亮度调整
-    img_array = np.clip(img_array.astype(np.float32) * contrast + brightness, 0, 255).astype(np.uint8)
+    img_array = np.clip(
+        img_array.astype(np.float32) * contrast + brightness, 0, 255
+    ).astype(np.uint8)
 
     # 应用颜色映射
     colored_array = colormap(img_array / 255.0)[:, :, :3]  # 忽略alpha通道
@@ -365,7 +415,9 @@ def is_black_and_white(image_array):
         return
 
     # 检查每个像素的 B、G、R 通道值是否相等
-    is_bw = np.all(image_array[:, :, 0] == image_array[:, :, 1]) and np.all(image_array[:, :, 1] == image_array[:, :, 2])
+    is_bw = np.all(image_array[:, :, 0] == image_array[:, :, 1]) and np.all(
+        image_array[:, :, 1] == image_array[:, :, 2]
+    )
 
     return is_bw
 
@@ -388,10 +440,12 @@ def camera_undistortion(frame, camera_matrix=None, dist_coeffs=None):
             new_camera_mtx, roi = cv2.getOptimalNewCameraMatrix(
                 camera_matrix, dist_coeffs, (w, h), 1, (w, h)
             )
-            undistorted = cv2.undistort(frame, camera_matrix, dist_coeffs, None, new_camera_mtx)
+            undistorted = cv2.undistort(
+                frame, camera_matrix, dist_coeffs, None, new_camera_mtx
+            )
             # 可选：裁剪ROI
             x, y, w, h = roi
-            undistorted = undistorted[y:y+h, x:x+w]
+            undistorted = undistorted[y : y + h, x : x + w]
             return undistorted
         except Exception as e:
             print(f"去畸变失败: {e}")
@@ -445,19 +499,21 @@ def rotate_image(img, angle_x, angle_y, zoom_factor=1.0):
 
     # 构造 K
     f = 1.2 * max(h, w)
-    K = np.array([[f, 0, cx],
-                  [0, f, cy],
-                  [0, 0, 1]])
+    K = np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
     K_inv = np.linalg.inv(K)
 
     # 构造 R
-    Rx = np.array([[1, 0, 0],
-                   [0, np.cos(pitch), -np.sin(pitch)],
-                   [0, np.sin(pitch),  np.cos(pitch)]])
-    
-    Rz = np.array([[np.cos(roll), -np.sin(roll), 0],
-                   [np.sin(roll),  np.cos(roll), 0],
-                   [0, 0, 1]])
+    Rx = np.array(
+        [
+            [1, 0, 0],
+            [0, np.cos(pitch), -np.sin(pitch)],
+            [0, np.sin(pitch), np.cos(pitch)],
+        ]
+    )
+
+    Rz = np.array(
+        [[np.cos(roll), -np.sin(roll), 0], [np.sin(roll), np.cos(roll), 0], [0, 0, 1]]
+    )
     R = Rz @ Rx
 
     # 透视矩阵 H
@@ -473,9 +529,7 @@ def rotate_image(img, angle_x, angle_y, zoom_factor=1.0):
     dy = cy - new_center[1, 0]
 
     # 构造平移矩阵 T
-    T = np.array([[1, 0, dx],
-                  [0, 1, dy],
-                  [0, 0, 1]])
+    T = np.array([[1, 0, dx], [0, 1, dy], [0, 0, 1]])
 
     # 加入平移补偿后的新变换矩阵
     H_corrected = T @ H
@@ -493,7 +547,9 @@ def rotate_image(img, angle_x, angle_y, zoom_factor=1.0):
         new_w, new_h = int(w * zoom_factor), int(h * zoom_factor)
         result = cv2.resize(result, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         pad_w, pad_h = (w - new_w) // 2, (h - new_h) // 2
-        result = cv2.copyMakeBorder(result, pad_h, pad_h, pad_w, pad_w, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+        result = cv2.copyMakeBorder(
+            result, pad_h, pad_h, pad_w, pad_w, cv2.BORDER_CONSTANT, value=[0, 0, 0]
+        )
 
     return result
 
@@ -505,10 +561,10 @@ def order_points(pts):
     rect = np.zeros((4, 2), dtype="float32")
     s = pts.sum(axis=1)
     diff = np.diff(pts, axis=1)
-    rect[0] = pts[np.argmin(s)]      # top-left
-    rect[2] = pts[np.argmax(s)]      # bottom-right
-    rect[1] = pts[np.argmin(diff)]   # top-right
-    rect[3] = pts[np.argmax(diff)]   # bottom-left
+    rect[0] = pts[np.argmin(s)]  # top-left
+    rect[2] = pts[np.argmax(s)]  # bottom-right
+    rect[1] = pts[np.argmin(diff)]  # top-right
+    rect[3] = pts[np.argmax(diff)]  # bottom-left
     return rect
 
 
@@ -538,6 +594,7 @@ def find_largest_valid_contour(image, scale_factor=0.1):
         return None
     largest_cnt = max(valid_cnts, key=cv2.contourArea)
     return largest_cnt
+
 
 def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
     """
@@ -576,12 +633,10 @@ def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
     maxWidth = int(max(widthA, widthB))
     maxHeight = int(max(heightA, heightB))
 
-    dst_pts = np.array([
-        [0, 0],
-        [maxWidth - 1, 0],
-        [maxWidth - 1, maxHeight - 1],
-        [0, maxHeight - 1]
-    ], dtype="float32")
+    dst_pts = np.array(
+        [[0, 0], [maxWidth - 1, 0], [maxWidth - 1, maxHeight - 1], [0, maxHeight - 1]],
+        dtype="float32",
+    )
 
     # 透视变换
     M = cv2.getPerspectiveTransform(box, dst_pts)
@@ -639,20 +694,23 @@ def enhance_texture(image, method="clahe"):
         # Apply Histogram Equalization
         enhanced_gray = cv2.equalizeHist(gray)
     else:
-        raise ValueError("Invalid enhancement method. Choose 'CLAHE' or 'Histogram Equalization'.")
+        raise ValueError(
+            "Invalid enhancement method. Choose 'CLAHE' or 'Histogram Equalization'."
+        )
 
     # Convert the enhanced grayscale image back to RGB format
     enhanced_rgb = cv2.cvtColor(enhanced_gray, cv2.COLOR_GRAY2BGR)
 
     return enhanced_rgb
 
+
 def extract_gps_info(image_path):
     """
     从图片EXIF信息中提取GPS经纬度信息
-    
+
     Args:
         image_path (str): 图片文件路径
-        
+
     Returns:
         dict: 包含GPS信息的字典，包括经度、纬度、高度等
     """
@@ -721,51 +779,79 @@ def extract_gps_info(image_path):
         print(f"提取GPS信息时出错: {e}")
         return None
 
+
 def format_gps_info(gps_info):
     """
     格式化GPS信息为可读的字符串
-    
+
     Args:
         gps_info (dict): GPS信息字典
-        
+
     Returns:
         str: 格式化后的GPS信息字符串
     """
     if not gps_info:
         return "未找到GPS信息"
-    
+
     parts = []
-    
+
     # 格式化纬度
-    if 'latitude' in gps_info:
+    if "latitude" in gps_info:
         lat_str = f"{gps_info['latitude']:.6f}°"
-        if 'latitude_ref' in gps_info:
+        if "latitude_ref" in gps_info:
             lat_str += f" {gps_info['latitude_ref']}"
         parts.append(f"纬度: {lat_str}")
-    
+
     # 格式化经度
-    if 'longitude' in gps_info:
+    if "longitude" in gps_info:
         lon_str = f"{gps_info['longitude']:.6f}°"
-        if 'longitude_ref' in gps_info:
+        if "longitude_ref" in gps_info:
             lon_str += f" {gps_info['longitude_ref']}"
         parts.append(f"经度: {lon_str}")
-    
+
     # 格式化高度
-    if 'altitude' in gps_info:
+    if "altitude" in gps_info:
         alt_str = f"{gps_info['altitude']:.1f}m"
-        if 'altitude_ref' in gps_info:
-            if gps_info['altitude_ref'] == 1:
+        if "altitude_ref" in gps_info:
+            if gps_info["altitude_ref"] == 1:
                 alt_str += " (海平面以下)"
             else:
                 alt_str += " (海平面以上)"
         parts.append(f"高度: {alt_str}")
-    
+
     # 格式化时间戳
-    if 'gps_timestamp' in gps_info and 'gps_datestamp' in gps_info:
-        timestamp = gps_info['gps_timestamp']
-        datestamp = gps_info['gps_datestamp']
+    if "gps_timestamp" in gps_info and "gps_datestamp" in gps_info:
+        timestamp = gps_info["gps_timestamp"]
+        datestamp = gps_info["gps_datestamp"]
         if isinstance(timestamp, tuple) and len(timestamp) == 3:
             time_str = f"{int(timestamp[0]):02d}:{int(timestamp[1]):02d}:{int(timestamp[2]):02d}"
             parts.append(f"GPS时间: {datestamp} {time_str}")
-    
+
     return "\n".join(parts) if parts else "GPS信息不完整"
+
+
+def compute_inclusion_relations(detections):
+    """计算组串与单组件的包含关系."""
+    strings = []
+    components = []
+    for idx, det in enumerate(detections):
+        if len(det) < 3:
+            continue
+        name = det[0]
+        bbox = det[2]
+        if name == "string":
+            strings.append((idx, bbox))
+        elif name == "component":
+            components.append((idx, bbox))
+
+    records = []
+    for s_idx, s_bbox in strings:
+        x1_s, y1_s, x2_s, y2_s = s_bbox
+        count = 0
+        for _, c_bbox in components:
+            x1_c, y1_c, x2_c, y2_c = c_bbox
+            if x1_c >= x1_s and y1_c >= y1_s and x2_c <= x2_s and y2_c <= y2_s:
+                count += 1
+        records.append([f"string_{s_idx}", count])
+
+    return pd.DataFrame(records, columns=["组串编号", "包含组件数"])
