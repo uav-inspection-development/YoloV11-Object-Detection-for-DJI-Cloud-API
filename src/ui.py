@@ -6,6 +6,7 @@ import os
 import json
 import streamlit as st
 from check_license import check_license
+from src.license_features import DEFAULT_FEATURES
 from web import Detection_UI
 from QtFusion.path import abs_path
 
@@ -121,7 +122,11 @@ if __name__ == "__main__":
 
     # 将 SECRET_KEY 转换为字节
     secret_key = args.secret_key.encode()
-    ret, message = check_license(secret_key, args.license_file, args.bind_info_file)
+    ret, message, license_data = check_license(
+        secret_key, args.license_file, args.bind_info_file
+    )
+    features = license_data.get("features", DEFAULT_FEATURES)
+    os.environ["LICENSE_FEATURES"] = json.dumps(features, ensure_ascii=False)
 
     # 使用 st.empty() 创建占位符
     message_placeholder = st.empty()
@@ -161,7 +166,7 @@ if __name__ == "__main__":
     # 启动对应应用模式
     if args.run_mode == "streamlit":
         # 启动 Streamlit 应用
-        app = Detection_UI(from_streamlit=True)
+        app = Detection_UI(from_streamlit=True, enabled_features=features)
         app.setupMainWindow()
     elif args.run_mode == "api":
         # 运行 Flask API

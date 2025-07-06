@@ -3,11 +3,22 @@
 import json
 import argparse
 from datetime import datetime
+from typing import List
+
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
+from src.license_features import DEFAULT_FEATURES
 
-def generate_license(secret_key: bytes, user_email: str, license_id: str, valid_until: str, output_path: str):
+
+def generate_license(
+    secret_key: bytes,
+    user_email: str,
+    license_id: str,
+    valid_until: str,
+    output_path: str,
+    features: List[str],
+) -> None:
     """
     生成加密的许可证文件。
 
@@ -30,7 +41,8 @@ def generate_license(secret_key: bytes, user_email: str, license_id: str, valid_
         "license_id": license_id,
         "bound_fingerprint": None,
         "issued_at": issued_at,
-        "valid_until": valid_until
+        "valid_until": valid_until,
+        "features": features,
     }
 
     raw = json.dumps(license_data).encode()
@@ -51,10 +63,24 @@ if __name__ == "__main__":
     parser.add_argument("--license-id", required=True, help="License ID.")
     parser.add_argument("--valid-until", default="None", help="License expiration date (YYYY-MM-DD). Default is no expiration.")
     parser.add_argument("--output-path", default="license.dat", help="Path to save the generated license file.")
+    parser.add_argument(
+        "--features",
+        nargs="*",
+        choices=DEFAULT_FEATURES,
+        default=DEFAULT_FEATURES,
+        help="Enabled features for the license. Default enables all.",
+    )
     args = parser.parse_args()
 
     # 将 SECRET_KEY 转换为字节
     secret_key = args.secret_key.encode()
 
     # 调用生成许可证函数
-    generate_license(secret_key, args.user_email, args.license_id, args.valid_until, args.output_path)
+    generate_license(
+        secret_key,
+        args.user_email,
+        args.license_id,
+        args.valid_until,
+        args.output_path,
+        args.features,
+    )

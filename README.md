@@ -229,7 +229,10 @@ User_Manual.md                # User manual for the application
     Before running the detection interface, you need to generate a license file. Use the following command:
 
     ```shell
-    python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" --user-email "user@example.com" --license-id "LIC-000001" --valid-until "2026-12-31" --output-path "license.dat"
+    python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" \
+        --user-email "user@example.com" --license-id "LIC-000001" \
+        --valid-until "2026-12-31" --output-path "license.dat" \
+        --features 检测任务 分割任务 EL隐裂 红外 可见光
     ```
 
     **Explanation of Arguments**:
@@ -238,13 +241,19 @@ User_Manual.md                # User manual for the application
     - `--license-id`: A unique identifier for the license.
     - `--valid-until`: The expiration date of the license in `YYYY-MM-DD` format. Use `"None"` for no expiration.
     - `--output-path`: The path where the generated license file will be saved (default: [license.dat](http://_vscodecontentref_/0)).
+    - `--features`: Space-separated list of enabled features. Defaults to all features.
 
     **Example**:
     ```shell
-    python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" --user-email "alice@example.com" --license-id "LIC-000002" --valid-until "None" --output-path "license.dat"
+    python src/generate_license.py --secret-key "0123456789abcdef0123456789abcdef" \
+        --user-email "alice@example.com" --license-id "LIC-000002" \
+        --valid-until "None" --output-path "license.dat" \
+        --features 检测任务 红外
     ```
 
-    After running this command, the encrypted license file will be saved to the specified path.
+After running this command, the encrypted license file will be saved to the specified path.
+
+The selected features determine which tasks and image types are available when running the detection interface.
 
 2. **Run the Detection Interface with Login Interface**:
 

@@ -9,12 +9,17 @@ import os
 import sys
 import base64
 from web import Detection_UI
+from src.license_features import DEFAULT_FEATURES
 import threading
 import json
 from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type, Other_type
 from functools import wraps
 import requests
 from auth import verify_token, get_access_token
+
+LICENSE_FEATURES = json.loads(
+    os.getenv("LICENSE_FEATURES", json.dumps(DEFAULT_FEATURES))
+)
 
 
 # 获取环境变量
@@ -136,10 +141,14 @@ def _check_params(required_fields, params):
     if "model_type" in params:
         if params["model_type"] not in ["检测任务", "分割任务"]:
             errors.append("model_type must be '检测任务' or '分割任务'")
+        elif params["model_type"] not in LICENSE_FEATURES:
+            errors.append(f"Feature '{params['model_type']}' not enabled")
 
     if "image_type" in params:
         if params["image_type"] not in ["可见光", "红外", "EL隐裂", "其他"]:
             errors.append("image_type must be one of ['可见光', '红外', 'EL隐裂', '其他']")
+        elif params["image_type"] not in LICENSE_FEATURES and params["image_type"] != "其他":
+            errors.append(f"Feature '{params['image_type']}' not enabled")
 
     if "selected_classes" in params and isinstance(params["selected_classes"], list):
         if not all(isinstance(cls, str) for cls in params["selected_classes"]):
@@ -306,7 +315,11 @@ def detect_image(validated_params, files):
         #         "processed_shape": str(processed_shape)
         #     }), 400
 
-        detector = Detection_UI(from_streamlit=False, api_params=validated_params)
+        detector = Detection_UI(
+            from_streamlit=False,
+            api_params=validated_params,
+            enabled_features=LICENSE_FEATURES,
+        )
         _, det_info, _ = detector.frame_process(image, "api_image.jpg", is_api=True)
         transformed_list = []
         for item in det_info:
@@ -366,7 +379,11 @@ def detect_video(validated_params, files):
         tfile.close()
 
         cap = cv2.VideoCapture(tfile.name)
-        detector = Detection_UI(from_streamlit=False, api_params=validated_params)
+        detector = Detection_UI(
+            from_streamlit=False,
+            api_params=validated_params,
+            enabled_features=LICENSE_FEATURES,
+        )
         frame_results = []
         frame_id = 0
 
@@ -449,7 +466,11 @@ def handle_stream(data):
             print(f"⚠️ 无法打开视频流: {stream_source}")
             return
 
-        detector = Detection_UI(from_streamlit=False, api_params=params)
+        detector = Detection_UI(
+            from_streamlit=False,
+            api_params=params,
+            enabled_features=LICENSE_FEATURES,
+        )
 
 
         def stream_loop():
