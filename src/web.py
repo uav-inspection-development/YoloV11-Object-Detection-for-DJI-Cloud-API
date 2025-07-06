@@ -41,6 +41,7 @@ from utils import (
     enhance_texture,
     fill_largest_polygon_white,
     extract_gps_info,
+    compute_inclusion_relations,
 )
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -353,6 +354,8 @@ class Detection_UI:
         self.gps_lon_placeholder = None
         self.gps_alt_placeholder = None
         self.gps_time_placeholder = None
+        self.inclusion_table_placeholder = None
+        self.show_inclusion = False
 
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
@@ -756,6 +759,12 @@ class Detection_UI:
             help="勾选时，将解析图片的RTK GPS信息并在主页面显示"
         )
         st.sidebar.caption(get_sidebar_hint("gps_parsing_hint"))
+
+        self.show_inclusion = st.sidebar.checkbox(
+            get_sidebar_label("show_inclusion_relationship"),
+            value=False,
+        )
+        st.sidebar.caption(get_sidebar_hint("inclusion_relationship_hint"))
 
         # 根据用户选择的导出格式设置文件后缀
         if self.export_format == "CSV":
@@ -2148,6 +2157,17 @@ class Detection_UI:
                     )
                 self.table_placeholder.table(disp_res.results_df)
                 self.update_category_counts(frame_id)
+                if (
+                    self.show_inclusion
+                    and self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]
+                ):
+                    inclusion_df = compute_inclusion_relations(filtered_results)
+                    if inclusion_df.empty:
+                        inclusion_df = pd.DataFrame(columns=["组串编号", "包含组件数"])
+                    if hasattr(self, "inclusion_table_placeholder"):
+                        self.inclusion_table_placeholder.table(inclusion_df)
+                elif hasattr(self, "inclusion_table_placeholder"):
+                    self.inclusion_table_placeholder.empty()
             else:
                 if hasattr(self, "table_placeholder"):
                     self.table_placeholder.table(
@@ -2162,6 +2182,8 @@ class Detection_UI:
                         )
                     )
                 self.update_category_counts(frame_id)
+                if hasattr(self, "inclusion_table_placeholder"):
+                    self.inclusion_table_placeholder.empty()
         else:
             if hasattr(self, "table_placeholder"):
                 self.table_placeholder.table(
@@ -2176,6 +2198,8 @@ class Detection_UI:
                     )
                 )
             self.update_category_counts(frame_id)
+            if hasattr(self, "inclusion_table_placeholder"):
+                self.inclusion_table_placeholder.empty()
 
         # 获取图像名称
         img_name = (
@@ -2631,7 +2655,10 @@ class Detection_UI:
             # 在当前图片检测结果下方添加当前图片类别统计
             st.subheader(get_main_header("current_category_statistics"))
             self.current_image_category_placeholder = st.empty()
-            
+
+            st.subheader(get_main_header("inclusion_relationship"))
+            self.inclusion_table_placeholder = st.empty()
+
             # 目标过滤选项（针对当前图片）
             st.subheader(get_main_label("target_filter"))
             self.selectbox_placeholder = st.empty()

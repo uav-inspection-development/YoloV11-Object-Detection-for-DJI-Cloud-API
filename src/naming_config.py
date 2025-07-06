@@ -118,6 +118,7 @@ SIDEBAR_LABELS = {
     "rtsp_output_url": "RTSP输出地址",
     # GPS经纬度设置
     "enable_gps_parsing": "解析并显示经纬度",
+    "show_inclusion_relationship": "显示包含关系表",
 }
 
 # 侧边栏选项配置
@@ -169,6 +170,7 @@ SIDEBAR_HINTS = {
     "rtsp_output_hint": "💡 提示: 输入RTSP/RTMP推流地址，用于实时推送检测结果视频流。",
     "clear_files_success": "已清空所有上传的文件！",
     "gps_parsing_hint": "💡 提示: 勾选后将解析图片的RTK GPS信息，在主页面与导出的报表中显示。",
+    "inclusion_relationship_hint": "💡 提示: 统计每个组串包含的单组件数量",
 }
 
 # =============================================================================
@@ -185,6 +187,7 @@ MAIN_HEADERS = {
     "gps_info": "🛰️ GPS 信息",
     "image_preprocessing_preview": "🖼️ 图片预处理预览",
     "current_category_statistics": "📊 当前类别统计",
+    "inclusion_relationship": "🔗 包含关系表",
     "total_category_statistics": "📈 总体类别统计",
     # 调试相关
     "current_config": "当前配置",

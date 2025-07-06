@@ -769,3 +769,30 @@ def format_gps_info(gps_info):
             parts.append(f"GPS时间: {datestamp} {time_str}")
     
     return "\n".join(parts) if parts else "GPS信息不完整"
+
+
+def compute_inclusion_relations(detections):
+    """统计每个string对象包含的component数量."""
+    strings = []
+    components = []
+    for idx, det in enumerate(detections):
+        if not isinstance(det, list) or len(det) < 3:
+            continue
+        name = det[0]
+        bbox = det[2]
+        if name == "string":
+            strings.append((idx, bbox))
+        elif name == "component":
+            components.append((idx, bbox))
+
+    records = []
+    for s_idx, s_bbox in strings:
+        x1_s, y1_s, x2_s, y2_s = s_bbox
+        count = 0
+        for _, c_bbox in components:
+            x1_c, y1_c, x2_c, y2_c = c_bbox
+            if x1_c >= x1_s and y1_c >= y1_s and x2_c <= x2_s and y2_c <= y2_s:
+                count += 1
+        records.append([f"string_{s_idx}", count])
+
+    return pd.DataFrame(records, columns=["组串编号", "包含组件数"])
