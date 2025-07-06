@@ -347,6 +347,7 @@ class Detection_UI:
         self.fps_placeholder = None  # FPS显示区域
         self.target_count_placeholder = None  # 目标计数显示区域
         self.detection_time_placeholder = None  # 检测时间显示区域
+        self.category_count_placeholder = None  # 类别计数表格区域
         self.selectbox_placeholder = None
         # GPS 信息指标占位符
         self.gps_lat_placeholder = None
@@ -2147,6 +2148,7 @@ class Detection_UI:
                         name, chinese_name, bbox, str(round(conf, 2)), str(use_time)
                     )
                 self.table_placeholder.table(disp_res.results_df)
+                self.update_category_counts()
             else:
                 if hasattr(self, "table_placeholder"):
                     self.table_placeholder.table(
@@ -2160,6 +2162,7 @@ class Detection_UI:
                             ]
                         )
                     )
+                self.update_category_counts()
         else:
             if hasattr(self, "table_placeholder"):
                 self.table_placeholder.table(
@@ -2173,6 +2176,7 @@ class Detection_UI:
                         ]
                     )
                 )
+            self.update_category_counts()
 
         # 获取图像名称
         img_name = (
@@ -2397,6 +2401,7 @@ class Detection_UI:
                 # 在表格中显示检测结果
                 if not is_api:
                     self.table_placeholder.table(res)
+                    self.update_category_counts()
 
         if not select_info:
             select_info = ["全部目标"]
@@ -2424,8 +2429,23 @@ class Detection_UI:
         # 使用 display_detection_results 函数显示结果
         res = concat_results(detection_result, detection_location, detection_confidence, detection_time)
         self.table_placeholder.table(res)
+        self.update_category_counts()
         # 添加适当的延迟
         cv2.waitKey(1)
+
+    def update_category_counts(self):
+        """更新并显示类别计数表格"""
+        if not hasattr(self, "category_count_placeholder"):
+            return
+
+        df = getattr(self.logTable, "data", pd.DataFrame())
+        if not df.empty and "类型" in df.columns:
+            counts = df["类型"].value_counts().reset_index()
+            counts.columns = ["类别", "数量"]
+        else:
+            counts = pd.DataFrame(columns=["类别", "数量"])
+
+        self.category_count_placeholder.table(counts)
 
     def setupMainWindow(self):
         """
@@ -2504,6 +2524,7 @@ class Detection_UI:
             st.subheader(get_main_header("current_image_results"))
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
+            self.update_category_counts()
 
             self.selectbox_placeholder = st.empty()
 
@@ -2626,6 +2647,10 @@ class Detection_UI:
             # 显示所有结果记录的空白表格
             self.log_table_placeholder = st.empty()
             self.logTable.update_table(self.log_table_placeholder)
+
+            st.subheader(get_main_header("category_statistics"))
+            self.category_count_placeholder = st.empty()
+            self.update_category_counts()
 
         # 在第五列设置一个空的停止按钮占位符
 

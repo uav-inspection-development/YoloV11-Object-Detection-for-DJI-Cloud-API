@@ -184,6 +184,7 @@ MAIN_HEADERS = {
     "realtime_dashboard": "📊 实时监控仪表盘",
     "gps_info": "🛰️ GPS 信息",
     "image_preprocessing_preview": "🖼️ 图片预处理预览",
+    "category_statistics": "📈 类别统计",
     # 调试相关
     "current_config": "当前配置",
     "class_settings": "类别设置",
