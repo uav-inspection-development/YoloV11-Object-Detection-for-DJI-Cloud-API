@@ -2577,11 +2577,6 @@ class Detection_UI:
         st.write(SYSTEM_INFO["description"])
         st.write(SYSTEM_INFO["separator"])
 
-        # 如果之前的批量检测总结信息存在，重新显示
-        if st.session_state.get("batch_processing_complete"):
-            st.success(st.session_state["batch_processing_complete"])
-        if st.session_state.get("batch_processing_summary"):
-            st.success(st.session_state["batch_processing_summary"])
         # 插入一条分割线
 
         # 创建列布局，将表格移到最右侧
@@ -2701,6 +2696,11 @@ class Detection_UI:
             
         # 图片浏览控制（移动到总体类别统计上方）
         st.markdown("---")
+        
+        # 显示批量处理汇总信息（如果存在）
+        if st.session_state.get("batch_processing_summary"):
+            st.success(st.session_state["batch_processing_summary"])
+        
         st.subheader(get_main_header("image_browser_control"))
 
         # 检查是否有检测结果（优先检查session state，然后检查logTable）
@@ -3162,18 +3162,27 @@ class Detection_UI:
 
             # 完成后的总结
             total_time = time.time() - start_time
-            complete_msg = get_detection_message("batch_processing_complete")
-            summary_msg = get_detection_message(
-                "batch_processing_summary",
-                successful_count=successful_count,
-                failed_count=failed_count,
-                total_time=total_time,
-            )
-            current_image_info.success(complete_msg)
+            
+            # 🔧 在终端输出完成信息
+            print(f"🎉 批量检测完成！")
+            print(f"🏁 批量处理完成")
+            print(f"   - 总文件数: {total_files}")
+            print(f"   - 成功处理: {successful_count}张")
+            print(f"   - 失败处理: {failed_count}张")
+            print(f"   - 总耗时: {total_time:.2f}秒")
+            print(f"   - 平均耗时: {total_time/total_files:.2f}秒/张")
+            
+            if failed_count > 0:
+                print(f"⚠️  有{failed_count}张图片处理失败，请检查上述错误信息")
+            
+            # 生成汇总信息用于界面显示
+            summary_msg = f"📊 处理完成: 成功 {successful_count} 张，失败 {failed_count} 张，总用时 {total_time:.2f} 秒"
+            
+            # 仅在处理过程中显示完成消息，不保存到session_state
+            current_image_info.success("批量处理完成！")
             status_text.success(summary_msg)
 
-            # 保存总结信息到 session_state，便于刷新后继续显示
-            st.session_state["batch_processing_complete"] = complete_msg
+            # 保存总结信息到 session_state，便于在"图片浏览控制"上方显示
             st.session_state["batch_processing_summary"] = summary_msg
             overall_progress.progress(1.0)
 
