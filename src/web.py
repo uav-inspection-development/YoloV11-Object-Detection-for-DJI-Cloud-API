@@ -2708,7 +2708,15 @@ class Detection_UI:
 
         if len(saved_images_ini) > 0:
             total_imgs = len(saved_images_ini)
-            st.info(get_statistic_message("total_images_info", count=total_imgs))
+            failed = st.session_state.get("failed_count", 0)
+            if failed > 0:
+                st.info(
+                    get_statistic_message(
+                        "total_images_failed_info", count=total_imgs, failed=failed
+                    )
+                )
+            else:
+                st.info(get_statistic_message("total_images_info", count=total_imgs))
 
             # 初始化或验证图片索引
             if "image_play_index" not in st.session_state:
@@ -3171,6 +3179,7 @@ class Detection_UI:
             st.session_state["saved_images_ini"] = self.logTable.saved_images_ini.copy()
             st.session_state["saved_images"] = self.logTable.saved_images.copy()
             st.session_state["saved_names"] = self.logTable.saved_names.copy()
+            st.session_state["failed_count"] = failed_count
             # 同步每张图片的目标信息
             if hasattr(self.logTable, "saved_targets_info"):
                 st.session_state["saved_targets_info"] = self.logTable.saved_targets_info.copy()
@@ -3297,6 +3306,7 @@ class Detection_UI:
                     )
                 )
 
+                st.session_state["failed_count"] = 0
                 st.success(get_detection_message("single_image_complete"))
                 # 立即刷新页面，让selectbox自动更新
                 st.rerun()

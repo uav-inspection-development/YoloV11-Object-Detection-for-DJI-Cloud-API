@@ -353,6 +353,7 @@ IMAGE_DISPLAY_LABELS = {
 # 统计信息标签
 STATISTICS_LABELS = {
     "total_images_info": "共有 {count} 张检测结果图片",
+    "total_images_failed_info": "共有 {count} 张检测结果图片，检测失败 {failed} 张",
     "image_index_info": "**第 {current} / {total} 张图片**",
     "filename_info": "文件名: {filename}",
     "total_files": "📊 总文件数",
