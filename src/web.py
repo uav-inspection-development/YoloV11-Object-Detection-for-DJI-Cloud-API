@@ -2576,6 +2576,12 @@ class Detection_UI:
         st.write(SYSTEM_INFO["separator"])
         st.write(SYSTEM_INFO["description"])
         st.write(SYSTEM_INFO["separator"])
+
+        # 如果之前的批量检测总结信息存在，重新显示
+        if st.session_state.get("batch_processing_complete"):
+            st.success(st.session_state["batch_processing_complete"])
+        if st.session_state.get("batch_processing_summary"):
+            st.success(st.session_state["batch_processing_summary"])
         # 插入一条分割线
 
         # 创建列布局，将表格移到最右侧
@@ -3156,15 +3162,19 @@ class Detection_UI:
 
             # 完成后的总结
             total_time = time.time() - start_time
-            current_image_info.success(get_detection_message("batch_processing_complete"))
-            status_text.success(
-                get_detection_message(
-                    "batch_processing_summary",
-                    successful_count=successful_count,
-                    failed_count=failed_count,
-                    total_time=total_time,
-                )
+            complete_msg = get_detection_message("batch_processing_complete")
+            summary_msg = get_detection_message(
+                "batch_processing_summary",
+                successful_count=successful_count,
+                failed_count=failed_count,
+                total_time=total_time,
             )
+            current_image_info.success(complete_msg)
+            status_text.success(summary_msg)
+
+            # 保存总结信息到 session_state，便于刷新后继续显示
+            st.session_state["batch_processing_complete"] = complete_msg
+            st.session_state["batch_processing_summary"] = summary_msg
             overall_progress.progress(1.0)
 
             # 立即更新session state以确保UI同步
