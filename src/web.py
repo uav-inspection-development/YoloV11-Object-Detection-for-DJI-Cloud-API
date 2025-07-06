@@ -42,7 +42,6 @@ from utils import (
     fill_largest_polygon_white,
     extract_gps_info,
 )
-import tempfile
 from datetime import datetime
 from auth import verify_token, get_access_token
 import tkinter as tk
@@ -339,7 +338,7 @@ class Detection_UI:
         self.table_placeholder = None  # 表格显示区域
         self.log_table_placeholder = None  # 完整结果表格显示区域
         self.selectbox_placeholder = None  # 下拉框显示区域
-        self.selectbox_target = None  # 下拉框选中项
+        self.selected_targets = []  # 多选框选中项
         self.progress_bar = None  # 用于显示的进度条
         self.export_format = "CSV"  # 导出格式
 
@@ -1807,7 +1806,7 @@ class Detection_UI:
                 st.subheader(get_main_header("display_mode"))
                 st.write(f"- 显示模式: {getattr(self, 'display_mode', 'None')}")
                 st.write(
-                    f"- 选择的目标: {st.session_state.get('selectbox_target', 'None')}"
+                    f"- 选择的目标: {st.session_state.get('multiselect_target', [])}"
                 )
 
     # 🚀 性能优化方法
@@ -2052,16 +2051,16 @@ class Detection_UI:
             )
             return
 
-        # 获取当前选中的目标过滤选项
-        selected_target = st.session_state.get(
-            "selectbox_target", SYSTEM_DEFAULTS["target_all"]
+        # 获取当前选中的目标过滤选项（多选）
+        selected_targets = st.session_state.get(
+            "multiselect_target", []
         )
 
         # 获取原始帧
         frame = saved_images_ini[frame_id]  # 获取指定帧的初始图像
 
         # 缓存图像调整大小的结果
-        cache_key = f"frame_{frame_id}_{self.display_width}_{self.display_height}_{selected_target}"
+        cache_key = f"frame_{frame_id}_{self.display_width}_{self.display_height}_{hash(tuple(selected_targets))}"
         if cache_key in self.image_cache:
             image = self.image_cache[cache_key]
         else:
@@ -2078,8 +2077,8 @@ class Detection_UI:
 
                         # 如果选择了目标过滤，跳过不匹配的目标
                         if (
-                            selected_target != SYSTEM_DEFAULTS["target_all"]
-                            and selected_target != chinese_name
+                            selected_targets  # 如果有选中的目标
+                            and chinese_name not in selected_targets  # 且当前目标不在选中列表中
                         ):
                             continue
 
@@ -2135,8 +2134,8 @@ class Detection_UI:
                 if isinstance(detInfo, list)
                 and len(detInfo) == 6
                 and (
-                    selected_target == SYSTEM_DEFAULTS["target_all"]
-                    or selected_target == detInfo[1]
+                    not selected_targets  # 如果没有选中任何目标，显示所有目标
+                    or detInfo[1] in selected_targets  # 否则只显示选中的目标
                 )
             ]
 
@@ -2148,7 +2147,7 @@ class Detection_UI:
                         name, chinese_name, bbox, str(round(conf, 2)), str(use_time)
                     )
                 self.table_placeholder.table(disp_res.results_df)
-                self.update_category_counts()
+                self.update_category_counts(frame_id)
             else:
                 if hasattr(self, "table_placeholder"):
                     self.table_placeholder.table(
@@ -2162,7 +2161,7 @@ class Detection_UI:
                             ]
                         )
                     )
-                self.update_category_counts()
+                self.update_category_counts(frame_id)
         else:
             if hasattr(self, "table_placeholder"):
                 self.table_placeholder.table(
@@ -2176,7 +2175,7 @@ class Detection_UI:
                         ]
                     )
                 )
-            self.update_category_counts()
+            self.update_category_counts(frame_id)
 
         # 获取图像名称
         img_name = (
@@ -2401,7 +2400,7 @@ class Detection_UI:
                 # 在表格中显示检测结果
                 if not is_api:
                     self.table_placeholder.table(res)
-                    self.update_category_counts()
+                    # 注意：类别统计会在 toggle_comboBox 中更新，这里不需要重复更新
 
         if not select_info:
             select_info = ["全部目标"]
@@ -2429,23 +2428,126 @@ class Detection_UI:
         # 使用 display_detection_results 函数显示结果
         res = concat_results(detection_result, detection_location, detection_confidence, detection_time)
         self.table_placeholder.table(res)
-        self.update_category_counts()
+        # 注意：这里是演示模式，不需要更新类别统计
         # 添加适当的延迟
         cv2.waitKey(1)
 
-    def update_category_counts(self):
+    def update_category_counts(self, current_frame_id=None):
         """更新并显示类别计数表格"""
-        if not hasattr(self, "category_count_placeholder"):
+        # 🔧 修复：添加安全检查，确保占位符存在
+        if not hasattr(self, "current_image_category_placeholder") or self.current_image_category_placeholder is None:
+            return
+        if not hasattr(self, "total_category_placeholder") or self.total_category_placeholder is None:
             return
 
-        df = getattr(self.logTable, "data", pd.DataFrame())
-        if not df.empty and "类型" in df.columns:
-            counts = df["类型"].value_counts().reset_index()
-            counts.columns = ["类别", "数量"]
-        else:
-            counts = pd.DataFrame(columns=["类别", "数量"])
+        # 获取当前图片的类别统计
+        if current_frame_id is not None:
+            self.update_current_image_category_counts(current_frame_id)
+        
+        # 获取总体类别统计
+        self.update_total_category_counts()
 
-        self.category_count_placeholder.table(counts)
+    def update_current_image_category_counts(self, frame_id):
+        """更新当前图片的类别统计"""
+        try:
+            # 获取当前图片的检测结果
+            saved_results = getattr(self.logTable, "saved_results", [])
+            saved_names = st.session_state.get("saved_names", [])
+            
+            if frame_id >= len(saved_results) or not saved_results[frame_id]:
+                # 如果没有检测结果，显示空表格
+                empty_df = pd.DataFrame(columns=["类别", "数量"])
+                self.current_image_category_placeholder.table(empty_df)
+                return
+            
+            # 获取当前图片名称
+            img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"图片_{frame_id+1}"
+            
+            # 统计当前图片的类别
+            current_results = saved_results[frame_id]
+            category_counts = {}
+            
+            for detInfo in current_results:
+                if isinstance(detInfo, list) and len(detInfo) >= 2:
+                    category = detInfo[1]  # 类别名称在索引1
+                    if category in category_counts:
+                        category_counts[category] += 1
+                    else:
+                        category_counts[category] = 1
+            
+            # 转换为DataFrame
+            if category_counts:
+                current_counts = pd.DataFrame(list(category_counts.items()), columns=["类别", "数量"])
+                current_counts = current_counts.sort_values("数量", ascending=False)
+            else:
+                current_counts = pd.DataFrame(columns=["类别", "数量"])
+            
+            # 添加表格标题信息
+            if not current_counts.empty:
+                self.current_image_category_placeholder.write(f"📊 **{img_name}** 中检测到的目标:")
+                self.current_image_category_placeholder.table(current_counts)
+            else:
+                self.current_image_category_placeholder.write(f"📊 **{img_name}** 中未检测到目标")
+                self.current_image_category_placeholder.table(pd.DataFrame(columns=["类别", "数量"]))
+                
+        except Exception as e:
+            st.error(f"更新当前图片类别统计时出错: {str(e)}")
+            self.current_image_category_placeholder.table(pd.DataFrame(columns=["类别", "数量"]))
+
+    def update_total_category_counts(self):
+        """更新总体类别统计，包含图片来源信息"""
+        try:
+            saved_results = getattr(self.logTable, "saved_results", [])
+            saved_names = st.session_state.get("saved_names", [])
+            
+            if not saved_results:
+                # 如果没有检测结果，显示空表格
+                empty_df = pd.DataFrame(columns=["类别", "总数量", "分布图片"])
+                self.total_category_placeholder.table(empty_df)
+                return
+            
+            # 统计每个类别在各图片中的分布
+            category_distribution = {}
+            
+            for frame_id, results in enumerate(saved_results):
+                img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"图片_{frame_id+1}"
+                
+                if results:
+                    frame_categories = {}
+                    for detInfo in results:
+                        if isinstance(detInfo, list) and len(detInfo) >= 2:
+                            category = detInfo[1]  # 类别名称在索引1
+                            if category in frame_categories:
+                                frame_categories[category] += 1
+                            else:
+                                frame_categories[category] = 1
+                    
+                    # 记录每个类别在当前图片中的分布
+                    for category, count in frame_categories.items():
+                        if category not in category_distribution:
+                            category_distribution[category] = []
+                        category_distribution[category].append(f"{img_name}({count})")
+            
+            # 转换为DataFrame
+            if category_distribution:
+                total_data = []
+                for category, distribution in category_distribution.items():
+                    total_count = sum(int(item.split('(')[1].split(')')[0]) for item in distribution)
+                    distribution_str = ", ".join(distribution)
+                    total_data.append([category, total_count, distribution_str])
+                
+                total_counts = pd.DataFrame(total_data, columns=["类别", "总数量", "分布图片"])
+                total_counts = total_counts.sort_values("总数量", ascending=False)
+                
+                self.total_category_placeholder.write(f"📈 **总体统计** (共{len(saved_results)}张图片):")
+                self.total_category_placeholder.table(total_counts)
+            else:
+                self.total_category_placeholder.write("📈 **总体统计**: 暂无检测结果")
+                self.total_category_placeholder.table(pd.DataFrame(columns=["类别", "总数量", "分布图片"]))
+                
+        except Exception as e:
+            st.error(f"更新总体类别统计时出错: {str(e)}")
+            self.total_category_placeholder.table(pd.DataFrame(columns=["类别", "总数量", "分布图片"]))
 
     def setupMainWindow(self):
         """
@@ -2524,8 +2626,13 @@ class Detection_UI:
             st.subheader(get_main_header("current_image_results"))
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
-            self.update_category_counts()
-
+            
+            # 在当前图片检测结果下方添加当前图片类别统计
+            st.subheader(get_main_header("current_category_statistics"))
+            self.current_image_category_placeholder = st.empty()
+            
+            # 目标过滤选项（针对当前图片）
+            st.subheader(get_main_label("target_filter"))
             self.selectbox_placeholder = st.empty()
 
             # 初始化目标过滤选项 - 根据当前图片动态获取检测目标
@@ -2543,123 +2650,50 @@ class Detection_UI:
             else:
                 detected_targets = st.session_state.get("select_info", ["全部目标"])
 
-            # selectbox动态key，确保当目标列表变化时selectbox会刷新
-            selectbox_key = f"selectbox_target_{idx}_{hash(tuple(detected_targets))}"
+            # 从检测目标列表中移除"全部目标"，只保留实际的类别名称
+            available_targets = [target for target in detected_targets if target != "全部目标"]
 
-            # 确保当前选中的目标在新的目标列表中，如果不在则重置为"全部目标"
-            current_selected = st.session_state.get("selectbox_target", "全部目标")
-            if current_selected not in detected_targets:
-                current_selected = "全部目标"
-                st.session_state["selectbox_target"] = current_selected
+            # multiselect动态key，确保当目标列表变化时multiselect会刷新
+            multiselect_key = f"multiselect_target_{idx}_{hash(tuple(available_targets))}"
 
-            # 获取当前选中目标在列表中的索引
-            try:
-                current_index = detected_targets.index(current_selected)
-            except ValueError:
-                current_index = 0
-                current_selected = (detected_targets[0] if detected_targets else "全部目标")
-                st.session_state["selectbox_target"] = current_selected
+            # 确保当前选中的目标在新的目标列表中，默认选择所有可用目标
+            current_selected = st.session_state.get("multiselect_target", available_targets.copy())
+            # 过滤掉不在当前目标列表中的选项
+            current_selected = [target for target in current_selected if target in available_targets]
+            # 如果没有选中任何目标，默认选择所有目标
+            if not current_selected:
+                current_selected = available_targets.copy()
 
-            selectbox_target = self.selectbox_placeholder.selectbox(
+            # 添加快捷操作按钮
+            if available_targets:
+                col_select_all, col_select_none = st.columns(2)
+                with col_select_all:
+                    if st.button("全选", key=f"select_all_{idx}"):
+                        st.session_state["multiselect_target"] = available_targets.copy()
+                        st.rerun()
+                with col_select_none:
+                    if st.button("全不选", key=f"select_none_{idx}"):
+                        st.session_state["multiselect_target"] = []
+                        st.rerun()
+
+            selected_targets = self.selectbox_placeholder.multiselect(
                 get_main_label("target_filter"),
-                detected_targets,
-                key=selectbox_key,
-                index=current_index,
+                available_targets,
+                default=current_selected,
+                key=multiselect_key,
             )
 
             # 只在选项变化时同步并刷新显示
             if (
-                "last_target" not in st.session_state
-                or st.session_state["last_target"] != selectbox_target
+                "last_selected_targets" not in st.session_state
+                or st.session_state["last_selected_targets"] != selected_targets
             ):
-                self.selectbox_target = selectbox_target
-                st.session_state["selectbox_target"] = selectbox_target
-                st.session_state["last_target"] = selectbox_target
+                self.selected_targets = selected_targets
+                st.session_state["multiselect_target"] = selected_targets
+                st.session_state["last_selected_targets"] = selected_targets
                 self.toggle_comboBox(idx)
-
-            # 创建一个导出结果的按钮
-            st.write("---------------------")
-            if st.button(get_button_text("export_results")):
-                current_time = datetime.now().strftime("%Y年%m月%d日_%H时%M分")
-
-                # 使用新的命名配置生成文件名
-                base_filename = generate_filename(
-                    "report",
-                    image_type=self.image_type,
-                    task_type=self.model_type,
-                    timestamp=current_time,
-                )
-                self.saved_log_data = os.path.join(self.csv_output_path, base_filename)
-
-                if self.export_format == "CSV":
-                    self.saved_log_data += ".csv"
-                    self.logTable.save_to_csv(self.saved_log_data)
-                    st.success(
-                        get_export_message(
-                            "export_success",
-                            file_type="CSV数据表",
-                            filename=os.path.basename(self.saved_log_data),
-                        )
-                    )
-                elif self.export_format == "Excel":
-                    self.saved_log_data += ".xlsx"
-                    self.logTable.save_to_excel(self.saved_log_data)
-                    st.success(
-                        get_export_message(
-                            "export_success",
-                            file_type="Excel电子表格",
-                            filename=os.path.basename(self.saved_log_data),
-                        )
-                    )
-                elif self.export_format == "JSON":
-                    self.saved_log_data += ".json"
-                    self.logTable.save_to_json(self.saved_log_data)
-                    st.success(
-                        get_export_message(
-                            "export_success",
-                            file_type="JSON数据文件",
-                            filename=os.path.basename(self.saved_log_data),
-                        )
-                    )
-                elif self.export_format == "Word":
-                    self.saved_log_data += ".docx"
-                    # 构建检测参数字典
-                    detection_params = {
-                        "model_type": self.model_type,
-                        "image_type": self.image_type,
-                        "conf_threshold": self.conf_threshold,
-                        "iou_threshold": self.iou_threshold,
-                        "selected_classes": getattr(self, "selected_classes", []),
-                        "cls_name": getattr(self, "cls_name", {}),
-                        "enable_gps_parsing": getattr(self, "enable_gps_parsing", False),
-                    }
-                    self.logTable.save_to_word(self.saved_log_data, detection_params)
-                    st.success(
-                        get_export_message(
-                            "export_success",
-                            file_type="Word检测报告",
-                            filename=os.path.basename(self.saved_log_data),
-                        )
-                    )
-
-                self.logTable.clear_data()
-            st.subheader(get_main_header("history_log"))
-            # 显示所有结果记录的空白表格
-            self.log_table_placeholder = st.empty()
-            self.logTable.update_table(self.log_table_placeholder)
-
-            st.subheader(get_main_header("category_statistics"))
-            self.category_count_placeholder = st.empty()
-            self.update_category_counts()
-
-        # 在第五列设置一个空的停止按钮占位符
-
-        with col1:
-            st.write("")
-            run_button = st.button(get_button_text("start_detection"))
-            self.close_placeholder = st.empty()
-
-        # 将切换按钮移到独立区域，并简化显示逻辑
+            
+        # 图片浏览控制（移动到总体类别统计上方）
         st.markdown("---")
         st.subheader(get_main_header("image_browser_control"))
 
@@ -2735,6 +2769,94 @@ class Detection_UI:
                     self, "image_placeholder_res"
                 ):
                     self.image_placeholder_res.image(load_default_image(), caption=get_image_display_label("detection_view"))
+
+        # 🔧 修复：在创建占位符后再调用update_category_counts
+        st.subheader(get_main_header("total_category_statistics"))
+        
+        # 总体类别统计
+        self.total_category_placeholder = st.empty()
+        
+        # 初始化类别统计（使用当前图片索引）
+        current_idx = st.session_state.get("image_play_index", 0)
+        self.update_category_counts(current_idx)
+
+        # 创建一个导出结果的按钮
+        st.write("---------------------")
+        if st.button(get_button_text("export_results"), key="main_export_results"):
+            current_time = datetime.now().strftime("%Y年%m月%d日_%H时%M分")
+
+            # 使用新的命名配置生成文件名
+            base_filename = generate_filename(
+                "report",
+                image_type=self.image_type,
+                task_type=self.model_type,
+                timestamp=current_time,
+            )
+            self.saved_log_data = os.path.join(self.csv_output_path, base_filename)
+
+            if self.export_format == "CSV":
+                self.saved_log_data += ".csv"
+                self.logTable.save_to_csv(self.saved_log_data)
+                st.success(
+                    get_export_message(
+                        "export_success",
+                        file_type="CSV数据表",
+                        filename=os.path.basename(self.saved_log_data),
+                    )
+                )
+            elif self.export_format == "Excel":
+                self.saved_log_data += ".xlsx"
+                self.logTable.save_to_excel(self.saved_log_data)
+                st.success(
+                    get_export_message(
+                        "export_success",
+                        file_type="Excel电子表格",
+                        filename=os.path.basename(self.saved_log_data),
+                    )
+                )
+            elif self.export_format == "JSON":
+                self.saved_log_data += ".json"
+                self.logTable.save_to_json(self.saved_log_data)
+                st.success(
+                    get_export_message(
+                        "export_success",
+                        file_type="JSON数据文件",
+                        filename=os.path.basename(self.saved_log_data),
+                    )
+                )
+            elif self.export_format == "Word":
+                self.saved_log_data += ".docx"
+                # 构建检测参数字典
+                detection_params = {
+                    "model_type": self.model_type,
+                    "image_type": self.image_type,
+                    "conf_threshold": self.conf_threshold,
+                    "iou_threshold": self.iou_threshold,
+                    "selected_classes": getattr(self, "selected_classes", []),
+                    "cls_name": getattr(self, "cls_name", {}),
+                    "enable_gps_parsing": getattr(self, "enable_gps_parsing", False),
+                }
+                self.logTable.save_to_word(self.saved_log_data, detection_params)
+                st.success(
+                    get_export_message(
+                        "export_success",
+                        file_type="Word检测报告",
+                        filename=os.path.basename(self.saved_log_data),
+                    )
+                )
+
+            self.logTable.clear_data()
+        st.subheader(get_main_header("history_log"))
+        # 显示所有结果记录的空白表格
+        self.log_table_placeholder = st.empty()
+        self.logTable.update_table(self.log_table_placeholder)
+
+        # 在第五列设置一个空的停止按钮占位符
+
+        with col1:
+            st.write("")
+            run_button = st.button(get_button_text("start_detection"), key="main_start_detection")
+            self.close_placeholder = st.empty()
 
         st.subheader(get_main_header("realtime_dashboard"))
         col1, col2, col3, col4 = st.columns(4)
