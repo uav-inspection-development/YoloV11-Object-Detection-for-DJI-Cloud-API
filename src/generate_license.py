@@ -8,7 +8,7 @@ from typing import List
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
-from src.license_features import DEFAULT_FEATURES
+from license_features import DEFAULT_FEATURES
 
 
 def generate_license(

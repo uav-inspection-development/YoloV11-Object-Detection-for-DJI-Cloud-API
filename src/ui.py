@@ -6,7 +6,7 @@ import os
 import json
 import streamlit as st
 from check_license import check_license
-from src.license_features import DEFAULT_FEATURES
+from license_features import DEFAULT_FEATURES
 from web import Detection_UI
 from QtFusion.path import abs_path
 

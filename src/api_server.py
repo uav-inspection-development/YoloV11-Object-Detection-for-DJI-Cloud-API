@@ -9,7 +9,7 @@ import os
 import sys
 import base64
 from web import Detection_UI
-from src.license_features import DEFAULT_FEATURES
+from license_features import DEFAULT_FEATURES
 import threading
 import json
 from chinese_name_list import Visible_type, EL_type, Thermo_type, Segmentation_type, Other_type

@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 from QtFusion.path import abs_path
 from QtFusion.utils import drawRectBox
-from src.license_features import DEFAULT_FEATURES
+from license_features import DEFAULT_FEATURES
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import (
