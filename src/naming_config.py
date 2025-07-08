@@ -6,6 +6,7 @@ import streamlit as st
 try:
     from streamlit_change_language import ChangeLanguage
 except Exception:  # pragma: no cover - fallback when package is missing
+
     class ChangeLanguage:
         def __init__(self, languages, default_language="zh"):
             self.languages = languages
@@ -18,7 +19,9 @@ except Exception:  # pragma: no cover - fallback when package is missing
 available_languages = ["zh", "en"]
 LOCALE_DIR = os.path.join(os.path.dirname(__file__), "locales")
 _current_language = st.session_state.get("language", "zh")
-_language_changer = ChangeLanguage(available_languages, default_language=_current_language)
+_language_changer = ChangeLanguage(
+    available_languages, default_language=_current_language
+)
 
 
 def _load_translations(lang: str) -> Dict[str, Any]:
@@ -32,12 +35,28 @@ _translations: Dict[str, Any] = _load_translations(_current_language)
 
 # Update globals from translations for backward compatibility
 
+
 def _update_globals() -> None:
     for key, value in _translations.items():
         globals()[key] = value
 
 
 _update_globals()
+
+# Load English mappings for language-independent comparisons
+_en_translations: Dict[str, Any] = _load_translations("en")
+_EN_IMAGE_TYPE_MAP = _en_translations.get("IMAGE_TYPE_MAP", {})
+_EN_TASK_TYPE_MAP = _en_translations.get("TASK_TYPE_MAP", {})
+
+
+def normalize_image_type(name: str) -> str:
+    """Return a language-neutral image type."""
+    return _EN_IMAGE_TYPE_MAP.get(name, name)
+
+
+def normalize_task_type(name: str) -> str:
+    """Return a language-neutral task type."""
+    return _EN_TASK_TYPE_MAP.get(name, name)
 
 
 def set_language(lang: str) -> None:
@@ -56,6 +75,7 @@ def get_current_language() -> str:
 
 
 # Wrapper helpers -------------------------------------------------------------
+
 
 def _get(category: str, key: str) -> str:
     return globals().get(category, {}).get(key, key)
