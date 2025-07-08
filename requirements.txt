@@ -76,6 +76,7 @@ shiboken6
 six
 smmap
 streamlit
+streamlit-change-language
 sympy
 tenacity
 tensorboard

@@ -67,6 +67,9 @@ from naming_config import (
     # 系统配置
     SYSTEM_INFO,
     SYSTEM_DEFAULTS,
+    set_language,
+    get_current_language,
+    available_languages,
     # 侧边栏配置
     SIDEBAR_HEADERS,
     SIDEBAR_LABELS,
@@ -668,6 +671,13 @@ class Detection_UI:
 
         在侧边栏中配置模型设置、摄像头选择以及识别项目设置等选项。
         """
+        # Language selection
+        lang = st.sidebar.selectbox(
+            "Language",
+            options=available_languages,
+            index=available_languages.index(get_current_language()),
+        )
+        set_language(lang)
         st.sidebar.title(get_sidebar_header("settings_menu"))
 
         # Add the About section to the sidebar
@@ -685,17 +695,18 @@ class Detection_UI:
         st.sidebar.header(get_sidebar_header("display_settings"))
 
         # 添加固定比例选项
+        aspect_options = get_sidebar_option("aspect_ratios")
         aspect_ratio = st.sidebar.selectbox(
             get_sidebar_label("aspect_ratio_selection"),
-            options=get_sidebar_option("aspect_ratios"),
+            options=aspect_options,
             index=0,
         )
-        if aspect_ratio == "16:9":
+        if aspect_ratio == aspect_options[0]:
             ratio = 16 / 9
-        elif aspect_ratio == "4:3":
+        elif aspect_ratio == aspect_options[1]:
             ratio = 4 / 3
         else:
-            ratio = None  # 自由调整
+            ratio = None  # Free
 
         # 根据选择的比例调整宽度和高度
         if ratio:
@@ -768,15 +779,16 @@ class Detection_UI:
         )
         st.sidebar.caption(get_sidebar_hint("inclusion_relationship_hint"))
 
+        export_options = get_sidebar_option("export_formats")
         # 根据用户选择的导出格式设置文件后缀
-        if self.export_format == "CSV":
-            file_suffix = ".csv"
-        elif self.export_format == "Excel":
-            file_suffix = ".xlsx"
-        elif self.export_format == "JSON":
-            file_suffix = ".json"
-        elif self.export_format == "Word":
+        if self.export_format == export_options[0]:
             file_suffix = ".docx"
+        elif self.export_format == export_options[1]:
+            file_suffix = ".csv"
+        elif self.export_format == export_options[2]:
+            file_suffix = ".xlsx"
+        elif self.export_format == export_options[3]:
+            file_suffix = ".json"
         else:
             file_suffix = ".txt"
 
@@ -941,12 +953,13 @@ class Detection_UI:
 
         # 选择模型文件类型，可以是默认的或者自定义的
         st.sidebar.header(get_sidebar_header("model_file_settings"))
+        model_options = get_sidebar_option("model_settings")
         model_file_option = st.sidebar.radio(
             get_sidebar_label("model_settings"),
-            options=get_sidebar_option("model_settings"),
+            options=model_options,
             index=0,
         )
-        if model_file_option == "指定权重文件":
+        if model_file_option == model_options[1]:
             # 如果选择自定义模型文件，则提供文件上传器
             model_file = st.sidebar.file_uploader(
                 get_sidebar_label("select_pt_file"), type="pt"
@@ -969,7 +982,7 @@ class Detection_UI:
                         self.detect_class_color.get(class_name, (0, 255, 0))
                         for class_name in self.cls_name.values()
                     ]
-        elif model_file_option == "默认":
+        elif model_file_option == model_options[0]:
             if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
                 if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
                     model_path = abs_path(
@@ -1076,29 +1089,30 @@ class Detection_UI:
         # 设置侧边栏的摄像头和 RTSP/RTMP 配置部分
         st.sidebar.header(get_sidebar_header("input_source_settings"))
         # 选择输入源类型：无输入，摄像头或 RTSP/RTMP 流
+        input_options = get_sidebar_option("input_sources")
         self.input_source = st.sidebar.radio(
             get_sidebar_label("input_source_selection"),
-            options=get_sidebar_option("input_sources"),
+            options=input_options,
             index=0,
         )
 
         if "file_key" not in st.session_state:
             st.session_state["file_key"] = str(random.random())
 
-        if self.input_source == "摄像头":
+        if self.input_source == input_options[4]:
             # 选择摄像头的下拉菜单
             self.selected_camera = st.sidebar.selectbox(
                 get_sidebar_label("camera_selection"), self.available_cameras
             )
             st.sidebar.caption(get_sidebar_hint("camera_hint"))
-        elif self.input_source == "RTSP/RTMP流":
+        elif self.input_source == input_options[5]:
             # 输入 RTSP/RTMP 地址
             self.rtsp_input_url = st.sidebar.text_input(
                 get_sidebar_label("rtsp_input"),
                 placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path",
             )
             st.sidebar.caption(get_sidebar_hint("rtsp_hint"))
-        elif self.input_source == "图片文件":
+        elif self.input_source == input_options[0]:
             self.uploaded_file = st.sidebar.file_uploader(
                 get_sidebar_label("upload_images"),
                 type=["jpg", "png", "jpeg"],
@@ -1130,7 +1144,7 @@ class Detection_UI:
                 st.sidebar.info(get_sidebar_hint("image_upload_hint"))
 
             st.sidebar.caption(get_sidebar_hint("image_detection_hint"))
-        elif self.input_source == "图片文件夹":
+        elif self.input_source == input_options[1]:
             default_types = ["jpg", "jpeg", "png"]
             image_types = st.sidebar.multiselect(
                 get_sidebar_label("select_image_type"),
@@ -1210,7 +1224,7 @@ class Detection_UI:
                     st.sidebar.error(get_sidebar_hint("invalid_folder_path"))
                 st.sidebar.caption(get_sidebar_hint("folder_selection_hint"))
                 self.uploaded_file = []
-        elif self.input_source == "视频文件":
+        elif self.input_source == input_options[2]:
             self.uploaded_video = st.sidebar.file_uploader(
                 get_sidebar_label("upload_videos"),
                 type=["mp4", "avi", "mov"],
@@ -1245,7 +1259,7 @@ class Detection_UI:
                 st.sidebar.info(get_sidebar_hint("video_upload_hint"))
 
             st.sidebar.caption(get_sidebar_hint("video_detection_hint"))
-        elif self.input_source == "视频文件夹":
+        elif self.input_source == input_options[3]:
             default_video_types = ["mp4", "avi", "mov"]
             video_types = st.sidebar.multiselect(
                 get_sidebar_label("select_video_type"),
@@ -1311,7 +1325,7 @@ class Detection_UI:
 
             st.sidebar.success(get_sidebar_hint("clear_files_success"))
 
-        if self.input_source in ["摄像头", "RTSP/RTMP流", "视频文件"]:
+        if self.input_source in [input_options[4], input_options[5], input_options[2]]:
             # 添加视频输出和 RTSP 输出的启用复选框
             st.sidebar.header(get_sidebar_header("video_output_settings"))
             self.enable_video_output = st.sidebar.checkbox(
@@ -1402,18 +1416,20 @@ class Detection_UI:
         st.sidebar.caption(get_sidebar_hint("background_fill_hint"))
 
         # 添加图像增强选项
+        enhancement_options = get_sidebar_option("image_enhancement_methods")
         self.image_enhancement_method = st.sidebar.radio(
             get_sidebar_label("image_enhancement_method"),
-            options=get_sidebar_option("image_enhancement_methods"),
-            index=0,  # 默认选择不处理
+            options=enhancement_options,
+            index=0,
         )
         st.sidebar.caption(get_sidebar_hint("image_enhancement_hint"))
 
         # 添加图像畸变校正选项
+        undistort_options = get_sidebar_option("undistortion_methods")
         self.undistortion_method = st.sidebar.radio(
             get_sidebar_label("undistortion_method"),
-            options=get_sidebar_option("undistortion_methods"),
-            index=0,  # 默认选择第一个选项
+            options=undistort_options,
+            index=0,
         )
         st.sidebar.caption(get_sidebar_hint("camera_calibration_hint"))
 
@@ -1588,11 +1604,11 @@ class Detection_UI:
                         else:
                             corrected_image = corrected_image.copy()
 
-                        if self.image_enhancement_method == "CLAHE":
+                        if self.image_enhancement_method == enhancement_options[1]:
                             corrected_image = enhance_texture(
                                 corrected_image, method="clahe"
                             )
-                        elif self.image_enhancement_method == "直方图均衡化":
+                        elif self.image_enhancement_method == enhancement_options[2]:
                             corrected_image = enhance_texture(
                                 corrected_image, method="histogram_equalization"
                             )
@@ -1600,14 +1616,14 @@ class Detection_UI:
                             corrected_image = corrected_image.copy()
 
                         if (
-                            self.undistortion_method == "相机参数计算"
+                            self.undistortion_method == undistort_options[1]
                             and self.camera_matrix is not None
                             and self.dist_coeffs is not None
                         ):
                             distorted_image = camera_undistortion(
                                 corrected_image, self.camera_matrix, self.dist_coeffs
                             )
-                        elif self.undistortion_method == "手动调整参数":
+                        elif self.undistortion_method == undistort_options[2]:
                             distorted_image = auto_undistort_image(
                                 corrected_image, self.image_k1
                             )
@@ -1673,9 +1689,9 @@ class Detection_UI:
                 else:
                     corrected_image = corrected_image.copy()
 
-                if self.image_enhancement_method == "CLAHE":
+                if self.image_enhancement_method == enhancement_options[1]:
                     corrected_image = enhance_texture(corrected_image, method="clahe")
-                elif self.image_enhancement_method == "直方图均衡化":
+                elif self.image_enhancement_method == enhancement_options[2]:
                     corrected_image = enhance_texture(
                         corrected_image, method="histogram_equalization"
                     )
@@ -1683,14 +1699,14 @@ class Detection_UI:
                     corrected_image = corrected_image.copy()
 
                 if (
-                    self.undistortion_method == "相机参数计算"
+                    self.undistortion_method == undistort_options[1]
                     and self.camera_matrix is not None
                     and self.dist_coeffs is not None
                 ):
                     distorted_image = camera_undistortion(
                         corrected_image, self.camera_matrix, self.dist_coeffs
                     )
-                elif self.undistortion_method == "手动调整参数":
+                elif self.undistortion_method == undistort_options[2]:
                     distorted_image = auto_undistort_image(
                         corrected_image, self.image_k1
                     )
@@ -1716,7 +1732,7 @@ class Detection_UI:
             placeholder="例如：../output 或 D:/videos",
         )
 
-        if self.input_source in ["摄像头", "RTSP/RTMP流"]:
+        if self.input_source in [input_options[4], input_options[5]]:
             st.sidebar.header(get_sidebar_header("rtsp_output_settings"))
             self.enable_rtsp_output = st.sidebar.checkbox(
                 get_sidebar_label("enable_rtsp_output"), value=False
@@ -1960,14 +1976,14 @@ class Detection_UI:
 
         # 去畸变
         if hasattr(self, "undistortion_method"):
-            if self.undistortion_method == "相机参数计算" and hasattr(
+            if self.undistortion_method == undistort_options[1] and hasattr(
                 self, "camera_matrix"
             ):
                 if self.camera_matrix is not None and self.dist_coeffs is not None:
                     processed = camera_undistortion(
                         processed, self.camera_matrix, self.dist_coeffs
                     )
-            elif self.undistortion_method == "手动调整参数" and hasattr(
+            elif self.undistortion_method == undistort_options[2] and hasattr(
                 self, "image_k1"
             ):
                 processed = auto_undistort_image(processed, self.image_k1)
@@ -1996,9 +2012,9 @@ class Detection_UI:
 
         # 图像增强
         if hasattr(self, "image_enhancement_method"):
-            if self.image_enhancement_method == "CLAHE":
+            if self.image_enhancement_method == enhancement_options[1]:
                 processed = enhance_texture(processed, method="clahe")
-            elif self.image_enhancement_method == "直方图均衡化":
+            elif self.image_enhancement_method == enhancement_options[2]:
                 processed = enhance_texture(processed, method="histogram_equalization")
 
         # 伪彩色处理
@@ -2224,13 +2240,14 @@ class Detection_UI:
 
         # 根据显示模式显示处理后的图像或原始图像
         if hasattr(self, "display_mode") and hasattr(self, "image_placeholder"):
-            if self.display_mode == "叠加显示":
+            display_modes = get_main_option("display_modes")
+            if self.display_mode == display_modes[0]:
                 self.image_placeholder.image(
                     resized_image,
                     channels="BGR",
                     caption=f"{get_image_display_label('detection_view')}: {img_name}",
                 )
-            else:  # "对比显示"
+            else:  # display_modes[1]
                 self.image_placeholder.image(
                     resized_frame,
                     channels="BGR",
@@ -2630,7 +2647,8 @@ class Detection_UI:
             self.image_placeholder = st.empty()
             self.image_placeholder_res = st.empty()
             # 根据显示模式创建用于显示视频画面的空容器，优化默认图像显示逻辑，避免覆盖检测结果
-            if self.display_mode == "叠加显示":
+            display_modes = get_main_option("display_modes")
+            if self.display_mode == display_modes[0]:
                 # 只在没有任何保存图像且没有session state中的图像时显示默认图像
                 if (
                     not hasattr(self.logTable, "saved_images_ini")
@@ -2812,7 +2830,7 @@ class Detection_UI:
             # 显示默认图像
             if hasattr(self, "image_placeholder"):
                 self.image_placeholder.image(load_default_image(), caption=get_image_display_label("original_view"))
-                if self.display_mode == "对比显示" and hasattr(
+                if self.display_mode == display_modes[1] and hasattr(
                     self, "image_placeholder_res"
                 ):
                     self.image_placeholder_res.image(load_default_image(), caption=get_image_display_label("detection_view"))
@@ -3144,7 +3162,7 @@ class Detection_UI:
                     resized_image = cv2.resize(image, (self.display_width, self.display_height))
                     resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
 
-                    if self.display_mode == "叠加显示":
+                    if self.display_mode == display_modes[0]:
                         self.image_placeholder.image(
                             resized_image,
                             channels="BGR",
@@ -3308,7 +3326,7 @@ class Detection_UI:
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_image, (self.display_width, self.display_height))
 
-                if self.display_mode == "叠加显示":
+                if self.display_mode == display_modes[0]:
                     self.image_placeholder.image(
                         resized_image,
                         channels="BGR",
@@ -3454,7 +3472,7 @@ class Detection_UI:
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
-                if self.display_mode == "叠加显示":
+                if self.display_mode == display_modes[0]:
                     self.image_placeholder.image(
                         resized_image,
                         channels="BGR",
@@ -3543,7 +3561,7 @@ class Detection_UI:
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
-                if self.display_mode == "叠加显示":
+                if self.display_mode == display_modes[0]:
                     self.image_placeholder.image(
                         resized_image,
                         channels="BGR",
@@ -3617,7 +3635,7 @@ class Detection_UI:
                 resized_image = cv2.resize(image, (self.display_width, self.display_height))
                 resized_frame = cv2.resize(processed_frame, (self.display_width, self.display_height))
 
-                if self.display_mode == "叠加显示":
+                if self.display_mode == display_modes[0]:
                     self.image_placeholder.image(
                         resized_image,
                         channels="BGR",
