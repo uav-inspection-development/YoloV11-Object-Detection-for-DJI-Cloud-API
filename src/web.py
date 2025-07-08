@@ -67,6 +67,9 @@ from naming_config import (
     # 系统配置
     SYSTEM_INFO,
     SYSTEM_DEFAULTS,
+    set_language,
+    get_current_language,
+    available_languages,
     # 侧边栏配置
     SIDEBAR_HEADERS,
     SIDEBAR_LABELS,
@@ -668,6 +671,13 @@ class Detection_UI:
 
         在侧边栏中配置模型设置、摄像头选择以及识别项目设置等选项。
         """
+        # Language selection
+        lang = st.sidebar.selectbox(
+            "Language",
+            options=available_languages,
+            index=available_languages.index(get_current_language()),
+        )
+        set_language(lang)
         st.sidebar.title(get_sidebar_header("settings_menu"))
 
         # Add the About section to the sidebar
