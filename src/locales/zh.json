@@ -12,6 +12,7 @@
     "image_type_visible": "可见光",
     "image_type_thermal": "红外",
     "image_type_el": "EL隐裂",
+    "image_type_other": "其他",
     "image_enhancement_none": "不处理",
     "undistortion_none": "不去除",
     "undistortion_camera_calc": "相机参数计算",
@@ -320,39 +321,6 @@
     "gps_longitude": "🌐 经度",
     "gps_altitude": "🏔️ 高度",
     "gps_time": "🕒 GPS时间"
-  },
-  "IMAGE_TYPE_MAP": {
-    "EL": "电致发光",
-    "可见光": "可见光",
-    "红外": "红外热成像",
-    "Thermo": "红外热成像",
-    "Visible": "可见光",
-    "热红外": "红外热成像",
-    "thermal": "红外热成像",
-    "visible": "可见光",
-    "el": "电致发光"
-  },
-  "TASK_TYPE_MAP": {
-    "检测任务": "缺陷检测",
-    "分割任务": "区域分割",
-    "Detection": "缺陷检测",
-    "Segmentation": "区域分割",
-    "detection": "缺陷检测",
-    "segmentation": "区域分割",
-    "detect": "缺陷检测",
-    "segment": "区域分割"
-  },
-  "EXPORT_FORMAT_MAP": {
-    "CSV": "CSV数据表",
-    "Excel": "Excel电子表格",
-    "JSON": "JSON数据文件",
-    "Word": "Word检测报告"
-  },
-  "DETECTION_STATUS_MAP": {
-    "success": "检测完成",
-    "failed": "检测失败",
-    "processing": "正在检测",
-    "pending": "等待检测"
   },
   "FILENAME_TEMPLATES": {
     "report": "光伏板{task_type}报告-{image_type}-{timestamp}",

@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from QtFusion.path import abs_path
-from QtFusion.utils import drawRectBox
-from license_features import DEFAULT_FEATURES
+from license_features import DEFAULT_FEATURES, get_enabled_task_types, is_feature_enabled
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import (
@@ -65,40 +64,10 @@ from streamlit_config import (
 # 📝 命名配置模块导入
 from naming_config import (
     # 系统配置
-    SYSTEM_INFO,
-    SYSTEM_DEFAULTS,
+    get_system_info,
     set_language,
     get_current_language,
     available_languages,
-    # 侧边栏配置
-    SIDEBAR_HEADERS,
-    SIDEBAR_LABELS,
-    SIDEBAR_OPTIONS,
-    SIDEBAR_HINTS,
-    # 主界面配置
-    MAIN_HEADERS,
-    MAIN_LABELS,
-    MAIN_OPTIONS,
-    # 按钮配置
-    BUTTON_TEXTS,
-    # 消息配置
-    DETECTION_MESSAGES,
-    FILE_MESSAGES,
-    VIDEO_MESSAGES,
-    CAMERA_MESSAGES,
-    RTSP_MESSAGES,
-    MODEL_MESSAGES,
-    WARNING_MESSAGES,
-    GENERAL_MESSAGES,
-    EXPORT_MESSAGES,
-    # 显示配置
-    IMAGE_DISPLAY_LABELS,
-    STATISTICS_LABELS,
-    METRICS_LABELS,
-    # 数据映射
-    IMAGE_TYPE_MAP,
-    TASK_TYPE_MAP,
-    EXPORT_FORMAT_MAP,
     # 工具函数
     get_detection_message,
     get_file_message,
@@ -123,11 +92,8 @@ from naming_config import (
     get_button_text,
     get_image_display_label,
     get_statistic_label,
-    # 兼容性支持
-    STATUS_MESSAGES,
-    UI_LABELS,
-    UI_OPTIONS,
     get_status_message,
+    get_system_default,
 )
 from image_optimizer import (
     get_image_optimizer,
@@ -186,10 +152,10 @@ except ImportError:
     GIT_INFO_AVAILABLE = False
 
     def format_git_info_for_about():
-        return SYSTEM_INFO["version_info_not_found"]
+        return get_system_info("version_info_not_found")
 
     def get_version_string():
-        return SYSTEM_INFO["unknown_version"]
+        return get_system_info("unknown_version")
 
 
 class Detection_UI:
@@ -273,7 +239,7 @@ class Detection_UI:
         self.selected_class_ids = None  # 选定的类别索引
 
         # 设置页面标题
-        self.title = SYSTEM_INFO["title"]
+        self.title = get_system_info("title")
         if self.from_streamlit:
             self.setup_page()  # 初始化页面布局
             def_css_html()  # 应用 CSS 样式
@@ -294,10 +260,10 @@ class Detection_UI:
             )
 
         # 初始化检测相关的配置参数
-        self.model_type = SYSTEM_DEFAULTS["model_type_detection"]
+        self.model_type = get_system_default("model_type_detection")
         self.conf_threshold = 0.15  # 默认置信度阈值
         self.iou_threshold = 0.5  # 默认IOU阈值
-        self.image_type = SYSTEM_DEFAULTS["image_type_visible"]  # 图像类型
+        self.image_type = get_system_default("image_type_visible")  # 图像类型
 
         # 初始化检测类别相关的配置参数
         self.available_classes = None  # 可用的检测类别
@@ -322,9 +288,9 @@ class Detection_UI:
         self.keystone_scale = 1.0  # 缩放比例
         self.scale_factor_keystone = 0.1  # 自动梯形校正的最小面积比例
         self.scale_factor_fill = 0.1  # 背景填充的最小面积比例
-        self.image_enhancement_method = SYSTEM_DEFAULTS[
+        self.image_enhancement_method = get_system_default(
             "image_enhancement_none"
-        ]  # 图像增强方法
+        )  # 图像增强方法
 
         # 初始化检测结果相关的变量
         self.detection_result = None
@@ -370,7 +336,7 @@ class Detection_UI:
         self.timenow = 0
 
         # 初始化相机参数
-        self.undistortion_method = SYSTEM_DEFAULTS["undistortion_none"]
+        self.undistortion_method = get_system_default("undistortion_none")
         self.camera_matrix = None
         self.dist_coeffs = None
         self.calibration_file = None
@@ -447,10 +413,10 @@ class Detection_UI:
         self.conf_threshold = float(self.api_params.get("conf_threshold", 0.15))
         self.iou_threshold = float(self.api_params.get("iou_threshold", 0.25))
         self.model_type = self.api_params.get(
-            "model_type", SYSTEM_DEFAULTS["model_type_detection"]
+            "model_type", get_system_default("model_type_detection")
         )
         self.image_type = self.api_params.get(
-            "image_type", SYSTEM_DEFAULTS["image_type_visible"]
+            "image_type", get_system_default("image_type_visible")
         )
         self.selected_classes = self.api_params.get(
             "selected_classes", list(Visible_type.keys())
@@ -466,14 +432,14 @@ class Detection_UI:
             "enable_background_fill", False
         )
         self.image_enhancement_method = self.api_params.get(
-            "image_enhancement_method", SYSTEM_DEFAULTS["image_enhancement_none"]
+            "image_enhancement_method", get_system_default("image_enhancement_none")
         )
         self.undistortion_method = self.api_params.get(
-            "undistortion_method", SYSTEM_DEFAULTS["undistortion_none"]
+            "undistortion_method", get_system_default("undistortion_none")
         )
 
         # 通过API方式上传相机标定文件
-        if self.undistortion_method == SYSTEM_DEFAULTS["undistortion_camera_calc"]:
+        if self.undistortion_method == get_system_default("undistortion_camera_calc"):
             calibration_file = self.api_params.get("calibration_file", None)
             if calibration_file is not None:
                 try:
@@ -506,7 +472,7 @@ class Detection_UI:
                 self.camera_matrix = None
                 self.dist_coeffs = None
                 self.calibration_file = None
-        elif self.undistortion_method == SYSTEM_DEFAULTS["undistortion_manual"]:
+        elif self.undistortion_method == get_system_default("undistortion_manual"):
             # 从API参数中获取畸变系数
             self.image_k1 = float(self.api_params.get("image_k1", 0.0))
 
@@ -530,17 +496,17 @@ class Detection_UI:
             )
 
         # 设置类别标签
-        if self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]:
+        if self.model_type == get_system_default("model_type_segmentation"):
             self.cls_name = Segmentation_type
             self.detect_class_color = Segmentation_class_colors
         else:
-            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
+            if self.image_type == get_system_default("image_type_thermal"):
                 self.cls_name = Thermo_type
                 self.detect_class_color = Thermo_class_colors
-            elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
+            elif self.image_type == get_system_default("image_type_el"):
                 self.cls_name = EL_type
                 self.detect_class_color = EL_class_colors
-            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
+            elif self.image_type == get_system_default("image_type_visible"):
                 self.cls_name = Visible_type
                 self.detect_class_color = Visible_class_colors
             else:
@@ -548,25 +514,25 @@ class Detection_UI:
                 self.detect_class_color = Other_class_colors
 
         # 重新加载模型
-        if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
-            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
+        if self.model_type == get_system_default("model_type_detection"):
+            if self.image_type == get_system_default("image_type_thermal"):
                 model_path = abs_path(
                     "../weights/yolo11s-thermo.pt", path_type="current"
                 )
-            elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
+            elif self.image_type == get_system_default("image_type_el"):
                 model_path = abs_path("../weights/yolo11s-el.pt", path_type="current")
-            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
+            elif self.image_type == get_system_default("image_type_visible"):
                 model_path = abs_path(
                     "../weights/yolo11s-visible.pt", path_type="current"
                 )
             else:
                 model_path = abs_path("../weights/yolo11s.pt", path_type="current")
         else:
-            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
+            if self.image_type == get_system_default("image_type_thermal"):
                 model_path = abs_path(
                     "../weights/yolo11s-thermo-seg.pt", path_type="current"
                 )
-            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
+            elif self.image_type == get_system_default("image_type_visible"):
                 model_path = abs_path(
                     "../weights/yolo11s-visible-seg.pt", path_type="current"
                 )
@@ -845,9 +811,9 @@ class Detection_UI:
         # 设置侧边栏的模型设置部分
         st.sidebar.header(get_sidebar_header("model_settings"))
         # 选择模型类型的下拉菜单
-        task_options = [
-            t for t in get_sidebar_option("task_types") if t in self.enabled_features
-        ]
+        available_task_types = get_sidebar_option("task_types")
+        task_options = get_enabled_task_types(available_task_types, self.enabled_features)
+        print(task_options)
         if not task_options:
             st.error("No licensed task types available")
             st.stop()
@@ -860,29 +826,29 @@ class Detection_UI:
 
         available_options = []
         # 添加提示信息
-        if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
+        if self.model_type == get_system_default("model_type_detection"):
             st.sidebar.caption(get_sidebar_hint("detection_task_hint"))
             # 检测任务也应该有矩形框选项
             self.rectangle_bounding_output = st.sidebar.checkbox(
                 get_sidebar_label("rectangle_output_checkbox"), value=True
             )
             available_options = [
-                SYSTEM_DEFAULTS["image_type_el"],
-                SYSTEM_DEFAULTS["image_type_thermal"],
-                SYSTEM_DEFAULTS["image_type_visible"],
-                "其他",
+                get_system_default("image_type_el"),
+                get_system_default("image_type_thermal"),
+                get_system_default("image_type_visible"),
+                get_system_default("image_type_other"),
             ]
-        elif self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]:
+        elif self.model_type == get_system_default("model_type_segmentation"):
             self.rectangle_bounding_output = st.sidebar.checkbox(
                 get_sidebar_label("rectangle_output_checkbox"), value=True
             )
             st.sidebar.caption(get_sidebar_hint("segmentation_task_hint"))
             available_options = [
-                SYSTEM_DEFAULTS["image_type_thermal"],
-                SYSTEM_DEFAULTS["image_type_visible"],
+                get_system_default("image_type_thermal"),
+                get_system_default("image_type_visible"),
             ]
 
-        available_options = [opt for opt in available_options if opt in self.enabled_features or opt == "其他"]
+        available_options = [opt for opt in available_options if is_feature_enabled(opt, self.enabled_features) or opt == "其他"]
         if not available_options:
             st.error("No licensed image types available")
             st.stop()
@@ -895,20 +861,20 @@ class Detection_UI:
             index=0,  # 默认选择第一个选项
         )
 
-        if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
-            if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
+        if self.model_type == get_system_default("model_type_detection"):
+            if self.image_type == get_system_default("image_type_thermal"):
                 self.cls_name = Thermo_type
                 self.detect_class_color = Thermo_class_colors
-            elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
+            elif self.image_type == get_system_default("image_type_el"):
                 self.cls_name = EL_type
                 self.detect_class_color = EL_class_colors
-            elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
+            elif self.image_type == get_system_default("image_type_visible"):
                 self.cls_name = Visible_type
                 self.detect_class_color = Visible_class_colors
             else:
                 self.cls_name = Other_type
                 self.detect_class_color = Other_class_colors
-        elif self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]:
+        elif self.model_type == get_system_default("model_type_segmentation"):
             self.cls_name = Segmentation_type
             self.detect_class_color = Segmentation_class_colors
 
@@ -983,27 +949,27 @@ class Detection_UI:
                         for class_name in self.cls_name.values()
                     ]
         elif model_file_option == model_options[0]:
-            if self.model_type == SYSTEM_DEFAULTS["model_type_detection"]:
-                if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
+            if self.model_type == get_system_default("model_type_detection"):
+                if self.image_type == get_system_default("image_type_thermal"):
                     model_path = abs_path(
                         "../weights/yolo11s-thermo.pt", path_type="current"
                     )
-                elif self.image_type == SYSTEM_DEFAULTS["image_type_el"]:
+                elif self.image_type == get_system_default("image_type_el"):
                     model_path = abs_path(
                         "../weights/yolo11s-el.pt", path_type="current"
                     )
-                elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
+                elif self.image_type == get_system_default("image_type_visible"):
                     model_path = abs_path(
                         "../weights/yolo11s-visible.pt", path_type="current"
                     )
                 else:
                     model_path = abs_path("../weights/yolo11s.pt", path_type="current")
             else:
-                if self.image_type == SYSTEM_DEFAULTS["image_type_thermal"]:
+                if self.image_type == get_system_default("image_type_thermal"):
                     model_path = abs_path(
                         "../weights/yolo11s-thermo-seg.pt", path_type="current"
                     )
-                elif self.image_type == SYSTEM_DEFAULTS["image_type_visible"]:
+                elif self.image_type == get_system_default("image_type_visible"):
                     model_path = abs_path(
                         "../weights/yolo11s-visible-seg.pt", path_type="current"
                     )
@@ -1433,7 +1399,7 @@ class Detection_UI:
         )
         st.sidebar.caption(get_sidebar_hint("camera_calibration_hint"))
 
-        if self.undistortion_method == SYSTEM_DEFAULTS["undistortion_camera_calc"]:
+        if self.undistortion_method == get_system_default("undistortion_camera_calc"):
             calibration_file = st.sidebar.file_uploader(
                 get_sidebar_label("upload_calibration_file"), type=["json"]
             )
@@ -1474,7 +1440,7 @@ class Detection_UI:
                 self.camera_matrix = None
                 self.dist_coeffs = None
                 self.calibration_file = None
-        elif self.undistortion_method == SYSTEM_DEFAULTS["undistortion_manual"]:
+        elif self.undistortion_method == get_system_default("undistortion_manual"):
             # Add slider for distortion coefficient
             self.image_k1 = st.sidebar.slider(
                 get_sidebar_label("adjust_distortion_coefficient"),
@@ -2189,7 +2155,7 @@ class Detection_UI:
                 self.update_category_counts(frame_id)
                 if (
                     self.show_inclusion
-                    and self.model_type == SYSTEM_DEFAULTS["model_type_segmentation"]
+                    and self.model_type == get_system_default("model_type_segmentation")
                 ):
                     inclusion_df = compute_inclusion_relations(filtered_results)
                     if inclusion_df.empty:
@@ -2628,9 +2594,9 @@ class Detection_UI:
         )
 
         # st.title(self.title) # 显示系统标题
-        st.write(SYSTEM_INFO["separator"])
-        st.write(SYSTEM_INFO["description"])
-        st.write(SYSTEM_INFO["separator"])
+        st.write(get_system_info("separator"))
+        st.write(get_system_info("description"))
+        st.write(get_system_info("separator"))
 
         # 插入一条分割线
 

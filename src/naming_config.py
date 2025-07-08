@@ -57,12 +57,26 @@ def get_current_language() -> str:
 
 # Wrapper helpers -------------------------------------------------------------
 
-def _get(category: str, key: str) -> str:
-    return globals().get(category, {}).get(key, key)
+def _get(category: str, key: str, default=None) -> Any:
+    """Get value from a category with fallback to default."""
+    category_data = globals().get(category, {})
+    if isinstance(category_data, dict):
+        return category_data.get(key, default if default is not None else key)
+    return default if default is not None else key
+
+
+def get_system_info(key: str) -> str:
+    """Get system information value for a given key."""
+    return _get("SYSTEM_INFO", key)
 
 
 def get_sidebar_header(key: str) -> str:
     return _get("SIDEBAR_HEADERS", key)
+
+
+def get_system_default(key: str) -> Any:
+    """Get system default value for a given key."""
+    return _get("SYSTEM_DEFAULTS", key, None)
 
 
 def get_sidebar_label(key: str) -> str:

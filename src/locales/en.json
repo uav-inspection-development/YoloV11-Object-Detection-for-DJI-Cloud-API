@@ -12,6 +12,7 @@
     "image_type_visible": "Visible",
     "image_type_thermal": "Thermal",
     "image_type_el": "EL",
+    "image_type_other": "Other",
     "image_enhancement_none": "None",
     "undistortion_none": "None",
     "undistortion_camera_calc": "Camera Params",
@@ -93,7 +94,7 @@
   "SIDEBAR_OPTIONS": {
     "aspect_ratios": ["16:9", "4:3", "Free"],
     "export_formats": ["Word", "CSV", "Excel", "JSON"],
-    "task_types": ["Detection", "Segmentation"],
+    "task_types": ["Detection Task", "Segmentation Task"],
     "model_settings": ["Default", "Custom Weights"],
     "input_sources": ["Image Files", "Image Folder", "Video Files", "Video Folder", "Camera", "RTSP/RTMP"],
     "image_enhancement_methods": ["None", "CLAHE", "Histogram Equalization"],
@@ -294,39 +295,6 @@
     "gps_longitude": "🌐 Longitude",
     "gps_altitude": "🏔️ Altitude",
     "gps_time": "🕒 GPS Time"
-  },
-  "IMAGE_TYPE_MAP": {
-    "EL": "EL",
-    "可见光": "Visible",
-    "红外": "Thermal",
-    "Thermo": "Thermal",
-    "Visible": "Visible",
-    "热红外": "Thermal",
-    "thermal": "Thermal",
-    "visible": "Visible",
-    "el": "EL"
-  },
-  "TASK_TYPE_MAP": {
-    "检测任务": "Detection",
-    "分割任务": "Segmentation",
-    "Detection": "Detection",
-    "Segmentation": "Segmentation",
-    "detection": "Detection",
-    "segmentation": "Segmentation",
-    "detect": "Detection",
-    "segment": "Segmentation"
-  },
-  "EXPORT_FORMAT_MAP": {
-    "CSV": "CSV",
-    "Excel": "Excel",
-    "JSON": "JSON",
-    "Word": "Word"
-  },
-  "DETECTION_STATUS_MAP": {
-    "success": "Success",
-    "failed": "Failed",
-    "processing": "Processing",
-    "pending": "Pending"
   },
   "FILENAME_TEMPLATES": {
     "report": "PV-{task_type}-Report-{image_type}-{timestamp}",
