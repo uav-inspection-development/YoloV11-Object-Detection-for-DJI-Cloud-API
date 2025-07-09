@@ -50,8 +50,16 @@ def set_language(lang: str) -> None:
     _translations = _load_translations(lang)
     _update_globals()
 
+    # 更新类别名称 - 使用动态导入避免循环导入
+    try:
+        import chinese_name_list
+        chinese_name_list.update_class_names()
+    except (ImportError, AttributeError):
+        pass  # 如果导入失败，忽略
+
 
 def get_current_language() -> str:
+    """Get current language."""
     return _current_language
 
 

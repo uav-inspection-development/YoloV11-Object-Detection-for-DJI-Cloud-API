@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from naming_config import get_current_language
+
 EL_type = {
     'crack': "隐裂",                    # crack
     'missing_corner': "缺角",           # Missing corner
