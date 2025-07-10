@@ -1,50 +1,75 @@
 # -*- coding: utf-8 -*-
 
-EL_type = {
-    'crack': "隐裂",                    # crack
-    'missing_corner': "缺角",           # Missing corner
-    'fragment': "碎片",                 # Fragment
-    'scratch': "划伤",                  # Scratch
-    'black_cell': "黑片"                # Black cell
-}
+"""Class name mappings for different languages."""
 
-Thermo_type = {
-    'dyrb': "单一热斑",
-    'dmjrb': "大面积热斑",
-    'dyrb_ycdw': "单一热斑_异常低温",
-    'dmjrb_ycdw': "大面积热斑_异常低温",
-    'ycdw': "异常低温",
-    'dyrb_ejgdl': "单一热斑_二极管短路",
-    'ejgdl': "二极管短路",
-    'ygfs': "阳光反射",
-    'gfb_zc_rcx': "光伏板正常热成像",
-    'ejgdl_ycdw': "二极管短路_异常低温"
-}
+from typing import Dict
 
-Visible_type = {
-    'yyzd': "遮挡",
-    'ygfs': "阳光反射",
-    'zw': "脏污",
-    'yyzd_zw': "遮挡_脏污",
-    'ns': "鸟粪",
-    'yyzd_ns': "遮挡_鸟粪",
-    'zw_ns': "脏污_鸟粪",
-    'gfbzjbx': "光伏板组件变形",
-    'gfbqs': "光伏板缺失",
-    'mbsl': "面板碎裂",
-    'snow': "积雪",
-    'crack': "隐裂"
-}
+def get_current_language():
+    """获取当前语言，避免循环导入"""
+    try:
+        import streamlit as st
+        return st.session_state.get("language", "zh")
+    except:
+        return "zh"  # 默认返回中文
 
-Other_type = {
-    'people': "行人",                # Person
-    'vehicle': "车辆",              # Vehicle
-}
+def get_class_names():
+    """从 locale 文件中获取类别名称"""
+    try:
+        from naming_config import get_class_names as get_locale_class_names
+        return get_locale_class_names()
+    except:
+        return {}
 
-Segmentation_type = {
-    'component': "单组件",           # Solar panel
-    'string': "组串"              # String of solar panels
-}
+# -----------------------------
+# Globals updated by language
+# -----------------------------
+EL_type: Dict[str, str] = {}
+Thermo_type: Dict[str, str] = {}
+Visible_type: Dict[str, str] = {}
+Other_type: Dict[str, str] = {}
+Segmentation_type: Dict[str, str] = {}
+
+
+def update_class_names() -> None:
+    """Update class name dictionaries based on current language."""
+    global EL_type, Thermo_type, Visible_type, Other_type, Segmentation_type
+
+    # 从 locale 文件中获取类别名称
+    class_names = get_class_names()
+    
+    if class_names:
+        EL_type = class_names.get("EL", {})
+        Thermo_type = class_names.get("Thermal", {})
+        Visible_type = class_names.get("Visible", {})
+        Other_type = class_names.get("Other", {})
+        Segmentation_type = class_names.get("Segmentation", {})
+    else:
+        print("无法获取类别名称！请检查 locale 文件是否存在或格式是否正确。")
+
+
+# 添加获取类别名称的便利函数
+def get_class_name(category_type: str) -> Dict[str, str]:
+    """
+    根据类别类型获取对应的类别名称字典
+    
+    Args:
+        category_type (str): 类别类型 ('EL', 'Thermal', 'Visible', 'Other', 'Segmentation')
+
+    Returns:
+        Dict[str, str]: 类别名称字典
+    """
+    category_map = {
+        'EL': EL_type,
+        'Thermal': Thermo_type,
+        'Visible': Visible_type,
+        'Other': Other_type,
+        'Segmentation': Segmentation_type
+    }
+    return category_map.get(category_type, {})
+
+
+# Initialize on import
+update_class_names()
 
 EL_class_colors = {
     "crack": (0, 0, 255),                     # Red

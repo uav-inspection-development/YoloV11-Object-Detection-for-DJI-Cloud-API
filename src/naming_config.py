@@ -2,6 +2,7 @@ import json
 import os
 from typing import Any, Dict
 import streamlit as st
+from chinese_name_list import update_class_names
 
 try:
     from streamlit_change_language import ChangeLanguage
@@ -49,9 +50,18 @@ def set_language(lang: str) -> None:
     st.session_state["language"] = lang
     _translations = _load_translations(lang)
     _update_globals()
+    update_class_names()
+
+    # 更新类别名称 - 使用动态导入避免循环导入
+    try:
+        import chinese_name_list
+        chinese_name_list.update_class_names()
+    except (ImportError, AttributeError):
+        pass  # 如果导入失败，忽略
 
 
 def get_current_language() -> str:
+    """Get current language."""
     return _current_language
 
 
@@ -221,3 +231,19 @@ def get_status_message(message_type: str, **kwargs) -> str:
         return template.format(**kwargs)
     except KeyError:
         return template
+
+
+def get_class_names(category_type: str = None):
+    """Get class names from translations.
+
+    Args:
+        category_type (str, optional): Specific category type to get.
+                                      If None, returns all class names.
+
+    Returns:
+        dict: Class names dictionary
+    """
+    class_names = globals().get("CLASS_NAMES", {})
+    if category_type:
+        return class_names.get(category_type.upper(), {})
+    return class_names

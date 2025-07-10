@@ -330,5 +330,48 @@
   },
   "STATUS_MESSAGES": {},
   "UI_LABELS": {},
-  "UI_OPTIONS": {}
+  "UI_OPTIONS": {},
+  "CLASS_NAMES": {
+    "EL": {
+      "crack": "隐裂",
+      "missing_corner": "缺角",
+      "fragment": "碎片",
+      "scratch": "划伤",
+      "black_cell": "黑片"
+    },
+    "Thermal": {
+      "dyrb": "单一热斑",
+      "dmjrb": "大面积热斑",
+      "dyrb_ycdw": "单一热斑_异常低温",
+      "dmjrb_ycdw": "大面积热斑_异常低温",
+      "ycdw": "异常低温",
+      "dyrb_ejgdl": "单一热斑_二极管短路",
+      "ejgdl": "二极管短路",
+      "ygfs": "阳光反射",
+      "gfb_zc_rcx": "光伏板正常热成像",
+      "ejgdl_ycdw": "二极管短路_异常低温"
+    },
+    "Visible": {
+      "yyzd": "遮挡",
+      "ygfs": "阳光反射",
+      "zw": "脏污",
+      "yyzd_zw": "遮挡_脏污",
+      "ns": "鸟粪",
+      "yyzd_ns": "遮挡_鸟粪",
+      "zw_ns": "脏污_鸟粪",
+      "gfbzjbx": "光伏板组件变形",
+      "gfbqs": "光伏板缺失",
+      "mbsl": "面板碎裂",
+      "snow": "积雪",
+      "crack": "隐裂"
+    },
+    "Other": {
+      "people": "行人",
+      "vehicle": "车辆"
+    },
+    "Segmentation": {
+      "component": "单组件",
+      "string": "组串"
+    }
+  }
 }

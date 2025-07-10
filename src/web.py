@@ -12,16 +12,12 @@ from license_features import DEFAULT_FEATURES, get_enabled_task_types, is_featur
 from log import ResultLogger, LogTable
 from model import Web_Detector
 from chinese_name_list import (
-    EL_type,
     EL_class_colors,
-    Thermo_type,
-    Other_type,
     Thermo_class_colors,
-    Visible_type,
     Visible_class_colors,
-    Segmentation_type,
     Segmentation_class_colors,
     Other_class_colors,
+    get_class_name,
 )
 from ui_style import def_css_html
 from utils import (
@@ -230,7 +226,7 @@ class Detection_UI:
         self.display_height = 480
 
         # 初始化类别标签列表和为每个类别随机分配颜色
-        self.cls_name = Visible_type
+        self.cls_name = get_class_name("Visible")
         self.detect_class_color = Visible_class_colors
         self.colors = [
             self.detect_class_color.get(class_name, (0, 255, 0))
@@ -419,7 +415,7 @@ class Detection_UI:
             "image_type", get_system_default("image_type_visible")
         )
         self.selected_classes = self.api_params.get(
-            "selected_classes", list(Visible_type.keys())
+            "selected_classes", list(get_class_name("Visible").keys())
         )
         self.enable_pseudo_color = self.api_params.get("enable_pseudo_color", False)
         self.enable_rotate_correction = self.api_params.get(
@@ -497,20 +493,20 @@ class Detection_UI:
 
         # 设置类别标签
         if self.model_type == get_system_default("model_type_segmentation"):
-            self.cls_name = Segmentation_type
+            self.cls_name = get_class_name("Segmentation")
             self.detect_class_color = Segmentation_class_colors
         else:
             if self.image_type == get_system_default("image_type_thermal"):
-                self.cls_name = Thermo_type
+                self.cls_name = get_class_name("Thermal")
                 self.detect_class_color = Thermo_class_colors
             elif self.image_type == get_system_default("image_type_el"):
-                self.cls_name = EL_type
+                self.cls_name = get_class_name("EL")
                 self.detect_class_color = EL_class_colors
             elif self.image_type == get_system_default("image_type_visible"):
-                self.cls_name = Visible_type
+                self.cls_name = get_class_name("Visible")
                 self.detect_class_color = Visible_class_colors
             else:
-                self.cls_name = Other_type
+                self.cls_name = get_class_name("Other")
                 self.detect_class_color = Other_class_colors
 
         # 重新加载模型
@@ -813,7 +809,6 @@ class Detection_UI:
         # 选择模型类型的下拉菜单
         available_task_types = get_sidebar_option("task_types")
         task_options = get_enabled_task_types(available_task_types, self.enabled_features)
-        print(task_options)
         if not task_options:
             st.error("No licensed task types available")
             st.stop()
@@ -863,19 +858,19 @@ class Detection_UI:
 
         if self.model_type == get_system_default("model_type_detection"):
             if self.image_type == get_system_default("image_type_thermal"):
-                self.cls_name = Thermo_type
+                self.cls_name = get_class_name("Thermal")
                 self.detect_class_color = Thermo_class_colors
             elif self.image_type == get_system_default("image_type_el"):
-                self.cls_name = EL_type
+                self.cls_name = get_class_name("EL")
                 self.detect_class_color = EL_class_colors
             elif self.image_type == get_system_default("image_type_visible"):
-                self.cls_name = Visible_type
+                self.cls_name = get_class_name("Visible")
                 self.detect_class_color = Visible_class_colors
             else:
-                self.cls_name = Other_type
+                self.cls_name = get_class_name("Other")
                 self.detect_class_color = Other_class_colors
         elif self.model_type == get_system_default("model_type_segmentation"):
-            self.cls_name = Segmentation_type
+            self.cls_name = get_class_name("Segmentation")
             self.detect_class_color = Segmentation_class_colors
 
         # 提示用户选择的图像类型

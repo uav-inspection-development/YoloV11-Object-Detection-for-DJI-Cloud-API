@@ -304,5 +304,48 @@
   },
   "STATUS_MESSAGES": {},
   "UI_LABELS": {},
-  "UI_OPTIONS": {}
+  "UI_OPTIONS": {},
+  "CLASS_NAMES": {
+    "EL": {
+      "crack": "Crack",
+      "missing_corner": "Missing Corner",
+      "fragment": "Fragment",
+      "scratch": "Scratch",
+      "black_cell": "Black Cell"
+    },
+    "Thermal": {
+      "dyrb": "Single Hot Spot",
+      "dmjrb": "Large Area Hot Spot",
+      "dyrb_ycdw": "Single Hot Spot - Low Temp",
+      "dmjrb_ycdw": "Large Hot Spot - Low Temp",
+      "ycdw": "Abnormal Low Temp",
+      "dyrb_ejgdl": "Single Hot Spot - Diode Short",
+      "ejgdl": "Diode Short",
+      "ygfs": "Sun Reflection",
+      "gfb_zc_rcx": "Normal Thermal Imaging",
+      "ejgdl_ycdw": "Diode Short - Low Temp"
+    },
+    "Visible": {
+      "yyzd": "Obstruction",
+      "ygfs": "Reflection",
+      "zw": "Dirt",
+      "yyzd_zw": "Obstruction & Dirt",
+      "ns": "Bird Droppings",
+      "yyzd_ns": "Obstruction & Bird Droppings",
+      "zw_ns": "Dirt & Bird Droppings",
+      "gfbzjbx": "Module Deformation",
+      "gfbqs": "Module Missing",
+      "mbsl": "Panel Cracking",
+      "snow": "Snow",
+      "crack": "Crack"
+    },
+    "Other": {
+      "people": "Person",
+      "vehicle": "Vehicle"
+    },
+    "Segmentation": {
+      "component": "Component",
+      "string": "String"
+    }
+  }
 }
