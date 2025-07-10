@@ -1934,6 +1934,8 @@ class Detection_UI:
     def apply_image_processing(self, image):
         """应用图像处理流水线"""
         processed = image.copy()
+        undistort_options = get_sidebar_option("undistortion_methods")
+        enhancement_options = get_sidebar_option("image_enhancement_methods")
 
         # 去畸变
         if hasattr(self, "undistortion_method"):
@@ -3027,6 +3029,7 @@ class Detection_UI:
             return
 
         self.logTable.clear_frames()
+        display_modes = get_main_option("display_modes")
 
         # 初始化进度显示
         progress_container = st.container()
@@ -3376,6 +3379,7 @@ class Detection_UI:
 
     def _process_single_video(self, video_file, video_index):
         """处理单个视频文件"""
+        display_modes = get_main_option("display_modes")
         try:
             # 创建临时文件
             tfile = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
@@ -3483,6 +3487,7 @@ class Detection_UI:
         """
         处理摄像头输入
         """
+        display_modes = get_main_option("display_modes")
         try:
             cap = cv2.VideoCapture(camera_id)
             if not cap.isOpened():
@@ -3558,6 +3563,7 @@ class Detection_UI:
         """
         处理RTSP/RTMP流输入
         """
+        display_modes = get_main_option("display_modes")
         try:
             cap = cv2.VideoCapture(rtsp_url)
             if not cap.isOpened():
