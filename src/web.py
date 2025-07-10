@@ -635,7 +635,7 @@ class Detection_UI:
         """
         # Language selection
         lang = st.sidebar.selectbox(
-            "Language",
+            get_sidebar_label("language"),
             options=available_languages,
             index=available_languages.index(get_current_language()),
         )

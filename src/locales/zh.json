@@ -38,6 +38,7 @@
     "about_version": "📖 关于 - 版本: {version_string}"
   },
   "SIDEBAR_LABELS": {
+    "language": "语言",
     "logout_button": "🚪 退出登陆",
     "aspect_ratio_selection": "选择显示比例",
     "display_height_input": "输入显示高度 (默认: 1080)",
@@ -328,9 +329,6 @@
     "log": "检测日志-{timestamp}",
     "image": "检测结果图-{image_type}-{timestamp}"
   },
-  "STATUS_MESSAGES": {},
-  "UI_LABELS": {},
-  "UI_OPTIONS": {},
   "CLASS_NAMES": {
     "EL": {
       "crack": "隐裂",

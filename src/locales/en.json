@@ -38,6 +38,7 @@
     "about_version": "📖 About - Version: {version_string}"
   },
   "SIDEBAR_LABELS": {
+    "language": "Language",
     "logout_button": "🚪 Logout",
     "aspect_ratio_selection": "Aspect Ratio",
     "display_height_input": "Display Height (default 1080)",
@@ -302,9 +303,6 @@
     "log": "Log-{timestamp}",
     "image": "Result-{image_type}-{timestamp}"
   },
-  "STATUS_MESSAGES": {},
-  "UI_LABELS": {},
-  "UI_OPTIONS": {},
   "CLASS_NAMES": {
     "EL": {
       "crack": "Crack",
