@@ -1,0 +1,201 @@
+# MediaMTX configuration file for YOLO Detection System
+# https://github.com/bluenviron/mediamtx
+
+###############################################
+# General parameters
+
+# Sets the verbosity of the program; available values are "error", "warn", "info", "debug".
+logLevel: info
+# Destinations of log messages; available values are "stdout", "file" and "syslog".
+logDestinations: [stdout]
+# If "file" is in logDestinations, this is the file which will receive the logs.
+logFile: mediamtx.log
+
+# Timeout of read operations.
+readTimeout: 10s
+# Timeout of write operations.
+writeTimeout: 10s
+# Size of the queue of outgoing packets.
+# A higher value allows to increase throughput, a lower value allows to save RAM.
+writeQueueSize: 512
+
+###############################################
+# HTTP server parameters
+
+# Disable the HTTP server used to serve the web interface and the HLS streams.
+httpDisable: false
+# Address of the HTTP server. This is needed only when encryption is disabled.
+httpAddress: :8888
+# Enable TLS/HTTPS on the HTTP server.
+httpEncryption: false
+
+###############################################
+# RTSP server parameters
+
+# Disable the RTSP server.
+rtspDisable: false
+# List of enabled RTSP transport protocols.
+# UDP is the most performant, but doesn't work when there's a NAT/firewall between
+# server and clients, and doesn't support encryption.
+# UDP-multicast allows to save bandwidth when clients are all in the same LAN.
+# TCP is the most versatile, and does support encryption.
+# The handshake is always performed with TCP.
+protocols: [udp, multicast, tcp]
+# Encrypt handshake and TCP streams with TLS (RTSPS).
+# Available values are "no", "strict", "optional".
+encryption: "no"
+# Address of the RTSP server. This is needed only when encryption is disabled.
+rtspAddress: :8554
+
+###############################################
+# RTMP server parameters
+
+# Disable the RTMP server.
+rtmpDisable: false
+# Address of the RTMP server. This is needed only when encryption is disabled.
+rtmpAddress: :1935
+# Encrypt connections with TLS (RTMPS).
+# Available values are "no", "strict", "optional".
+rtmpEncryption: "no"
+
+###############################################
+# HLS server parameters
+
+# Disable the HLS server.
+hlsDisable: false
+# Address of the HLS server. This is needed only when encryption is disabled.
+hlsAddress: :8080
+# Enable TLS/HTTPS on the HLS server.
+hlsEncryption: false
+# By default, HLS streams are generated only when requested by a user.
+# This option allows to generate streams always, avoiding the delay between request and generation.
+hlsAlwaysRemux: false
+# Variant of the HLS protocol to use. Available options are:
+# * mpegts - uses MPEG-TS segments, compatible with all HLS clients.
+# * fmp4 - uses fragmented MP4 segments, more efficient.
+# * lowLatency - uses Low-Latency HLS.
+hlsVariant: mpegts
+# Number of HLS segments to keep on the server.
+# Segments allow to seek through the stream.
+# Their number doesn't influence latency.
+hlsSegmentCount: 3
+# Minimum duration of each segment.
+hlsSegmentDuration: 1s
+# Minimum duration of the part.
+# A part is a sub-segment, available only in Low-Latency HLS.
+hlsPartDuration: 200ms
+# Maximum size of each segment.
+# This prevents RAM exhaustion.
+hlsSegmentMaxSize: 50M
+
+###############################################
+# WebRTC server parameters
+
+# Disable the WebRTC server.
+webrtcDisable: false
+# Address of the WebRTC server. This is needed only when encryption is disabled.
+webrtcAddress: :8889
+# Enable TLS/HTTPS on the WebRTC server.
+webrtcEncryption: false
+
+###############################################
+# API server parameters
+
+# Address of the API server. Leave empty to disable.
+api: true
+apiAddress: :9997
+
+###############################################
+# Metrics parameters
+
+# Address of the metrics server. Leave empty to disable.
+# Metrics are gathered with Prometheus, available at /metrics.
+metrics: false
+metricsAddress: :9998
+
+###############################################
+# PPROF parameters
+
+# Address of the pprof server. Leave empty to disable.
+# Report is available at /debug/pprof.
+pprof: false
+pprofAddress: :9999
+
+###############################################
+# Path parameters
+
+# These settings are path-dependent, and the map key is the name of the path.
+# It's possible to use regular expressions by using a tilde as prefix.
+# For example, "~^(test1|test2)$" will match both "test1" and "test2".
+# For example, "~^prefix" will match all paths that start with "prefix".
+# The settings under the path "all" are applied to all paths that do not match
+# another entry.
+paths:
+  all:
+    # Source of the stream. This can be:
+    # * publisher -> the stream is provided by a RTSP, RTMP, WebRTC or SRT client
+    # * rtsp://existing-url -> the stream is pulled from another RTSP server / camera
+    # * rtsps://existing-url -> the stream is pulled from another RTSP server / camera with RTSPS
+    # * rtmp://existing-url -> the stream is pulled from another RTMP server / camera
+    # * rtmps://existing-url -> the stream is pulled from another RTMP server / camera with RTMPS
+    # * http://existing-url/stream.m3u8 -> the stream is pulled from another HLS server
+    # * https://existing-url/stream.m3u8 -> the stream is pulled from another HLS server with HTTPS
+    # * udp://ip:port -> the stream is pulled from UDP, by listening on the specified IP and port
+    # * srt://existing-url -> the stream is pulled from another SRT server / camera
+    # * whep://existing-url -> the stream is pulled from another WebRTC server / camera
+    # * wheps://existing-url -> the stream is pulled from another WebRTC server / camera with HTTPS
+    # * redirect -> the stream is provided by another path or server
+    # * rpiCamera -> the stream is provided by a Raspberry Pi Camera
+    source: publisher
+
+    # If the source is a publisher, users can publish to the path only if their
+    # IP is in this range (empty means any IP).
+    sourceOnDemand: false
+    
+    # Username required to publish.
+    # SHA256-hashed values can be inserted with the "sha256:" prefix.
+    publishUser: ""
+    # Password required to publish.
+    # SHA256-hashed values can be inserted with the "sha256:" prefix.
+    publishPass: ""
+    # IPs or networks (x.x.x.x/24) allowed to publish.
+    publishIPs: []
+
+    # Username required to read.
+    # SHA256-hashed values can be inserted with the "sha256:" prefix.
+    readUser: ""
+    # Password required to read.
+    # SHA256-hashed values can be inserted with the "sha256:" prefix.
+    readPass: ""
+    # IPs or networks (x.x.x.x/24) allowed to read.
+    readIPs: []
+
+  # YOLO Detection System specific paths
+  yolo_input:
+    source: publisher
+    publishUser: ""
+    publishPass: ""
+    readUser: ""
+    readPass: ""
+
+  yolo_output:
+    source: publisher
+    publishUser: ""
+    publishPass: ""
+    readUser: ""
+    readPass: ""
+
+  # Camera streams
+  camera_0:
+    source: publisher
+    publishUser: ""
+    publishPass: ""
+    readUser: ""
+    readPass: ""
+
+  camera_1:
+    source: publisher
+    publishUser: ""
+    publishPass: ""
+    readUser: ""
+    readPass: ""

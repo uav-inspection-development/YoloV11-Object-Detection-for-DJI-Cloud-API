@@ -21,8 +21,58 @@ services:
       - CLIENT_ID=${CLIENT_ID:-your-client-id}
       - CLIENT_SECRET=${CLIENT_SECRET:-your-client-secret}
       - ENTRYPOINT_SCRIPT=${ENTRYPOINT_SCRIPT:-ui.py}
+      # MediaMTX 服务连接信息
+      - MEDIAMTX_HOST=mediamtx
+      - MEDIAMTX_RTSP_PORT=8554
+      - MEDIAMTX_API_PORT=9997
     command: sh -c "python3 src/${ENTRYPOINT_SCRIPT} --run-mode $RUN_MODE --oauth2-introspect-url $OAUTH2_INTROSPECT_URL --oauth2-token-url $OAUTH2_TOKEN_URL --client-id $CLIENT_ID --client-secret $CLIENT_SECRET"
+    depends_on:
+      - mediamtx
+    networks:
+      - yolo-network
+
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx-server
+    restart: unless-stopped
+    ports:
+      # RTSP 端口
+      - "8554:8554/tcp"
+      - "8554:8554/udp"
+      # RTMP 端口
+      - "1935:1935"
+      # HTTP/WebRTC 端口
+      - "8888:8888"
+      - "8889:8889"
+      # API 端口
+      - "9997:9997"
+      # HLS 端口
+      - "8080:8080"
+    volumes:
+      # 挂载配置文件（可选）
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    environment:
+      # 基本配置
+      - MTX_PROTOCOLS=tcp,udp
+      - MTX_RTSPADDRESS=:8554
+      - MTX_RTMPADDRESS=:1935
+      - MTX_HLSADDRESS=:8080
+      - MTX_WEBRTCADDRESS=:8889
+      - MTX_APIADDRESS=:9997
+      # 日志级别
+      - MTX_LOGLEVEL=info
+      # 允许所有来源推流/拉流
+      - MTX_PATHS_ALL_SOURCE=publisher
+      - MTX_PATHS_ALL_PUBLISHUSER=
+      - MTX_PATHS_ALL_PUBLISHPASS=
+      - MTX_PATHS_ALL_READUSER=
+      - MTX_PATHS_ALL_READPASS=
+    networks:
+      - yolo-network
 
 networks:
-  default:
+  yolo-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

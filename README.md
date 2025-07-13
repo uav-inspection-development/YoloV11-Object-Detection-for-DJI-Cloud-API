@@ -22,30 +22,117 @@ This project provides a comprehensive solution for detecting solar panel anomali
 
 ## Environment Deployment Steps
 
-1. **Install System Dependencies (Linux/Ubuntu only)**:
+### 1. System Dependencies Installation
 
-    For Ubuntu/Debian systems, run the automated installer:
-    ```shell
-    chmod +x install_system_deps.sh
-    ./install_system_deps.sh
-    ```
-    
-    Or see [SYSTEM_DEPS.md](SYSTEM_DEPS.md) for manual installation instructions.
+#### Automated Installation (Recommended)
 
-2. Create and activate a Python environment:
+For Ubuntu/Debian systems, use the provided script:
+
+```bash
+chmod +x install_system_deps.sh
+./install_system_deps.sh
+```
+
+This script will:
+- Detect your Ubuntu version
+- Install appropriate OpenCV and OpenGL dependencies
+- Handle package conflicts gracefully
+- Provide fallbacks for older Ubuntu versions
+
+#### Manual Installation
+
+If you prefer to install manually or are using a different system:
+
+**Ubuntu 22.04+ (Current LTS)**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgtk-3-0 \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libatlas-base-dev \
+    python3-dev \
+    python3-numpy \
+    libgl1-mesa-dev \
+    libgles2-mesa-dev
+```
+
+**Ubuntu 20.04 (Older LTS)**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgtk-3-0 \
+    python3-dev \
+    python3-numpy
+```
+
+**Other Platforms**
+- **CentOS/RHEL**: Use `yum` or `dnf` with equivalent package names
+- **Arch Linux**: Use `pacman` with equivalent package names
+- **Alpine**: Use `apk` with equivalent package names
+- **Windows**: System dependencies are typically handled by Python packages themselves. You may need Visual C++ Redistributable and CUDA toolkit (if using GPU)
+- **macOS**: `brew install opencv`
+
+#### Docker Installation
+
+If you're using Docker, add this to your Dockerfile:
+
+```dockerfile
+# Copy and run system dependencies installer
+COPY install_system_deps.sh /tmp/
+RUN chmod +x /tmp/install_system_deps.sh && /tmp/install_system_deps.sh
+```
+
+#### Verification
+
+After installing system dependencies, verify the installation:
+
+```bash
+# Test Python imports
+python -c "import cv2; print(f'OpenCV version: {cv2.__version__}')"
+
+# Run the project validator (if available)
+python tests/validate_config.py
+```
+
+### 2. Python Environment Setup
+
+1. Create and activate a Python environment:
+
+1. Create and activate a Python environment:
 
     ```shell
     conda create -n pytorch python=3.12
     conda activate pytorch
     ```
 
-3. Install dependencies:
+2. Install dependencies:
 
     ```shell
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
     ```
 
-4. Install torch and torchvision for CUDA:
+3. Install torch and torchvision for CUDA:
 
     ```shell
     pip install torch==2.3.1+cu121 torchvision==0.18.0+cu121 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
@@ -57,13 +144,13 @@ This project provides a comprehensive solution for detecting solar panel anomali
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
     ```
 
-5. Verify the environment:
+4. Verify the environment:
 
     ```shell
     conda env list
     ```
 
-6. If the following prompt appears:
+5. If the following prompt appears:
 
     ```plaintext
     Downloading https://ultralytics.com/assets/Arial.ttf to 'C:\Users\ad\AppData\Roaming\Ultralytics\Arial.ttf'...
@@ -71,6 +158,132 @@ This project provides a comprehensive solution for detecting solar panel anomali
 
     - It means the configuration file is being downloaded automatically.
     - If a timeout occurs, copy the `Arial.ttf` file from the `fonts` folder to the specified path and rerun the code.
+
+### 3. Docker Deployment with MediaMTX RTSP Support
+
+This project includes Docker Compose configuration with integrated MediaMTX server for RTSP streaming capabilities.
+
+#### Quick Start with Docker
+
+1. **Start all services**:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+2. **Check service status**:
+
+    ```bash
+    docker-compose ps
+    ```
+
+3. **View logs**:
+
+    ```bash
+    # All services
+    docker-compose logs -f
+    
+    # Specific services
+    docker-compose logs -f mediamtx
+    docker-compose logs -f yolo-app
+    ```
+
+#### Service Ports
+
+**MediaMTX Streaming Server**:
+
+- **RTSP**: `8554` - Main RTSP push/pull streaming port
+- **RTMP**: `1935` - RTMP streaming port  
+- **HTTP/HLS**: `8080` - HLS streaming port
+- **WebRTC**: `8889` - WebRTC port
+- **Web Interface**: `8888` - MediaMTX web management interface
+- **API**: `9997` - MediaMTX API endpoint
+
+**YOLO Application**:
+
+- **Streamlit**: `5000` - YOLO detection system web interface
+
+#### RTSP Streaming Usage
+
+**Push Stream (Send video to server)**:
+
+```bash
+# Push video file to server
+ffmpeg -i input_video.mp4 -c copy -f rtsp rtsp://localhost:8554/mystream
+
+# Push camera feed
+ffmpeg -f dshow -i video="USB Camera" -c:v libx264 -preset fast -f rtsp rtsp://localhost:8554/camera_0
+
+# Push file with loop
+ffmpeg -re -stream_loop -1 -i input_video.mp4 -c copy -f rtsp rtsp://localhost:8554/test_stream
+```
+
+**Pull Stream (Receive video from server)**:
+
+```bash
+# Using VLC: Open Network Stream → rtsp://localhost:8554/mystream
+# Using FFplay
+ffplay rtsp://localhost:8554/mystream
+```
+
+**Python OpenCV Integration**:
+
+```python
+import cv2
+
+# Connect to RTSP stream
+cap = cv2.VideoCapture('rtsp://localhost:8554/mystream')
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    cv2.imshow('RTSP Stream', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+```
+
+**Using RTSP in YOLO Detection**:
+
+1. In the YOLO web interface, select "RTSP/RTMP Stream"
+2. Enter RTSP URL: `rtsp://mediamtx:8554/camera_0`
+3. Start detection
+
+#### MediaMTX Web Management
+
+Access the MediaMTX management interface at:
+
+- URL: `http://localhost:8888`
+- Features: View active streams, connection statistics, server status
+
+#### Pre-configured Stream Paths
+
+The system includes pre-configured stream paths:
+
+- `yolo_input` - YOLO system input stream
+- `yolo_output` - YOLO detection result output stream  
+- `camera_0` - Camera 0
+- `camera_1` - Camera 1
+
+#### Troubleshooting
+
+**Common issues**:
+
+- **Cannot push stream**: Check firewall settings and ensure port 8554 is available
+- **High latency**: Use FFmpeg parameters: `-preset ultrafast -tune zerolatency`
+- **Connection refused**: Verify Docker services are running: `docker-compose ps`
+
+**View detailed logs**:
+
+```bash
+# Set debug log level in mediamtx.yml: logLevel: debug
+docker-compose restart mediamtx
+docker-compose logs -f mediamtx
+```
 
 ## Testing
 
@@ -251,9 +464,9 @@ User_Manual.md                # User manual for the application
         --features 检测任务 红外
     ```
 
-After running this command, the encrypted license file will be saved to the specified path.
+    After running this command, the encrypted license file will be saved to the specified path.
 
-The selected features determine which tasks and image types are available when running the detection interface.
+    The selected features determine which tasks and image types are available when running the detection interface.
 
 2. **Run the Detection Interface with Login Interface**:
 
