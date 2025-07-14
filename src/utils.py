@@ -827,13 +827,18 @@ def compute_missing_panels(detections, image_shape, min_area=1000):
             area = cv2.contourArea(cnt)
             x, y, w, h = cv2.boundingRect(cnt)
             if area >= min_area and not (x == x1_s and y == y1_s and x + w == x2_s and y + h == y2_s):
+                # 将轮廓转换为与分割结果一致的mask格式
+                mask_points = cnt.reshape(-1, 2)
+                # 确保mask格式与draw_detections期望的格式一致（列表格式）
+                mask_data = [mask_points] if mask_points.size > 0 else None
+                
                 missing.append(
                     {
                         "class_name": "missing_panel",
                         "bbox": [x, y, x + w, y + h],
                         "score": 1.0,
                         "class_id": len(detections),
-                        "mask": cnt.reshape(-1, 2),
+                        "mask": mask_data,
                     }
                 )
 
@@ -868,19 +873,48 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
         for c in components:
             x1_c, y1_c, x2_c, y2_c = c["bbox"]
             if x1_c >= x1_s and y1_c >= y1_s and x2_c <= x2_s and y2_c <= y2_s:
-                mask = np.array(c.get("mask", []), dtype=np.int32)
-                if mask.size == 0:
-                    mask = np.array(
+                # 获取并处理mask数据
+                original_mask = c.get("mask", [])
+                
+                # 尝试构建用于计算的mask点集
+                if original_mask and len(original_mask) > 0:
+                    try:
+                        # 如果原始mask存在，尝试使用它
+                        if isinstance(original_mask, list) and len(original_mask) > 0:
+                            mask_for_calc = np.concatenate(original_mask)
+                        elif isinstance(original_mask, np.ndarray):
+                            mask_for_calc = original_mask
+                        else:
+                            mask_for_calc = np.array([], dtype=np.int32)
+                    except (ValueError, TypeError):
+                        mask_for_calc = np.array([], dtype=np.int32)
+                else:
+                    mask_for_calc = np.array([], dtype=np.int32)
+                
+                # 如果没有有效的mask数据，使用边界框创建矩形
+                if mask_for_calc.size == 0:
+                    mask_for_calc = np.array(
                         [[x1_c, y1_c], [x2_c, y1_c], [x2_c, y2_c], [x1_c, y2_c]],
                         dtype=np.int32,
                     )
-                rect = cv2.minAreaRect(mask)
-                (cx, cy), (_, _), angle = rect
-                comps_in_string.append({
-                    "det": c,
-                    "center": (cx, cy),
-                    "angle": angle,
-                })
+                
+                try:
+                    rect = cv2.minAreaRect(mask_for_calc)
+                    (cx, cy), (_, _), angle = rect
+                    comps_in_string.append({
+                        "det": c,
+                        "center": (cx, cy),
+                        "angle": angle,
+                    })
+                except cv2.error as e:
+                    print(f"[警告] 计算最小外接矩形失败: {e}")
+                    # 使用边界框中心作为备选
+                    cx, cy = (x1_c + x2_c) / 2, (y1_c + y2_c) / 2
+                    comps_in_string.append({
+                        "det": c,
+                        "center": (cx, cy),
+                        "angle": 0,
+                    })
 
         if not comps_in_string:
             continue
@@ -907,13 +941,22 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
             if angle_dev > angle_threshold or (
                 median_space > 0 and center_dev > center_ratio * median_space
             ):
+                # 确保mask格式与draw_detections期望的格式一致
+                original_mask = comp["det"].get("mask")
+                if original_mask is not None and len(original_mask) > 0:
+                    # 如果原始mask存在且有效，保持原格式
+                    mask_data = original_mask
+                else:
+                    # 如果没有有效的mask，设置为None，让draw_detections使用边界框绘制
+                    mask_data = None
+                
                 misaligned.append(
                     {
                         "class_name": "misaligned_panel",
                         "bbox": comp["det"]["bbox"],
                         "score": 1.0,
                         "class_id": len(detections) + len(misaligned),
-                        "mask": comp["det"].get("mask"),
+                        "mask": mask_data,
                     }
                 )
 

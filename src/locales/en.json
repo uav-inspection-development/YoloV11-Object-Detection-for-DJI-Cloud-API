@@ -90,6 +90,7 @@
     "enable_rtsp_output": "Enable RTSP Output",
     "rtsp_output_url": "RTSP Output URL",
     "enable_gps_parsing": "Parse GPS",
+    "clear_after_export": "Clear Data After Export",
     "show_inclusion_relationship": "Show Inclusion Table",
     "show_missing_panel": "Show Missing Modules",
     "show_misaligned_panel": "Show Misaligned Modules"
@@ -133,6 +134,8 @@
     "rtsp_output_hint": "💡 Provide RTSP/RTMP url for streaming.",
     "clear_files_success": "Files cleared!",
     "gps_parsing_hint": "💡 Parse RTK GPS info in results.",
+    "gps_parsing_help": "Parse RTK GPS information from images and display on main page",
+    "clear_after_export_hint": "💡 Automatically clear all detection data after export.",
     "inclusion_relationship_hint": "💡 Count modules per string",
     "missing_panel_hint": "💡 Highlight missing modules within strings",
     "misaligned_panel_hint": "💡 Highlight rotated or shifted modules"

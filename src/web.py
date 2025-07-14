@@ -311,6 +311,7 @@ class Detection_UI:
         self.selected_targets = []  # 多选框选中项
         self.progress_bar = None  # 用于显示的进度条
         self.export_format = "CSV"  # 导出格式
+        self.clear_after_export = False  # 导出后清空检测结果
 
         self.frame_count_placeholder = None  # 帧计数显示区域
         self.fps_placeholder = None  # FPS显示区域
@@ -730,32 +731,21 @@ class Detection_UI:
                 format=self.export_format, path=self.csv_output_path
             )
         )
+        
+        # 添加导出后清空检测结果选项
+        self.clear_after_export = st.sidebar.checkbox(
+            get_sidebar_label("clear_after_export"),
+            value=False,
+            help=get_sidebar_hint("clear_after_export_hint")
+        )
 
         # 添加GPS经纬度解析选项
         self.enable_gps_parsing = st.sidebar.checkbox(
             get_sidebar_label("enable_gps_parsing"),
             value=True,
-            help="勾选时，将解析图片的RTK GPS信息并在主页面显示"
+            help=get_sidebar_hint("gps_parsing_help")
         )
         st.sidebar.caption(get_sidebar_hint("gps_parsing_hint"))
-
-        self.show_inclusion = st.sidebar.checkbox(
-            get_sidebar_label("show_inclusion_relationship"),
-            value=False,
-        )
-        st.sidebar.caption(get_sidebar_hint("inclusion_relationship_hint"))
-
-        self.show_missing_panel = st.sidebar.checkbox(
-            get_sidebar_label("show_missing_panel"),
-            value=False,
-        )
-        st.sidebar.caption(get_sidebar_hint("missing_panel_hint"))
-
-        self.show_misaligned_panel = st.sidebar.checkbox(
-            get_sidebar_label("show_misaligned_panel"),
-            value=False,
-        )
-        st.sidebar.caption(get_sidebar_hint("misaligned_panel_hint"))
 
         export_options = get_sidebar_option("export_formats")
         # 根据用户选择的导出格式设置文件后缀
@@ -854,6 +844,25 @@ class Detection_UI:
                 get_sidebar_label("rectangle_output_checkbox"), value=True
             )
             st.sidebar.caption(get_sidebar_hint("segmentation_task_hint"))
+
+            self.show_inclusion = st.sidebar.checkbox(
+                get_sidebar_label("show_inclusion_relationship"),
+                value=False,
+            )
+            st.sidebar.caption(get_sidebar_hint("inclusion_relationship_hint"))
+
+            self.show_missing_panel = st.sidebar.checkbox(
+                get_sidebar_label("show_missing_panel"),
+                value=False,
+            )
+            st.sidebar.caption(get_sidebar_hint("missing_panel_hint"))
+
+            self.show_misaligned_panel = st.sidebar.checkbox(
+                get_sidebar_label("show_misaligned_panel"),
+                value=False,
+            )
+            st.sidebar.caption(get_sidebar_hint("misaligned_panel_hint"))
+
             available_options = [
                 get_system_default("image_type_thermal"),
                 get_system_default("image_type_visible"),
@@ -2717,6 +2726,12 @@ class Detection_UI:
             current_selected = st.session_state.get("multiselect_target", available_targets.copy())
             # 过滤掉不在当前目标列表中的选项
             current_selected = [target for target in current_selected if target in available_targets]
+            
+            # 🔧 关键修复：自动添加新出现的检测类别（如"光伏板缺失"、"光伏板移位"）
+            for target in available_targets:
+                if target not in current_selected and target in ["光伏板缺失", "光伏板移位"]:
+                    current_selected.append(target)
+            
             # 如果没有选中任何目标，默认选择所有目标
             if not current_selected:
                 current_selected = available_targets.copy()
@@ -2907,7 +2922,10 @@ class Detection_UI:
                     )
                 )
 
-            self.logTable.clear_data()
+            # 根据用户设置决定是否清空检测结果
+            if self.clear_after_export:
+                self.logTable.clear_data()
+                st.info("检测结果已清空")
         st.subheader(get_main_header("history_log"))
         # 显示所有结果记录的空白表格
         self.log_table_placeholder = st.empty()
