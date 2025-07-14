@@ -796,3 +796,125 @@ def compute_inclusion_relations(detections):
         records.append([f"string_{s_idx}", count])
 
     return pd.DataFrame(records, columns=["组串编号", "包含组件数"])
+
+
+def compute_missing_panels(detections, image_shape, min_area=1000):
+    """Detect regions inside each string bbox that lack components."""
+
+    height, width = image_shape[:2]
+    strings = []
+    components = []
+
+    for det in detections:
+        if det.get("class_name") == "string":
+            strings.append(det)
+        elif det.get("class_name") == "component":
+            components.append(det)
+
+    missing = []
+    for s in strings:
+        x1_s, y1_s, x2_s, y2_s = s["bbox"]
+        mask = np.zeros((height, width), dtype=np.uint8)
+        cv2.rectangle(mask, (x1_s, y1_s), (x2_s, y2_s), 255, -1)
+
+        for c in components:
+            x1_c, y1_c, x2_c, y2_c = c["bbox"]
+            if x1_c >= x1_s and y1_c >= y1_s and x2_c <= x2_s and y2_c <= y2_s:
+                cv2.rectangle(mask, (x1_c, y1_c), (x2_c, y2_c), 0, -1)
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            x, y, w, h = cv2.boundingRect(cnt)
+            if area >= min_area and not (x == x1_s and y == y1_s and x + w == x2_s and y + h == y2_s):
+                missing.append(
+                    {
+                        "class_name": "missing_panel",
+                        "bbox": [x, y, x + w, y + h],
+                        "score": 1.0,
+                        "class_id": len(detections),
+                        "mask": cnt.reshape(-1, 2),
+                    }
+                )
+
+    return missing
+
+
+def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2):
+    """Detect misaligned components within strings.
+
+    Args:
+        detections (list): Detection results with component and string objects.
+        angle_threshold (float): Allowed angle deviation in degrees.
+        center_ratio (float): Allowed center deviation ratio.
+
+    Returns:
+        list: misaligned component detections.
+    """
+
+    strings = []
+    components = []
+    for det in detections:
+        if det.get("class_name") == "string":
+            strings.append(det)
+        elif det.get("class_name") == "component":
+            components.append(det)
+
+    misaligned = []
+
+    for s in strings:
+        x1_s, y1_s, x2_s, y2_s = s["bbox"]
+        comps_in_string = []
+        for c in components:
+            x1_c, y1_c, x2_c, y2_c = c["bbox"]
+            if x1_c >= x1_s and y1_c >= y1_s and x2_c <= x2_s and y2_c <= y2_s:
+                mask = np.array(c.get("mask", []), dtype=np.int32)
+                if mask.size == 0:
+                    mask = np.array(
+                        [[x1_c, y1_c], [x2_c, y1_c], [x2_c, y2_c], [x1_c, y2_c]],
+                        dtype=np.int32,
+                    )
+                rect = cv2.minAreaRect(mask)
+                (cx, cy), (_, _), angle = rect
+                comps_in_string.append({
+                    "det": c,
+                    "center": (cx, cy),
+                    "angle": angle,
+                })
+
+        if not comps_in_string:
+            continue
+
+        angles = [c["angle"] for c in comps_in_string]
+        median_angle = np.median(angles)
+
+        centers = np.array([c["center"] for c in comps_in_string])
+        centers_sorted = centers[centers[:, 0].argsort()]
+
+        if len(centers_sorted) > 1:
+            spacings = np.diff(centers_sorted[:, 0])
+            median_space = np.median(spacings)
+        else:
+            median_space = 0
+
+        for idx, comp in enumerate(comps_in_string):
+            angle_dev = abs(comp["angle"] - median_angle)
+            center_dev = 0
+            if median_space > 0:
+                expected_x = centers_sorted[0, 0] + idx * median_space
+                center_dev = abs(comp["center"][0] - expected_x)
+
+            if angle_dev > angle_threshold or (
+                median_space > 0 and center_dev > center_ratio * median_space
+            ):
+                misaligned.append(
+                    {
+                        "class_name": "misaligned_panel",
+                        "bbox": comp["det"]["bbox"],
+                        "score": 1.0,
+                        "class_id": len(detections) + len(misaligned),
+                        "mask": comp["det"].get("mask"),
+                    }
+                )
+
+    return misaligned

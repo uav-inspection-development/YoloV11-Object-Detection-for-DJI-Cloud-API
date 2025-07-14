@@ -90,7 +90,9 @@
     "enable_rtsp_output": "启用RTSP输出",
     "rtsp_output_url": "RTSP输出地址",
     "enable_gps_parsing": "解析并显示经纬度",
-    "show_inclusion_relationship": "显示包含关系表"
+    "show_inclusion_relationship": "显示包含关系表",
+    "show_missing_panel": "显示缺失组件",
+    "show_misaligned_panel": "显示移位组件"
   },
   "SIDEBAR_OPTIONS": {
     "aspect_ratios": [
@@ -161,7 +163,9 @@
     "rtsp_output_hint": "💡 提示: 输入RTSP/RTMP推流地址，用于实时推送检测结果视频流。",
     "clear_files_success": "已清空所有上传的文件！",
     "gps_parsing_hint": "💡 提示: 勾选后将解析图片的RTK GPS信息，在主页面与导出的报表中显示。",
-    "inclusion_relationship_hint": "💡 提示: 统计每个组串包含的单组件数量"
+    "inclusion_relationship_hint": "💡 提示: 统计每个组串包含的单组件数量",
+    "missing_panel_hint": "💡 提示: 自动圈出组串内缺失的组件",
+    "misaligned_panel_hint": "💡 提示: 检测组件旋转或移位"
   },
   "MAIN_HEADERS": {
     "video_image_detection_system": "📷 视频/图片检测系统",
@@ -369,7 +373,9 @@
     },
     "Segmentation": {
       "component": "单组件",
-      "string": "组串"
+      "string": "组串",
+      "missing_panel": "光伏板缺失",
+      "misaligned_panel": "光伏板移位"
     }
   }
 }
