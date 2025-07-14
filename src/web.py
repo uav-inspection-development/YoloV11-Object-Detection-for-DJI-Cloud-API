@@ -38,6 +38,8 @@ from utils import (
     fill_largest_polygon_white,
     extract_gps_info,
     compute_inclusion_relations,
+    compute_missing_panels,
+    compute_misaligned_panels,
 )
 from datetime import datetime
 from auth import verify_token, get_access_token
@@ -323,6 +325,8 @@ class Detection_UI:
         self.gps_time_placeholder = None
         self.inclusion_table_placeholder = None
         self.show_inclusion = False
+        self.show_missing_panel = False
+        self.show_misaligned_panel = False
 
         self.new_width = 1080
         self.new_height = int(self.new_width * (9 / 16))
@@ -740,6 +744,18 @@ class Detection_UI:
             value=False,
         )
         st.sidebar.caption(get_sidebar_hint("inclusion_relationship_hint"))
+
+        self.show_missing_panel = st.sidebar.checkbox(
+            get_sidebar_label("show_missing_panel"),
+            value=False,
+        )
+        st.sidebar.caption(get_sidebar_hint("missing_panel_hint"))
+
+        self.show_misaligned_panel = st.sidebar.checkbox(
+            get_sidebar_label("show_misaligned_panel"),
+            value=False,
+        )
+        st.sidebar.caption(get_sidebar_hint("misaligned_panel_hint"))
 
         export_options = get_sidebar_option("export_formats")
         # 根据用户选择的导出格式设置文件后缀
@@ -2303,6 +2319,16 @@ class Detection_UI:
         # 如果有有效的检测结果
         if det is not None and len(det):
             det_info = self.model.postprocess(pred)  # 后处理预测结果
+            if (
+                self.show_missing_panel
+                and self.model_type == get_system_default("model_type_segmentation")
+            ):
+                det_info.extend(compute_missing_panels(det_info, image.shape))
+            if (
+                self.show_misaligned_panel
+                and self.model_type == get_system_default("model_type_segmentation")
+            ):
+                det_info.extend(compute_misaligned_panels(det_info))
             if len(det_info):
                 disp_res = ResultLogger()
                 res = None
@@ -2334,18 +2360,29 @@ class Detection_UI:
                             )
 
                     # Ensure cls_id is within bounds
-                    if cls_id >= len(self.colors):
-                        st.warning(
-                            get_warning_message(
-                                "index_out_of_range_warning", cls_id=cls_id
-                            )
-                        )
-                        color = (255, 0, 0)  # 默认红色
+                    if name == "missing_panel":
+                        color = Segmentation_class_colors.get("missing_panel", (255, 0, 255))
+                        draw_flag = self.show_missing_panel
+                        chinese_name = "光伏板缺失"
+                    elif name == "misaligned_panel":
+                        color = Segmentation_class_colors.get("misaligned_panel", (255, 165, 0))
+                        draw_flag = self.show_misaligned_panel
+                        chinese_name = "光伏板移位"
                     else:
-                        color = self.colors[cls_id]
+                        if cls_id >= len(self.colors):
+                            st.warning(
+                                get_warning_message(
+                                    "index_out_of_range_warning", cls_id=cls_id
+                                )
+                            )
+                            color = (255, 0, 0)  # 默认红色
+                        else:
+                            color = self.colors[cls_id]
+                        chinese_name = self.cls_name.get(name, "未知类别")
+                        draw_flag = name in self.selected_classes
 
                     # 🔧 确保类别匹配逻辑正确
-                    if name in self.selected_classes:
+                    if draw_flag:
                         # 绘制检测框、标签和面积信息
                         if not is_api:
                             image, aim_frame_area = draw_detections(
@@ -2365,9 +2402,6 @@ class Detection_UI:
                                 is_api=True,
                                 rectangle_bbox=self.rectangle_bounding_output,
                             )
-
-                        # 获取中文名
-                        chinese_name = self.cls_name.get(name, "未知类别")
 
                         res = disp_res.concat_results(
                             name,
