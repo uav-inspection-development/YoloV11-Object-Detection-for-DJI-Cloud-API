@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import cv2  # 导入OpenCV库，用于处理图像和视频
 import torch
+import numpy as np  # 导入numpy库
 from QtFusion.models import Detector, HeatmapGenerator  # 从QtFusion库中导入Detector抽象基类
 # from chinese_name_list import Chinese_name  # 从datasets库中导入Chinese_name字典，用于获取类别的中文名称
 from ultralytics import YOLO  # 从ultralytics库中导入YOLO类，用于加载YOLO模型
@@ -68,29 +69,47 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
         return results
 
     def postprocess(self, pred):
-        # 定义后处理方法
-        results = []  # 初始化结果列表
-        aim_id = 0  # 初始化 aim_id
+        results = []
+        if not pred or not pred[0].boxes:
+            return results
 
-        for res in pred[0].boxes:
-            for box in res:
-                # 提前计算并转换数据类型
-                class_id = int(box.cls.cpu())
-                bbox = box.xyxy.cpu().squeeze().tolist()
-                bbox = [int(coord) for coord in bbox]  # 转换边界框坐标为整数
+        has_masks = pred[0].masks is not None
 
-                result = {
-                    "class_name": self.names[class_id],  # 类别名称
-                    "bbox": bbox,  # 边界框
-                    "score": box.conf.cpu().squeeze().item(),  # 置信度
-                    "class_id": class_id,  # 类别ID
-                    "mask": pred[0].masks[aim_id].xy if pred[0].masks is not None else None  # 掩码
-                }
-                results.append(result)  # 将结果添加到列表
+        def is_valid_mask(mask_xy, class_id):
+            if not (mask_xy and isinstance(mask_xy, list)):
+                print(f"[警告] 类别 {self.names[class_id]} (ID:{class_id}) 的掩码不是列表或为空")
+                return False
+            first_contour = mask_xy[0]
+            if not (isinstance(first_contour, np.ndarray) and first_contour.ndim == 2 and first_contour.shape[1] == 2):
+                print(f"[警告] 类别 {self.names[class_id]} (ID:{class_id}) 掩码格式异常: {getattr(first_contour, 'shape', None)}")
+                return False
+            if first_contour.size == 0:
+                print(f"[警告] 类别 {self.names[class_id]} (ID:{class_id}) 的掩码轮廓为空")
+                return False
+            return True
 
-                aim_id += 1  # 增加 aim_id，确保每个框都有对应的 mask
+        for aim_id, box in enumerate(pred[0].boxes):
+            class_id = int(box.cls.cpu())
+            bbox = [int(coord) for coord in box.xyxy.cpu().squeeze().tolist()]
 
-        return results  # 返回结果列表
+            mask_data = None
+            if has_masks and aim_id < len(pred[0].masks):
+                try:
+                    mask_xy = pred[0].masks[aim_id].xy
+                    if is_valid_mask(mask_xy, class_id):
+                        mask_data = mask_xy
+                except Exception as e:
+                    print(f"[错误] 处理类别 {self.names[class_id]} (ID:{class_id}) 掩码时出现异常: {e}")
+
+            results.append({
+                "class_name": self.names[class_id],
+                "bbox": bbox,
+                "score": box.conf.cpu().squeeze().item(),
+                "class_id": class_id,
+                "mask": mask_data
+            })
+
+        return results
 
     def set_param(self, params):
         self.params.update(params)

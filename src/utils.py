@@ -109,7 +109,43 @@ def calculate_polygon_area(points):
     Args:
         points (numpy.ndarray): 多边形的顶点坐标，形状为 (N, 2)，其中 N 是顶点数量
     """
-    return cv2.contourArea(points.astype(np.float32))
+    if points is None:
+        return 0
+    
+    try:
+        # 确保points是正确的格式和类型
+        points_array = np.array(points, dtype=np.float32)
+        
+        # 检查点数组的基本格式
+        if points_array.size == 0:
+            return 0
+            
+        # 处理一维数组情况，重塑为(N, 2)
+        if len(points_array.shape) == 1:
+            if points_array.shape[0] % 2 != 0:
+                return 0
+            points_array = points_array.reshape(-1, 2)
+        
+        # 检查是否为正确的二维格式
+        if len(points_array.shape) != 2 or points_array.shape[1] != 2:
+            return 0
+            
+        # 检查点数量
+        if points_array.shape[0] < 3:
+            return 0
+        
+        # 检查是否包含无效值
+        if np.any(np.isnan(points_array)) or np.any(np.isinf(points_array)):
+            return 0
+            
+        area = cv2.contourArea(points_array)
+        if area < 0:
+            area = abs(area)  # 确保面积为正值
+
+        return area
+    except Exception as e:
+        # 静默处理异常，返回0
+        return 0
 
 
 # def draw_with_chinese(img, text, position, font_size):
@@ -179,6 +215,7 @@ def adjust_parameter(image_size, base_size=1000):
 def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None, is_api=False, rectangle_bbox=False):
     """
     在图像上绘制检测结果，包括边界框、类别名称和掩码（如果有）
+    注意：所有分割结果（string和component）都使用边界框面积，不使用掩码面积
 
     Args:
         image (numpy.ndarray): 输入图像
@@ -192,60 +229,87 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
     adjust_param = adjust_parameter(image.shape[:2])
     spacing = int(20 * adjust_param)
 
+    # 统一使用边界框面积，不管是否有掩码
+    x1, y1, x2, y2 = bbox
+    aim_frame_area = (x2 - x1) * (y2 - y1)
+
     if mask is None:
-        x1, y1, x2, y2 = bbox
-        aim_frame_area = (x2 - x1) * (y2 - y1)
+        # 没有掩码，绘制边界框
         cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
         image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
-        y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
+        y_offset = int(50 * adjust_param)
     else:
-        mask_points = np.concatenate(mask)
-        aim_frame_area = calculate_polygon_area(mask_points)
-        mask_color = generate_color_based_on_name(name)
+        # 有掩码，绘制掩码用于可视化，但面积仍使用边界框
         try:
-            overlay = image.copy()
-            cv2.fillPoly(overlay, [mask_points.astype(np.int32)], mask_color)
-            image = cv2.addWeighted(overlay, 0.3, image, 0.7, 0)
-            cv2.drawContours(image, [mask_points.astype(np.int32)], -1, color=color, thickness=int(8 * adjust_param))
+            # 处理掩码点数据
+            if isinstance(mask, list) and len(mask) > 0:
+                mask_points = np.concatenate(mask) if len(mask) > 1 else mask[0]
+            else:
+                mask_points = np.array(mask)
+            
+            # 验证掩码点格式
+            if mask_points.size == 0:
+                # 掩码为空，只绘制边界框
+                cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
+                image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+                y_offset = int(50 * adjust_param)
+                return image, aim_frame_area
+            
+            # 重塑掩码点为正确格式
+            if len(mask_points.shape) == 1:
+                if mask_points.shape[0] % 2 != 0:
+                    # 掩码格式错误，只绘制边界框
+                    cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
+                    image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+                    y_offset = int(50 * adjust_param)
+                    return image, aim_frame_area
+                mask_points = mask_points.reshape(-1, 2)
+            
+            # 检查点数量和坐标有效性
+            if mask_points.shape[0] < 3 or np.any(np.isnan(mask_points)) or np.any(np.isinf(mask_points)):
+                # 掩码数据无效，只绘制边界框
+                cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
+                image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+                y_offset = int(50 * adjust_param)
+                return image, aim_frame_area
+            
+            mask_color = generate_color_based_on_name(name)
+            mask_points_int = mask_points.astype(np.int32)
+            
+            # 验证点数组格式是否符合OpenCV要求
+            if mask_points_int.shape[0] >= 3 and mask_points_int.shape[1] == 2:
+                # 绘制掩码用于可视化
+                overlay = image.copy()
+                cv2.fillPoly(overlay, [mask_points_int], mask_color)
+                image = cv2.addWeighted(overlay, 0.3, image, 0.7, 0)
+                cv2.drawContours(image, [mask_points_int], -1, color=color, thickness=int(8 * adjust_param))
 
-            # 绘制矩形包围框（如果启用）
-            if rectangle_bbox:
-                x, y, w, h = cv2.boundingRect(mask_points.astype(np.int32))
-                cv2.rectangle(
-                    image, 
-                    (x, y), 
-                    (x + w, y + h), 
-                    color=color, 
-                    thickness=int(5 * adjust_param)
-                )
+                # 绘制矩形包围框（如果启用）
+                if rectangle_bbox:
+                    x, y, w, h = cv2.boundingRect(mask_points_int)
+                    cv2.rectangle(
+                        image, 
+                        (x, y), 
+                        (x + w, y + h), 
+                        color=color, 
+                        thickness=int(5 * adjust_param)
+                    )
 
-            # 计算面积、周长、圆度
-            area = cv2.contourArea(mask_points.astype(np.int32))
-            perimeter = cv2.arcLength(mask_points.astype(np.int32), True)
-            circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
-
-            # 计算色彩
-            mask = np.zeros(image.shape[:2], dtype=np.uint8)
-            cv2.drawContours(mask, [mask_points.astype(np.int32)], -1, 255, -1)
-            color_points = cv2.findNonZero(mask)
-            selected_points = color_points[np.random.choice(color_points.shape[0], 5, replace=False)]
-            colors = np.mean([image[y, x] for x, y in selected_points[:, 0]], axis=0)
-            color_str = f"({colors[0]:.1f}, {colors[1]:.1f}, {colors[2]:.1f})"
-
-            # 绘制类别名称
-            x, y = np.min(mask_points, axis=0).astype(int)
-            image = draw_with_chinese(image, name, (x, y - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
-            y_offset = int(50 * adjust_param)  # 类别名称上方绘制，其下方留出空间
-
-            # 绘制面积、周长、圆度和色彩值
-            # metrics = [("Area", area), ("Perimeter", perimeter), ("Circularity", circularity), ("Color", color_str)]
-            # for idx, (metric_name, metric_value) in enumerate(metrics):
-            #     text = f"{metric_name}: {metric_value}"
-            #     image = draw_with_chinese(image, text, (x, y - y_offset - spacing * (idx + 1)),
-            #                               font_size=int(35 * adjust_param), color=color)
-
+                # 绘制类别名称
+                x, y = np.min(mask_points_int, axis=0).astype(int)
+                image = draw_with_chinese(image, name, (x, y - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+                y_offset = int(50 * adjust_param)
+            else:
+                # 掩码格式仍然不正确，使用边界框绘制
+                cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
+                image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+                y_offset = int(50 * adjust_param)
+                
         except Exception as e:
-            print(f"An error occurred: {e}")
+            # 处理掩码异常，回退到边界框绘制
+            cv2.rectangle(image, (x1, y1), (x2, y2), color=color, thickness=int(5 * adjust_param))
+            image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
+            y_offset = int(50 * adjust_param)
 
     # 在检测框中间绘制行号
     if line_number is not None and not is_api:
@@ -255,18 +319,6 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
         image = draw_with_chinese(image, str(line_number), (center_x, center_y), font_size=int(20 * adjust_param), color=color)
 
     return image, aim_frame_area
-
-
-def calculate_polygon_area(points):
-    """
-    计算多边形的面积
-
-    Args:
-        points (numpy.ndarray): 多边形的顶点坐标，形状为 (N, 2)，其中 N 是顶点数量
-    """
-    if len(points) < 3:  # 多边形至少需要3个顶点
-        return 0
-    return cv2.contourArea(points)
 
 
 def format_time(seconds):
@@ -850,11 +902,18 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
 
     Args:
         detections (list): Detection results with component and string objects.
-        angle_threshold (float): Allowed angle deviation in degrees.
+        angle_threshold (float): Minimum angle deviation from mean angle in degrees.
+                                If standard deviation is large, uses dynamic threshold (std * 2).
         center_ratio (float): Allowed center deviation ratio.
 
     Returns:
         list: misaligned component detections.
+        
+    Detection Logic:
+        - Calculates mean angle of all components in each string
+        - Components with angle deviation > threshold from mean are marked as misaligned
+        - Uses dynamic threshold when angle variation is high (std > 1°)
+        - Also checks for position misalignment based on expected spacing
     """
 
     strings = []
@@ -919,8 +978,14 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
         if not comps_in_string:
             continue
 
+        # 计算角度统计信息
         angles = [c["angle"] for c in comps_in_string]
-        median_angle = np.median(angles)
+        mean_angle = np.mean(angles)  # 使用平均角度
+        angle_std = np.std(angles)    # 计算角度标准差
+        
+        # 如果标准差太小（所有角度都很接近），使用固定阈值
+        # 如果标准差较大，使用动态阈值
+        dynamic_angle_threshold = max(angle_threshold, angle_std * 2.0) if angle_std > 1.0 else angle_threshold
 
         centers = np.array([c["center"] for c in comps_in_string])
         centers_sorted = centers[centers[:, 0].argsort()]
@@ -932,13 +997,14 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
             median_space = 0
 
         for idx, comp in enumerate(comps_in_string):
-            angle_dev = abs(comp["angle"] - median_angle)
+            # 计算与平均角度的偏差
+            angle_dev = abs(comp["angle"] - mean_angle)
             center_dev = 0
             if median_space > 0:
                 expected_x = centers_sorted[0, 0] + idx * median_space
                 center_dev = abs(comp["center"][0] - expected_x)
 
-            if angle_dev > angle_threshold or (
+            if angle_dev > dynamic_angle_threshold or (
                 median_space > 0 and center_dev > center_ratio * median_space
             ):
                 # 确保mask格式与draw_detections期望的格式一致

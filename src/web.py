@@ -2328,16 +2328,25 @@ class Detection_UI:
         # 如果有有效的检测结果
         if det is not None and len(det):
             det_info = self.model.postprocess(pred)  # 后处理预测结果
+            
+            # 只对包含string类型的检测结果进行缺失面板和错位面板检测
             if (
                 self.show_missing_panel
                 and self.model_type == get_system_default("model_type_segmentation")
             ):
-                det_info.extend(compute_missing_panels(det_info, image.shape))
+                # 检查是否有string类型的检测结果
+                has_string = any(info.get("class_name") == "string" for info in det_info)
+                if has_string:
+                    det_info.extend(compute_missing_panels(det_info, image.shape))
+                    
             if (
                 self.show_misaligned_panel
                 and self.model_type == get_system_default("model_type_segmentation")
             ):
-                det_info.extend(compute_misaligned_panels(det_info))
+                # 检查是否有string类型的检测结果
+                has_string = any(info.get("class_name") == "string" for info in det_info)
+                if has_string:
+                    det_info.extend(compute_misaligned_panels(det_info))
             if len(det_info):
                 disp_res = ResultLogger()
                 res = None
