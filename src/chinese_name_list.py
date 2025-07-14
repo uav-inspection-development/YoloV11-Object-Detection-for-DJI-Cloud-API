@@ -114,5 +114,6 @@ Other_class_colors = {
 
 Segmentation_class_colors = {
     "component": (0, 255, 0),                # Green for single solar panels
-    "string": (0, 0, 255)                      # Blue for strings
+    "string": (0, 0, 255),                     # Blue for strings
+    "missing_panel": (255, 0, 255)             # Magenta for missing panels
 }

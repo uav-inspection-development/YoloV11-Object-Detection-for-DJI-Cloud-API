@@ -796,3 +796,45 @@ def compute_inclusion_relations(detections):
         records.append([f"string_{s_idx}", count])
 
     return pd.DataFrame(records, columns=["组串编号", "包含组件数"])
+
+
+def compute_missing_panels(detections, image_shape, min_area=1000):
+    """Detect regions inside each string bbox that lack components."""
+
+    height, width = image_shape[:2]
+    strings = []
+    components = []
+
+    for det in detections:
+        if det.get("class_name") == "string":
+            strings.append(det)
+        elif det.get("class_name") == "component":
+            components.append(det)
+
+    missing = []
+    for s in strings:
+        x1_s, y1_s, x2_s, y2_s = s["bbox"]
+        mask = np.zeros((height, width), dtype=np.uint8)
+        cv2.rectangle(mask, (x1_s, y1_s), (x2_s, y2_s), 255, -1)
+
+        for c in components:
+            x1_c, y1_c, x2_c, y2_c = c["bbox"]
+            if x1_c >= x1_s and y1_c >= y1_s and x2_c <= x2_s and y2_c <= y2_s:
+                cv2.rectangle(mask, (x1_c, y1_c), (x2_c, y2_c), 0, -1)
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            x, y, w, h = cv2.boundingRect(cnt)
+            if area >= min_area and not (x == x1_s and y == y1_s and x + w == x2_s and y + h == y2_s):
+                missing.append(
+                    {
+                        "class_name": "missing_panel",
+                        "bbox": [x, y, x + w, y + h],
+                        "score": 1.0,
+                        "class_id": len(detections),
+                        "mask": cnt.reshape(-1, 2),
+                    }
+                )
+
+    return missing

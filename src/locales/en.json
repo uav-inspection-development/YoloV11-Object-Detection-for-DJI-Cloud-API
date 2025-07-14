@@ -90,7 +90,8 @@
     "enable_rtsp_output": "Enable RTSP Output",
     "rtsp_output_url": "RTSP Output URL",
     "enable_gps_parsing": "Parse GPS",
-    "show_inclusion_relationship": "Show Inclusion Table"
+    "show_inclusion_relationship": "Show Inclusion Table",
+    "show_missing_panel": "Show Missing Modules"
   },
   "SIDEBAR_OPTIONS": {
     "aspect_ratios": ["16:9", "4:3", "Free"],
@@ -131,7 +132,8 @@
     "rtsp_output_hint": "💡 Provide RTSP/RTMP url for streaming.",
     "clear_files_success": "Files cleared!",
     "gps_parsing_hint": "💡 Parse RTK GPS info in results.",
-    "inclusion_relationship_hint": "💡 Count modules per string"
+    "inclusion_relationship_hint": "💡 Count modules per string",
+    "missing_panel_hint": "💡 Highlight missing modules within strings"
   },
   "MAIN_HEADERS": {
     "video_image_detection_system": "📷 Video/Image Detection",
@@ -343,7 +345,8 @@
     },
     "Segmentation": {
       "component": "Component",
-      "string": "String"
+      "string": "String",
+      "missing_panel": "Module Missing"
     }
   }
 }
