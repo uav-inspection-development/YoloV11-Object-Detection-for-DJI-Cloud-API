@@ -257,7 +257,9 @@
     "model_class_mismatch": "⚠️ Classes mismatch. Check model.",
     "default_model_load_error": "⚠️ Cannot load default model: {error}",
     "model_class_auto_adjusted": "⚠️ Classes auto adjusted!",
-    "unsupported_image_type": "⚠️ Unsupported image type!"
+    "unsupported_image_type": "⚠️ Unsupported image type!",
+    "no_licensed_task_types": "❌ Error: No licensed task types available",
+    "no_licensed_image_types": "❌ Error: No licensed image types available"
   },
   "WARNING_MESSAGES": {
     "frame_id_out_of_range_warning": "⚠️ Frame {frame_id} out of range (total {total})",
@@ -270,7 +272,8 @@
     "loading": "⏳ Processing...",
     "no_results": "⚠️ No results yet",
     "ai_detection_running": "🤖 AI detection running...",
-    "oauth_error": "❌ Cannot get ACCESS_TOKEN. Check credentials and token endpoint."
+    "env_vars_missing": "❌ Error: Missing required environment variables.\nPlease set the following variables:\n  - OAUTH2_TOKEN_URL\n  - CLIENT_ID\n  - CLIENT_SECRET",
+    "oauth_token_failed": "❌ Failed to retrieve ACCESS_TOKEN. Please check your credentials and token endpoint."
   },
   "EXPORT_MESSAGES": {
     "export_success": "✅ {file_type} exported:\n{filename}",

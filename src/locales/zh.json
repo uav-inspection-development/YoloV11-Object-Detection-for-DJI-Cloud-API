@@ -283,7 +283,9 @@
     "model_class_mismatch": "⚠️ 错误: 模型类别与选定类别不匹配，请检查模型文件或重新选择类别！",
     "default_model_load_error": "⚠️ 错误: 无法加载默认模型文件，请检查文件路径或文件是否存在！错误信息: {error}",
     "model_class_auto_adjusted": "⚠️ 警告: 模型类别与选定类别已自动调整！",
-    "unsupported_image_type": "⚠️ 错误: 不支持的图像类型！"
+    "unsupported_image_type": "⚠️ 错误: 不支持的图像类型！",
+    "no_licensed_task_types": "❌ 错误: 没有可用的授权任务类型",
+    "no_licensed_image_types": "❌ 错误: 没有可用的授权图像类型"
   },
   "WARNING_MESSAGES": {
     "frame_id_out_of_range_warning": "⚠️ 警告: 选择的帧ID {frame_id} 超出范围！当前有 {total} 张图片。",
@@ -296,6 +298,8 @@
     "loading": "⏳ 正在处理，请稍候...",
     "no_results": "⚠️ 暂无检测结果，请先进行检测",
     "ai_detection_running": "🤖 正在进行AI检测...",
+    "env_vars_missing": "❌ 错误: 缺少必需的环境变量。\n请设置以下变量:\n  - OAUTH2_TOKEN_URL\n  - CLIENT_ID\n  - CLIENT_SECRET",
+    "oauth_token_failed": "❌ 获取ACCESS_TOKEN失败。请检查您的凭据和令牌端点。",
     "oauth_error": "❌ 错误: 无法获取ACCESS_TOKEN，请检查您的凭据和token端点。"
   },
   "EXPORT_MESSAGES": {

@@ -183,21 +183,13 @@ class Detection_UI:
 
             # 验证环境变量是否存在
             if not OAUTH2_TOKEN_URL or not CLIENT_ID or not CLIENT_SECRET:
-                st.error(
-                    "Error: Missing required environment variables.\n"
-                    "Please set the following variables:\n"
-                    "  - OAUTH2_TOKEN_URL\n"
-                    "  - CLIENT_ID\n"
-                    "  - CLIENT_SECRET\n"
-                )
+                st.error(get_general_message("env_vars_missing"))
                 st.stop()
 
             # 获取 OAuth2 令牌
             access_token = get_access_token(OAUTH2_TOKEN_URL, CLIENT_ID, CLIENT_SECRET)
             if not access_token:
-                st.error(
-                    "Failed to retrieve ACCESS_TOKEN. Please check your credentials and token endpoint."
-                )
+                st.error(get_general_message("oauth_token_failed"))
                 st.stop()
 
         self.from_streamlit = from_streamlit
@@ -816,7 +808,7 @@ class Detection_UI:
         available_task_types = get_sidebar_option("task_types")
         task_options = get_enabled_task_types(available_task_types, self.enabled_features)
         if not task_options:
-            st.error("No licensed task types available")
+            st.error(get_model_message("no_licensed_task_types"))
             st.stop()
 
         self.model_type = st.sidebar.radio(
@@ -870,7 +862,7 @@ class Detection_UI:
 
         available_options = [opt for opt in available_options if is_feature_enabled(opt, self.enabled_features) or opt == "其他"]
         if not available_options:
-            st.error("No licensed image types available")
+            st.error(get_model_message("no_licensed_image_types"))
             st.stop()
 
         # 添加图像类型选择
