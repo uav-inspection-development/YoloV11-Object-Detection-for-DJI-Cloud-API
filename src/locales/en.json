@@ -451,12 +451,6 @@
     "confidence_format": "{value:.2f}",
     "percentage_format": "{value:.1f}%"
   },
-  "LEGACY_COLUMNS": {
-    "recognition_result": "Recognition Result",
-    "location": "Location",
-    "confidence": "Confidence",
-    "time_taken": "Time Taken"
-  },
   "EXPORT_MESSAGES": {
     "export_success": "✅ {file_type} exported:\n{filename}",
     "export_error": "❌ Export failed: {error}"
@@ -541,11 +535,12 @@
     }
   },
   "TABLE_COLUMNS": {
-    "detection_result": "Recognition Result",
+    "confidence": "Confidence",
+    "detection_result": "Detection Result",
     "type": "Type",
-    "location_pixel": "Location (pixel)",
-    "area_pixel": "Area (pixel)",
-    "time_seconds": "Time (s)",
+    "location": "Location (pixel)",
+    "area": "Area (pixel)",
+    "time": "Time (s)",
     "file_path": "File Path",
     "string_id": "String ID",
     "component_count": "Component Count",

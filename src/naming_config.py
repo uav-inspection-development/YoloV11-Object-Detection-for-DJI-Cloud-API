@@ -258,15 +258,6 @@ def get_ui_message(message_type: str, **kwargs) -> str:
         return template
 
 
-def get_legacy_column(column_type: str, **kwargs) -> str:
-    """Get legacy column name for a given type."""
-    template = globals().get("LEGACY_COLUMNS", {}).get(column_type, column_type)
-    try:
-        return template.format(**kwargs)
-    except KeyError:
-        return template
-
-
 def get_table_column(key: str, **kwargs) -> str:
     """Get table column header for a given key."""
     template = _get("TABLE_COLUMNS", key)

@@ -477,12 +477,6 @@
     "confidence_format": "{value:.2f}",
     "percentage_format": "{value:.1f}%"
   },
-  "LEGACY_COLUMNS": {
-    "recognition_result": "识别结果",
-    "location": "位置",
-    "confidence": "置信度",
-    "time_taken": "用时"
-  },
   "EXPORT_MESSAGES": {
     "export_success": "✅ {file_type}已成功导出：\n{filename}",
     "export_error": "❌ 导出失败：{error}"
@@ -567,11 +561,12 @@
     }
   },
   "TABLE_COLUMNS": {
-    "detection_result": "识别结果",
+    "confidence": "置信度",
+    "detection_result": "检测结果",
     "type": "类型",
-    "location_pixel": "位置(pixel)",
-    "area_pixel": "面积(pixel)",
-    "time_seconds": "时间(s)",
+    "location": "位置(pixel)",
+    "area": "面积(pixel)",
+    "time": "时间(s)",
     "file_path": "文件路径",
     "string_id": "组串编号",
     "component_count": "包含组件数",

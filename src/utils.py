@@ -64,10 +64,10 @@ def concat_results(result, location, confidence, time):
     """
     # 创建一个包含这些信息的 DataFrame
     result_data = {
-        "识别结果": [result],
-        "位置": [location],
-        "置信度": [confidence],
-        "用时": [time]
+        get_table_column("detection_result"): [result],
+        get_table_column("location"): [location],
+        get_table_column("area"): [confidence],
+        get_table_column("time"): [time]
     }
 
     results_df = pd.DataFrame(result_data)
@@ -112,41 +112,37 @@ def calculate_polygon_area(points):
     """
     if points is None:
         return 0
-    
-    try:
-        # 确保points是正确的格式和类型
-        points_array = np.array(points, dtype=np.float32)
-        
-        # 检查点数组的基本格式
-        if points_array.size == 0:
-            return 0
-            
-        # 处理一维数组情况，重塑为(N, 2)
-        if len(points_array.shape) == 1:
-            if points_array.shape[0] % 2 != 0:
-                return 0
-            points_array = points_array.reshape(-1, 2)
-        
-        # 检查是否为正确的二维格式
-        if len(points_array.shape) != 2 or points_array.shape[1] != 2:
-            return 0
-            
-        # 检查点数量
-        if points_array.shape[0] < 3:
-            return 0
-        
-        # 检查是否包含无效值
-        if np.any(np.isnan(points_array)) or np.any(np.isinf(points_array)):
-            return 0
-            
-        area = cv2.contourArea(points_array)
-        if area < 0:
-            area = abs(area)  # 确保面积为正值
 
-        return area
-    except Exception as e:
-        # 静默处理异常，返回0
+    # 确保points是正确的格式和类型
+    points_array = np.array(points, dtype=np.float32)
+
+    # 检查点数组的基本格式
+    if points_array.size == 0:
         return 0
+
+    # 处理一维数组情况，重塑为(N, 2)
+    if len(points_array.shape) == 1:
+        if points_array.shape[0] % 2 != 0:
+            return 0
+        points_array = points_array.reshape(-1, 2)
+
+    # 检查是否为正确的二维格式
+    if len(points_array.shape) != 2 or points_array.shape[1] != 2:
+        return 0
+
+    # 检查点数量
+    if points_array.shape[0] < 3:
+        return 0
+
+    # 检查是否包含无效值
+    if np.any(np.isnan(points_array)) or np.any(np.isinf(points_array)):
+        return 0
+
+    area = cv2.contourArea(points_array)
+    if area < 0:
+        area = abs(area)  # 确保面积为正值
+
+    return area
 
 
 # def draw_with_chinese(img, text, position, font_size):

@@ -51,9 +51,9 @@ class ResultLogger:
         self.results_df = pd.DataFrame(columns=[
             get_table_column("detection_result"),
             get_table_column("type"),
-            get_table_column("location_pixel"),
-            get_table_column("area_pixel"),
-            get_table_column("time_seconds")
+            get_table_column("location"),
+            get_table_column("area"),
+            get_table_column("time")
         ])
 
     def concat_results(self, result, chinese_name, location, confidence, time):
@@ -72,11 +72,11 @@ class ResultLogger:
         """
         # 创建一个包含这些信息的字典
         result_data = {
-            get_table_column("recognition_result"): [result],
+            get_table_column("detection_result"): [result],
             get_table_column("type"): [chinese_name],
-            get_table_column("location_pixel"): [location],
-            get_table_column("area_pixel"): [confidence],
-            get_table_column("time_s"): [time]
+            get_table_column("location"): [location],
+            get_table_column("area"): [confidence],
+            get_table_column("time"): [time]
         }
 
         # 创建一个新的DataFrame并将其添加到实例的DataFrame
@@ -107,9 +107,9 @@ class LogTable:
             get_table_column("file_path"),
             get_table_column("detection_result"),
             get_table_column("type"),
-            get_table_column("location_pixel"),
-            get_table_column("area_pixel"),
-            get_table_column("time_seconds")
+            get_table_column("location"),
+            get_table_column("area"),
+            get_table_column("time")
         ]
         self.data = pd.DataFrame(columns=self.columns)
 
@@ -731,12 +731,34 @@ class LogTable:
         Returns:
             None
         """
+        # 动态获取当前语言的列名
+        current_columns = [
+            get_table_column("file_path"),
+            get_table_column("detection_result"),
+            get_table_column("type"),
+            get_table_column("location"),
+            get_table_column("area"),
+            get_table_column("time")
+        ]
+
         # 判断DataFrame的长度是否超过500
         if len(self.data) > 500:
             # 如果超过500，仅显示最新的500条记录
-            display_data = self.data.head(500)
+            display_data = self.data.head(500).copy()
         else:
             # 如果不超过，显示全部数据
-            display_data = self.data
+            display_data = self.data.copy()
+
+        # 如果有数据，动态更新列名以支持语言切换
+        if not display_data.empty:
+            # 确保列数匹配
+            if len(display_data.columns) == len(current_columns):
+                display_data.columns = current_columns
+            else:
+                # 如果列数不匹配，重新创建DataFrame
+                display_data = pd.DataFrame(display_data.values, columns=current_columns[:len(display_data.columns)])
+        else:
+            # 如果没有数据，创建一个带有正确列名的空DataFrame
+            display_data = pd.DataFrame(columns=current_columns)
 
         log_table_placeholder.table(display_data)

@@ -83,7 +83,6 @@ from naming_config import (
     get_gps_message,
     get_report_field,
     get_ui_message,
-    get_legacy_column,
     generate_filename,
     # UI 获取函数
     get_sidebar_header,
@@ -2063,9 +2062,9 @@ class Detection_UI:
                             columns=[
                                 get_table_column("detection_result"),
                                 get_table_column("type"),
-                                get_table_column("location_pixel"),
-                                get_table_column("area_pixel"),
-                                get_table_column("time_seconds"),
+                                get_table_column("location"),
+                                get_table_column("area"),
+                                get_table_column("time"),
                             ]
                         )
                     )
@@ -2197,9 +2196,9 @@ class Detection_UI:
                             columns=[
                                 get_table_column("detection_result"),
                                 get_table_column("type"),
-                                get_table_column("location_pixel"),
-                                get_table_column("area_pixel"),
-                                get_table_column("time_seconds"),
+                                get_table_column("location"),
+                                get_table_column("area"),
+                                get_table_column("time"),
                             ]
                         )
                     )
@@ -2213,9 +2212,9 @@ class Detection_UI:
                         columns=[
                             get_table_column("detection_result"),
                             get_table_column("type"),
-                            get_table_column("location_pixel"),
-                            get_table_column("area_pixel"),
-                            get_table_column("time_seconds"),
+                            get_table_column("location"),
+                            get_table_column("area"),
+                            get_table_column("time"),
                         ]
                     )
                 )
@@ -2563,7 +2562,7 @@ class Detection_UI:
             else:
                 self.current_image_category_placeholder.write(f"📊 **{img_name}** 中未检测到目标")
                 self.current_image_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")]))
-                
+
         except Exception as e:
             st.error(f"更新当前图片类别统计时出错: {str(e)}")
             self.current_image_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")]))
@@ -2573,19 +2572,19 @@ class Detection_UI:
         try:
             saved_results = getattr(self.logTable, "saved_results", [])
             saved_names = st.session_state.get("saved_names", [])
-            
+
             if not saved_results:
                 # 如果没有检测结果，显示空表格
                 empty_df = pd.DataFrame(columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")])
                 self.total_category_placeholder.table(empty_df)
                 return
-            
+
             # 统计每个类别在各图片中的分布
             category_distribution = {}
-            
+
             for frame_id, results in enumerate(saved_results):
-                img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"图片_{frame_id+1}"
-                
+                img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"{get_detection_message("image_default_name").format(idx=frame_id + 1)}"
+
                 if results:
                     frame_categories = {}
                     for detInfo in results:
@@ -2595,13 +2594,13 @@ class Detection_UI:
                                 frame_categories[category] += 1
                             else:
                                 frame_categories[category] = 1
-                    
+
                     # 记录每个类别在当前图片中的分布
                     for category, count in frame_categories.items():
                         if category not in category_distribution:
                             category_distribution[category] = []
                         category_distribution[category].append(f"{img_name}({count})")
-            
+
             # 转换为DataFrame
             if category_distribution:
                 total_data = []
@@ -2609,16 +2608,16 @@ class Detection_UI:
                     total_count = sum(int(item.split('(')[1].split(')')[0]) for item in distribution)
                     distribution_str = ", ".join(distribution)
                     total_data.append([category, total_count, distribution_str])
-                
+
                 total_counts = pd.DataFrame(total_data, columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")])
                 total_counts = total_counts.sort_values(get_table_column("total_count"), ascending=False)
-                
+
                 self.total_category_placeholder.write(f"📈 **总体统计** (共{len(saved_results)}张图片):")
                 self.total_category_placeholder.table(total_counts)
             else:
                 self.total_category_placeholder.write("📈 **总体统计**: 暂无检测结果")
                 self.total_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")]))
-                
+
         except Exception as e:
             st.error(f"更新总体类别统计时出错: {str(e)}")
             self.total_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")]))
