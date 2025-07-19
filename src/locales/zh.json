@@ -58,15 +58,20 @@
     "input_source_selection": "选择输入源",
     "camera_selection": "选择摄像头序号",
     "rtsp_input": "输入RTSP/RTMP地址",
+    "rtsp_input_example": "例如：rtsp://username:password@ip:port/stream",
     "upload_images": "上传图片",
     "upload_videos": "上传视频",
     "display_uploaded_files": "显示已上传文件",
     "select_image_folder": "选择图片文件夹",
     "input_folder_path": "输入文件夹路径",
+    "folder_path_example": "例如：D:/images",
     "display_uploaded_images": "显示已上传的图片",
     "display_uploaded_video": "显示已上传的视频",
     "select_video_type": "选择视频类型",
     "select_video_folder": "选择视频文件夹",
+    "input_video_folder_path": "输入视频文件夹路径",
+    "video_folder_path_example": "例如：D:/videos",
+    "total_video_count": "📂 视频总数: {count}",
     "clear_uploaded_files": "🗑️ 清空已上传文件",
     "enable_video_output": "启用视频输出",
     "enable_pseudo_color": "启用伪彩色转换",
@@ -87,8 +92,10 @@
     "adjust_distortion_coefficient": "调整畸变系数 (k1)",
     "select_preview_image": "选择预览图片",
     "output_file_path": "输出文件路径",
+    "output_file_path_example": "例如：D:/output 或 D:/videos",
     "enable_rtsp_output": "启用RTSP输出",
     "rtsp_output_url": "RTSP输出地址",
+    "rtsp_output_url_example": "例如：rtsp://username:password@ip:port/stream",
     "enable_gps_parsing": "解析并显示经纬度",
     "clear_after_export": "导出后清空检测结果",
     "show_inclusion_relationship": "显示包含关系表",
@@ -202,6 +209,11 @@
     "config_label_available_classes": "- 可用类别(中文)",
     "config_label_selected_classes": "- 选择的类别(英文)",
     "config_label_model_classes": "- 模型类别",
+    "config_label_class_mapping": "- 类别映射",
+    "config_label_detected_classes": "- 当前检测到的类别",
+    "config_label_class_matches": "- 类别匹配状态",
+    "config_label_color_list_length": "- 颜色列表长度",
+    "config_label_first_colors": "- 前3个颜色",
     "image_slider_label": "选择图片"
   },
   "MAIN_OPTIONS": {
@@ -221,7 +233,9 @@
     "sidebar_prev": "⬅️",
     "sidebar_next": "➡️",
     "prev_btn": "⬅️ 上一张",
-    "next_btn": "下一张 ➡️"
+    "next_btn": "下一张 ➡️",
+    "select_all": "全选",
+    "deselect_all": "全不选"
   },
   "DETECTION_MESSAGES": {
     "no_detection_results": "⚠️ 暂无检测结果，请先上传图片并开始检测",
@@ -487,7 +501,11 @@
     "rtsp_detection_view": "RTSP识别画面",
     "rtsp_original_view": "RTSP原始画面",
     "detection_view": "识别画面",
-    "original_view": "原始画面"
+    "original_view": "原始画面",
+    "original_image_caption": "原始图片: {filename}",
+    "adjusted_image_caption": "调整后的图片: {filename}",
+    "file_name": "📄 文件名: {filename}",
+    "image_size": "📐 图片大小: {height} x {width}"
   },
   "STATISTICS_LABELS": {
     "total_images_info": "共有 {count} 张检测结果图片",
@@ -507,7 +525,9 @@
     "gps_latitude": "🌐 纬度",
     "gps_longitude": "🌐 经度",
     "gps_altitude": "🏔️ 高度",
-    "gps_time": "🕒 GPS时间"
+    "gps_time": "🕒 GPS时间",
+    "above_sea_level": "海平面以上",
+    "below_sea_level": "海平面以下"
   },
   "FILENAME_TEMPLATES": {
     "report": "光伏板{task_type}报告-{image_type}-{timestamp}",

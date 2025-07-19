@@ -58,15 +58,20 @@
     "input_source_selection": "Input Source",
     "camera_selection": "Camera Index",
     "rtsp_input": "RTSP/RTMP URL",
+    "rtsp_input_example": "Example: rtsp://username:password@ip:port/stream",
     "upload_images": "Upload Images",
     "upload_videos": "Upload Videos",
     "display_uploaded_files": "Uploaded Files",
     "select_image_folder": "Select Image Folder",
     "input_folder_path": "Folder Path",
+    "folder_path_example": "Example: D:/images",
     "display_uploaded_images": "Uploaded Images",
     "display_uploaded_video": "Uploaded Videos",
     "select_video_type": "Video Types",
     "select_video_folder": "Select Video Folder",
+    "input_video_folder_path": "Input Video Folder Path",
+    "video_folder_path_example": "Example: D:/videos",
+    "total_video_count": "📂 Total Video Count: {count}",
     "clear_uploaded_files": "🗑️ Clear Uploaded",
     "enable_video_output": "Enable Video Output",
     "enable_pseudo_color": "Enable Pseudo Color",
@@ -87,8 +92,10 @@
     "adjust_distortion_coefficient": "Distortion Coefficient (k1)",
     "select_preview_image": "Preview Image",
     "output_file_path": "Output Path",
+    "output_file_path_example": "Example: D:/output or D:/videos",
     "enable_rtsp_output": "Enable RTSP Output",
     "rtsp_output_url": "RTSP Output URL",
+    "rtsp_output_url_example": "Example: rtsp://username:password@ip:port/stream",
     "enable_gps_parsing": "Parse GPS",
     "clear_after_export": "Clear Data After Export",
     "show_inclusion_relationship": "Show Inclusion Table",
@@ -176,6 +183,11 @@
     "config_label_available_classes": "- Available (CN)",
     "config_label_selected_classes": "- Selected (EN)",
     "config_label_model_classes": "- Model Classes",
+    "config_label_class_mapping": "- Class Mapping",
+    "config_label_detected_classes": "- Currently Detected Classes",
+    "config_label_class_matches": "- Class Match Status",
+    "config_label_color_list_length": "- Color List Length",
+    "config_label_first_colors": "- First 3 Colors",
     "image_slider_label": "Choose Image"
   },
   "MAIN_OPTIONS": {
@@ -195,7 +207,9 @@
     "next_btn": "Next ➡️",
     "pause_detection": "Pause Detection",
     "resume_detection": "Resume Detection",
-    "export_log": "Export Log"
+    "export_log": "Export Log",
+    "select_all": "Select All",
+    "deselect_all": "Deselect All"
   },
   "DETECTION_MESSAGES": {
     "no_detection_results": "⚠️ No results yet. Upload images first.",
@@ -461,7 +475,11 @@
     "rtsp_detection_view": "RTSP Detection",
     "rtsp_original_view": "RTSP Original",
     "detection_view": "Detection",
-    "original_view": "Original"
+    "original_view": "Original",
+    "original_image_caption": "Original Image: {filename}",
+    "adjusted_image_caption": "Adjusted Image: {filename}",
+    "file_name": "📄 File Name: {filename}",
+    "image_size": "📐 Image Size: {height} x {width}"
   },
   "STATISTICS_LABELS": {
     "total_images_info": "Total {count} results",
@@ -481,7 +499,9 @@
     "gps_latitude": "🌐 Latitude",
     "gps_longitude": "🌐 Longitude",
     "gps_altitude": "🏔️ Altitude",
-    "gps_time": "🕒 GPS Time"
+    "gps_time": "🕒 GPS Time",
+    "above_sea_level": "Above Sea Level",
+    "below_sea_level": "Below Sea Level"
   },
   "FILENAME_TEMPLATES": {
     "report": "PV-{task_type}-Report-{image_type}-{timestamp}",

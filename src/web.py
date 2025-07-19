@@ -1098,7 +1098,7 @@ class Detection_UI:
             # 输入 RTSP/RTMP 地址
             self.rtsp_input_url = st.sidebar.text_input(
                 get_sidebar_label("rtsp_input"),
-                placeholder="例如：rtsp://<ip>:<port>/path 或 rtmp://<ip>:<port>/path",
+                placeholder=get_sidebar_label("rtsp_input_example")
             )
             st.sidebar.caption(get_sidebar_hint("rtsp_hint"))
         elif self.input_source == input_options[0]:
@@ -1154,7 +1154,7 @@ class Detection_UI:
             folder_path = st.sidebar.text_input(
                 get_sidebar_label("input_folder_path"),
                 value=st.session_state.get("image_folder_path", ""),
-                placeholder="例如：D:/images",
+                placeholder=get_sidebar_label("folder_path_example")
             )
             image_files = []
             if folder_path and os.path.isdir(folder_path):
@@ -1198,7 +1198,7 @@ class Detection_UI:
                         # 显示前几个文件名
                         st.write(get_statistic_message("example_files"))
                         for i, file in enumerate(image_files[:5]):
-                            st.write(f"  {i+1}. {os.path.basename(file)}")
+                            st.write(f" {i + 1}. {os.path.basename(file)}")
                         if len(image_files) > 5:
                             st.write(
                                 get_sidebar_hint("more_files_remaining").format(
@@ -1236,7 +1236,7 @@ class Detection_UI:
                     for i, video in enumerate(self.uploaded_video[:5]):  # 最多显示前5个
                         video_size = len(video.getvalue()) / (1024 * 1024)  # MB
                         total_size += video_size
-                        st.write(f"{i+1}. {video.name} ({video_size:.1f} MB)")
+                        st.write(f"{i + 1}. {video.name} ({video_size:.1f} MB)")
                     if num_videos > 5:
                         st.write(
                             get_file_message(
@@ -1266,9 +1266,9 @@ class Detection_UI:
                     st.session_state["video_folder_path"] = folder_path
 
             folder_path = st.sidebar.text_input(
-                "输入视频文件夹路径",
+                get_sidebar_label("input_video_folder_path"),
                 value=st.session_state.get("video_folder_path", ""),
-                placeholder="例如：D:/videos",
+                placeholder=get_sidebar_label("video_folder_path_example")
             )
             video_files = []
             if folder_path and os.path.isdir(folder_path):
@@ -1277,7 +1277,7 @@ class Detection_UI:
                     for file in files:
                         if file.lower().endswith(exts):
                             video_files.append(os.path.join(root_dir, file))
-                st.sidebar.write(f"📂 共找到视频数量: {len(video_files)}")
+                st.sidebar.write(get_sidebar_label("total_video_count").format(count=len(video_files)))
                 # 转为文件对象
                 self.uploaded_video = [LocalFileObj(f) for f in video_files]
             else:
@@ -1623,16 +1623,16 @@ class Detection_UI:
                         st.sidebar.image(
                             [image_ini, distorted_image],
                             caption=[
-                                f"原始图像: {file_name}",
-                                f"调整后图像: {file_name}",
+                                get_image_display_label('original_image', filename=file_name),
+                                get_image_display_label('adjusted_image', filename=file_name),
                             ],
                             channels="BGR",
                         )
 
                         # 显示图片信息
-                        st.sidebar.caption(f"📄 文件名: {file_name}")
+                        st.sidebar.caption(get_image_display_label('file_name', filename=file_name))
                         st.sidebar.caption(
-                            f"📐 尺寸: {image_ini.shape[1]} × {image_ini.shape[0]}"
+                            get_image_display_label('image_size', height=image_ini.shape[0], width=image_ini.shape[1])
                         )
 
                 except Exception as e:
@@ -1706,8 +1706,8 @@ class Detection_UI:
                 st.sidebar.image(
                     [image_ini, distorted_image],
                     caption=[
-                        f"原始图像: {self.uploaded_file.name}",
-                        f"调整后的图像: {self.uploaded_file.name}",
+                        get_image_display_label("original_image_caption", filename=self.uploaded_file.name),
+                        get_image_display_label("adjusted_image_caption", filename=self.uploaded_file.name),
                     ],
                     channels="BGR",
                 )
@@ -1718,7 +1718,7 @@ class Detection_UI:
         self.output_path = st.sidebar.text_input(
             get_sidebar_label("output_file_path"),
             value=abs_path("../output", path_type="current"),
-            placeholder="例如：../output 或 D:/videos",
+            placeholder=get_sidebar_label("output_file_path_example")
         )
 
         if self.input_source in [input_options[4], input_options[5]]:
@@ -1729,11 +1729,11 @@ class Detection_UI:
         if self.enable_rtsp_output:
             self.rtsp_output_url = st.sidebar.text_input(
                 get_sidebar_label("rtsp_output_url"),
-                placeholder="例如：rtmp://<ip>:<port>/live/stream 或 rtsp://<ip>:<port>/path",
+                placeholder=get_sidebar_label("rtsp_output_url_example"),
             )
             st.sidebar.write(get_sidebar_hint("rtsp_output_hint"))
 
-        # 🔧 调用调试函数
+        # 调用调试函数
         self.debug_detection_settings()
 
     def debug_detection_settings(self):
@@ -1780,22 +1780,22 @@ class Detection_UI:
                     )
 
                 if hasattr(self, "cls_name"):
-                    st.write(f"- 类别映射: {self.cls_name}")
+                    st.write(f"{get_main_label('config_label_class_mapping')}: {self.cls_name}")
 
                 # 显示实时检测信息
                 if hasattr(self, "_debug_detected_classes"):
                     st.write(get_main_header("real_time_detection"))
                     st.write(
-                        f"- 当前检测到的类别: {getattr(self, '_debug_detected_classes', [])}"
+                        f"{get_main_label('config_label_detected_classes')}: {getattr(self, '_debug_detected_classes', [])}"
                     )
                     st.write(
-                        f"- 类别匹配状态: {getattr(self, '_debug_class_matches', {})}"
+                        f"{get_main_label('config_label_class_matches')}: {getattr(self, '_debug_class_matches', {})}"
                     )
 
                 st.subheader(get_main_header("color_settings"))
-                st.write(f"- 颜色列表长度: {len(getattr(self, 'colors', []))}")
+                st.write(f"{get_main_label('config_label_color_list_length')}: {len(getattr(self, 'colors', []))}")
                 if hasattr(self, "colors") and len(self.colors) > 0:
-                    st.write(f"- 前3个颜色: {self.colors[:3]}")
+                    st.write(f"{get_main_label('config_label_first_colors')}: {self.colors[:3]}")
 
     def debug_display_state(self):
         """
@@ -2279,9 +2279,9 @@ class Detection_UI:
                             if "altitude" in gps:
                                 alt = f"{gps['altitude']:.1f}m"
                                 if gps.get('altitude_ref') == 1:
-                                    alt += " (海平面以下)"
+                                    alt += " (" + get_metric_label("below_sea_level") + ")"
                                 else:
-                                    alt += " (海平面以上)"
+                                    alt += " (" + get_metric_label("above_sea_level") + ")"
                             if "gps_timestamp" in gps and "gps_datestamp" in gps:
                                 ts = gps["gps_timestamp"]
                                 if isinstance(ts, tuple) and len(ts) == 3:
@@ -2726,10 +2726,10 @@ class Detection_UI:
             if saved_targets_info and idx < len(saved_targets_info):
                 detected_targets = saved_targets_info[idx]
             else:
-                detected_targets = st.session_state.get("select_info", ["全部目标"])
+                detected_targets = st.session_state.get("select_info", [get_system_default("target_all")])
 
             # 从检测目标列表中移除"全部目标"，只保留实际的类别名称
-            available_targets = [target for target in detected_targets if target != "全部目标"]
+            available_targets = [target for target in detected_targets if target != get_system_default("target_all")]
 
             # multiselect动态key，确保当目标列表变化时multiselect会刷新
             multiselect_key = f"multiselect_target_{idx}_{hash(tuple(available_targets))}"
@@ -2741,7 +2741,7 @@ class Detection_UI:
             
             # 🔧 关键修复：自动添加新出现的检测类别（如"光伏板缺失"、"光伏板移位"）
             for target in available_targets:
-                if target not in current_selected and target in ["光伏板缺失", "光伏板移位"]:
+                if target not in current_selected and target in [get_class_name("missing_panel"), get_class_name("misaligned_panel")]:
                     current_selected.append(target)
             
             # 如果没有选中任何目标，默认选择所有目标
@@ -2752,11 +2752,11 @@ class Detection_UI:
             if available_targets:
                 col_select_all, col_select_none = st.columns(2)
                 with col_select_all:
-                    if st.button("全选", key=f"select_all_{idx}"):
+                    if st.button(get_button_text("select_all"), key=f"select_all_{idx}"):
                         st.session_state["multiselect_target"] = available_targets.copy()
                         st.rerun()
                 with col_select_none:
-                    if st.button("全不选", key=f"select_none_{idx}"):
+                    if st.button(get_button_text("deselect_all"), key=f"select_none_{idx}"):
                         st.session_state["multiselect_target"] = []
                         st.rerun()
 
