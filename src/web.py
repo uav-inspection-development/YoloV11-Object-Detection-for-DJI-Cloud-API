@@ -94,6 +94,7 @@ from naming_config import (
     get_main_option,
     get_button_text,
     get_image_display_label,
+    get_about_content,
     get_statistic_label,
     get_status_message,
     get_system_default,
@@ -589,28 +590,17 @@ class Detection_UI:
             get_sidebar_header("about_version").format(version_string=version_string),
             expanded=False,
         ):
-            st.markdown(
-                """
-                ## 关于本应用
-                本应用旨在检测光伏组件的故障，包括：
-                - 可见光故障
-                - 红外热故障
-                - EL隐裂
-                - 其他异常（如异物入侵）
-
-                ### 功能特点：
-                - 使用摄像头或 RTSP/RTMP 流进行实时检测
-                - 批量处理图片和视频
-                - 高级图像校正技术（例如：畸变校正、梯形校正）
-                - 支持多种格式导出检测结果（CSV、Excel、JSON、Word）
-
-                ### 使用技术：
-                - **Streamlit** 用于用户界面
-                - **OpenCV** 用于图像处理
-                - **YOLOv11** 用于目标检测
-                - **NumPy** 用于数值计算
-            """
-            )
+            # 主标题和描述
+            st.subheader(get_about_content('title'))
+            st.markdown(get_about_content('description'))
+            
+            # 功能特点
+            st.subheader(get_about_content('features_title'))
+            st.markdown(get_about_content('features'))
+            
+            # 使用技术
+            st.subheader(get_about_content('tech_title'))
+            st.markdown(get_about_content('technologies'))
 
             # 显示Git版本信息
             if GIT_INFO_AVAILABLE:
@@ -618,16 +608,12 @@ class Detection_UI:
                 git_info_md = format_git_info_for_about()
                 st.markdown(git_info_md)
 
-            st.markdown(
-                """
-                ---
-                ### 作者：
-                由 Phillweston 开发。
-
-                ### 联系方式：
-                如有疑问或需要支持，请联系：lrt2443655975@gmail.com
-            """
-            )
+            # 作者和联系方式
+            st.markdown("---")
+            st.subheader(get_about_content('author_title'))
+            st.markdown(get_about_content('author'))
+            st.subheader(get_about_content('contact_title'))
+            st.markdown(get_about_content('contact'))
 
     def setup_sidebar(self):
         """
@@ -3003,7 +2989,6 @@ class Detection_UI:
             st.rerun()
 
     def process_camera_or_file(self):
-        # FIXME:
         """
         根据输入源类型处理不同的输入（摄像头、文件、RTSP流等）
         """

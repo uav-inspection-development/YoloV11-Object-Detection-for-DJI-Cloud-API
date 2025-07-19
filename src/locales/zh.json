@@ -594,5 +594,17 @@
     "count": "数量",
     "total_count": "总数量",
     "distribution_images": "分布图片"
+  },
+  "ABOUT_SECTION": {
+    "title": "关于本应用",
+    "description": "本应用旨在检测光伏组件的故障，包括：\n- 可见光故障\n- 红外热故障\n- EL隐裂\n- 其他异常（如异物入侵）",
+    "features_title": "功能特点",
+    "features": "- 使用摄像头或 RTSP/RTMP 流进行实时检测\n- 批量处理图片和视频\n- 高级图像校正技术（例如：畸变校正、梯形校正）\n- 支持多种格式导出检测结果（CSV、Excel、JSON、Word）",
+    "tech_title": "使用技术",
+    "technologies": "- **Streamlit** 用于用户界面\n- **OpenCV** 用于图像处理\n- **YOLOv11** 用于目标检测\n- **NumPy** 用于数值计算",
+    "author_title": "作者",
+    "author": "由 Phillweston 开发。",
+    "contact_title": "联系方式",
+    "contact": "如有疑问或需要支持，请联系：lrt2443655975@gmail.com"
   }
 }

@@ -123,6 +123,10 @@ def get_image_display_label(key: str) -> str:
     return _get("IMAGE_DISPLAY_LABELS", key)
 
 
+def get_about_content(key: str) -> str:
+    return _get("ABOUT_SECTION", key)
+
+
 def get_statistic_label(key: str, **kwargs) -> str:
     template = globals().get("STATISTICS_LABELS", {}).get(key, "")
     try:

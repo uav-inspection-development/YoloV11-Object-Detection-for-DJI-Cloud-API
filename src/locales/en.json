@@ -566,7 +566,19 @@
     "component_count": "Component Count",
     "category": "Category",
     "count": "Count",
-    "total_count": "Total Count",
+    "total_count": "Total Count", 
     "distribution_images": "Distribution Images"
+  },
+  "ABOUT_SECTION": {
+    "title": "About This Application",
+    "description": "This application is designed to detect faults in photovoltaic components, including:\n- Visible light faults\n- Infrared thermal faults\n- EL cracks\n- Other anomalies (such as foreign object intrusion)",
+    "features_title": "Features",
+    "features": "- Real-time detection using camera or RTSP/RTMP streams\n- Batch processing of images and videos\n- Advanced image correction techniques (e.g., distortion correction, trapezoid correction)\n- Support for multiple export formats of detection results (CSV, Excel, JSON, Word)",
+    "tech_title": "Technologies Used:",
+    "technologies": "- **Streamlit** for user interface\n- **OpenCV** for image processing\n- **YOLOv11** for object detection\n- **NumPy** for numerical computation",
+    "author_title": "Author",
+    "author": "Developed by Phillweston.",
+    "contact_title": "Contact",
+    "contact": "For questions or support, please contact: lrt2443655975@gmail.com"
   }
 }

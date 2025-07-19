@@ -1,6 +1,7 @@
 import os
 import time
 import cv2
+import traceback
 import pandas as pd
 from pathlib import Path
 from QtFusion.path import abs_path
@@ -712,13 +713,10 @@ class LogTable:
 
             # 保存 Word 文件
             doc.save(word_file_path)
-            # FIXME:
             print(f"{get_system_message('save_to_word_success').format(path=word_file_path)}")
 
         except Exception as e:
-            # FIXME:
             print(f"{get_system_message('save_to_word_failed').format(error=str(e))}")
-            import traceback
             traceback.print_exc()
 
     def update_table(self, log_table_placeholder):
