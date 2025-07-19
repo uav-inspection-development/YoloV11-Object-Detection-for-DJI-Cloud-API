@@ -8,6 +8,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 import exifread
 from hashlib import md5
 from QtFusion.path import abs_path
+from naming_config import get_table_column, get_system_message, get_gps_message
 from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
 from scipy.optimize import minimize
@@ -357,9 +358,9 @@ def save_chinese_image(file_path, image_array):
         # 使用 Pillow 保存图片文件
         image.save(file_path)
 
-        print(f"成功保存图像到: {file_path}")
+        print(f"{get_system_message('save_image_success')}: {file_path}")
     except Exception as e:
-        print(f"保存图像失败: {str(e)}")
+        print(f"{get_system_message('save_image_failed')}: {str(e)}")
 
 
 def convert_to_pseudo_colorizer(image, contrast=1.0, brightness=0):
@@ -446,7 +447,7 @@ def camera_undistortion(frame, camera_matrix=None, dist_coeffs=None):
             undistorted = undistorted[y:y+h, x:x+w]
             return undistorted
         except Exception as e:
-            print(f"去畸变失败: {e}")
+            print(f"{get_system_message('undistort_failed').format(error=str(e))}")
             return frame
     return frame
 
@@ -605,7 +606,7 @@ def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
     """
     largest_cnt = find_largest_valid_contour(image, scale_factor)
     if largest_cnt is None:
-        print("[警告] 未检测到有效边界，返回原图")
+        print(f"[{get_system_message('warning')}] {get_system_message('no_valid_boundaries')}")
         return image
 
     # 使用 approxPolyDP 获取逼近的四边形
@@ -615,7 +616,7 @@ def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
         box = approx.reshape(4, 2)
         box = order_points(box)
     else:
-        print("[警告] 未检测到梯形，返回原图")
+        print(f"[{get_system_message('warning')}] {get_system_message('no_trapezoid_detected')}")
         return image
 
     # 计算目标宽高（保持比例）
@@ -658,7 +659,7 @@ def fill_largest_polygon_white(image, scale_factor=0.1):
     """
     largest_cnt = find_largest_valid_contour(image, scale_factor)
     if largest_cnt is None:
-        print("[警告] 未检测到有效边界，返回原图")
+        print(f"[{get_system_message('warning')}] {get_system_message('no_valid_boundaries')}")
         return image
     polygon_points = largest_cnt.reshape(-1, 2)
     mask = np.zeros(image.shape[:2], dtype=np.uint8)
@@ -770,7 +771,7 @@ def extract_gps_info(image_path):
         return result if result else None
 
     except Exception as e:
-        print(f"提取GPS信息时出错: {e}")
+        print(f"{get_gps_message('extract_gps_error')}: {e}")
         return None
 
 def format_gps_info(gps_info):
@@ -847,7 +848,7 @@ def compute_inclusion_relations(detections):
                 count += 1
         records.append([f"string_{s_idx}", count])
 
-    return pd.DataFrame(records, columns=["组串编号", "包含组件数"])
+    return pd.DataFrame(records, columns=[get_table_column("string_id"), get_table_column("component_count")])
 
 
 def compute_missing_panels(detections, image_shape, min_area=1000):
@@ -966,7 +967,7 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
                         "angle": angle,
                     })
                 except cv2.error as e:
-                    print(f"[警告] 计算最小外接矩形失败: {e}")
+                    print(f"[{get_system_message('warning')}] {get_system_message('min_bounding_rect_failed')}: {e}")
                     # 使用边界框中心作为备选
                     cx, cy = (x1_c + x2_c) / 2, (y1_c + y2_c) / 2
                     comps_in_string.append({

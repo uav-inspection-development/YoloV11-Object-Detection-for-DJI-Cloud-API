@@ -2,23 +2,51 @@
 
 """Class name mappings for different languages."""
 
+import json
+import os
 from typing import Dict
+
 
 def get_current_language():
     """获取当前语言，避免循环导入"""
     try:
         import streamlit as st
         return st.session_state.get("language", "zh")
-    except:
+    except Exception:
         return "zh"  # 默认返回中文
 
-def get_class_names():
-    """从 locale 文件中获取类别名称"""
+
+def _load_translations(lang: str) -> Dict[str, any]:
+    """Load translations from locale files."""
     try:
-        from naming_config import get_class_names as get_locale_class_names
-        return get_locale_class_names()
-    except:
+        locale_dir = os.path.join(os.path.dirname(__file__), "locales")
+        path = os.path.join(locale_dir, f"{lang}.json")
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"无法加载翻译文件 {lang}.json: {e}")
         return {}
+
+
+def get_class_names(category_type=None):
+    """
+    Get class names from locale files.
+    
+    Args:
+        category_type (str, optional): Specific category type to get.
+                                      If None, returns all class names.
+
+    Returns:
+        dict: Class names dictionary
+    """
+    current_lang = get_current_language()
+    translations = _load_translations(current_lang)
+    class_names = translations.get("CLASS_NAMES", {})
+    
+    if category_type:
+        return class_names.get(category_type.upper(), {})
+    return class_names
+
 
 # -----------------------------
 # Globals updated by language

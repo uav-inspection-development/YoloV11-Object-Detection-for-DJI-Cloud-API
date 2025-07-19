@@ -2,6 +2,7 @@ import os
 import time
 import cv2
 import pandas as pd
+from pathlib import Path
 from QtFusion.path import abs_path
 from PIL import Image
 import numpy as np
@@ -9,16 +10,18 @@ from datetime import datetime
 from docx import Document
 from docx.shared import Inches
 from io import BytesIO
+from utils import extract_gps_info, format_gps_info
+from naming_config import (
+    get_system_default,
+    get_table_column,
+    get_system_message,
+    get_gps_message,
+    get_report_field,
+    get_fault_category,
+    get_report_statistic,
+    get_report_table_header
+)
 
-try:
-    from utils import extract_gps_info, format_gps_info
-    GPS_PARSING_AVAILABLE = True
-except ImportError:
-    GPS_PARSING_AVAILABLE = False
-    def extract_gps_info(image_path):
-        return None
-    def format_gps_info(gps_info):
-        return "GPS解析功能不可用"
 
 def save_chinese_image(file_path, image_array):
     """
@@ -35,16 +38,23 @@ def save_chinese_image(file_path, image_array):
         # 使用 Pillow 保存图片文件
         image.save(file_path)
 
-        print(f"成功保存图像到: {file_path}")
+        print(f"{get_system_message('save_image_success').format(path=file_path)}")
     except Exception as e:
-        print(f"保存图像失败: {str(e)}")
+        print(f"{get_system_message('save_image_failed').format(error=str(e))}")
+
 
 class ResultLogger:
     def __init__(self):
         """
         初始化ResultLogger类。
         """
-        self.results_df = pd.DataFrame(columns=["识别结果", "类型","位置(pixel)", "面积(pixel)", "时间(s)"])
+        self.results_df = pd.DataFrame(columns=[
+            get_table_column("detection_result"),
+            get_table_column("type"),
+            get_table_column("location_pixel"),
+            get_table_column("area_pixel"),
+            get_table_column("time_seconds")
+        ])
 
     def concat_results(self, result, chinese_name, location, confidence, time):
         """
@@ -62,11 +72,11 @@ class ResultLogger:
         """
         # 创建一个包含这些信息的字典
         result_data = {
-            "识别结果": [result],
-            "类型": [chinese_name],
-            "位置(pixel)": [location],
-            "面积(pixel)": [confidence],
-            "时间(s)": [time]
+            get_table_column("recognition_result"): [result],
+            get_table_column("type"): [chinese_name],
+            get_table_column("location_pixel"): [location],
+            get_table_column("area_pixel"): [confidence],
+            get_table_column("time_s"): [time]
         }
 
         # 创建一个新的DataFrame并将其添加到实例的DataFrame
@@ -93,7 +103,14 @@ class LogTable:
         self.saved_targets_info = []  # 存储每张图片的目标类别信息
         self.saved_image_paths = []  # 存储原始图片路径，用于GPS信息解析
 
-        self.columns = ['文件路径', '识别结果', '类型', '位置(pixel)', '面积(pixel)', '时间(s)']
+        self.columns = [
+            get_table_column("file_path"),
+            get_table_column("detection_result"),
+            get_table_column("type"),
+            get_table_column("location_pixel"),
+            get_table_column("area_pixel"),
+            get_table_column("time_seconds")
+        ]
         self.data = pd.DataFrame(columns=self.columns)
 
     def add_frames(self, image, detInfo, img_ini, img_name=None, img_path=None):
@@ -114,7 +131,7 @@ class LogTable:
         self.saved_image_paths.append(img_path)  # 保存原始图片路径
         
         # 提取并保存当前图片的目标类别信息
-        current_targets = ["全部目标"]  # 默认包含"全部目标"选项
+        current_targets = [get_table_column("all_targets")]  # 默认包含"全部目标"选项
         if detInfo:
             self.saved_target_images.append(image)
             # 从detInfo中提取中文类别名称
@@ -294,8 +311,8 @@ class LogTable:
             if detection_params is None:
                 detection_params = {}
             
-            model_type = detection_params.get('model_type', '检测任务')
-            image_type = detection_params.get('image_type', '其他')
+            model_type = detection_params.get('model_type', get_system_default('model_type_detection'))
+            image_type = detection_params.get('image_type', get_system_default('image_type_other'))
             conf_threshold = detection_params.get('conf_threshold', 0.15)
             iou_threshold = detection_params.get('iou_threshold', 0.25)
             selected_classes = detection_params.get('selected_classes', [])
@@ -322,7 +339,7 @@ class LogTable:
                 doc.add_paragraph("")
             
             title_para = doc.add_paragraph()
-            title_run = title_para.add_run("无人机光伏巡检报告")
+            title_run = title_para.add_run(get_report_field("report_title"))
             title_run.font.size = Inches(0.25)  # 大标题
             title_run.bold = True
             title_para.alignment = 1  # 居中
@@ -342,14 +359,14 @@ class LogTable:
             
             # 报告编号
             report_num = f"PV-{now.strftime('%Y%m%d%H%M%S')}"
-            report_num_para = doc.add_paragraph(f"报告编号：{report_num}")
+            report_num_para = doc.add_paragraph(f"{get_report_field('report_number').format(number=report_num)}")
             report_num_para.alignment = 1  # 居中
 
             # 第一页结束，插入分页符进入目录页
             doc.add_page_break()
 
             # 第二页：目录页
-            toc_title = doc.add_heading("目录", level=1)
+            toc_title = doc.add_heading(get_report_field("table_of_contents"), level=1)
             toc_title.alignment = 1  # 居中
             
             # 添加空行
@@ -361,10 +378,10 @@ class LogTable:
             
             # 目录项
             toc_items = [
-                ("1、概述", "3"),
-                ("2、光伏电站故障维修建议", "4"), 
-                ("3、结果统计", "5"),
-                ("4、详细检测结果", "6"),
+                (get_report_field("overview_section"), "3"),
+                (get_report_field("fault_suggestion_section"), "4"),
+                (get_report_field("statistics_section"), "5"),
+                (get_report_field("detailed_results_section"), "6"),
                 ("", "")  # 空行
             ]
             
@@ -378,27 +395,27 @@ class LogTable:
             doc.add_page_break()
 
             # 1、概述部分
-            doc.add_heading("1、概述", level=1)
+            doc.add_heading(get_report_field("overview_section"), level=1)
             overview_table = doc.add_table(rows=8, cols=2)
             overview_table.style = 'Table Grid'
             
             # 根据检测类型和图像类型生成检测场景描述
             scene_desc = f"{image_type}{model_type}"
-            if model_type == "分割任务":
-                scene_desc += f" - 对{image_type}图像进行光伏板轮廓分割"
+            if model_type == get_system_default("model_type_segmentation"):
+                scene_desc += f" - {get_report_field('segmentation_description').format(image_type=image_type)}"
             else:
-                scene_desc += f" - 对{image_type}图像进行异常检测"
-            
+                scene_desc += f" - {get_report_field('detection_description').format(image_type=image_type)}"
+
             # 概述表格数据
             overview_data = [
-                ["使用单位", "光伏电站"],
-                ["检测场景", scene_desc],
-                ["检测类型", f"{model_type} - {image_type}"],
-                ["飞行批号", f"UAV-{now.strftime('%Y%m%d')}"],
-                ["任务名称", f"光伏巡检任务-{now.strftime('%Y%m%d')}"],
-                ["报告日期", report_time],
-                ["检测图片数量", str(len(self.saved_images))],
-                ["检测参数", f"置信度: {conf_threshold}, IOU: {iou_threshold}"]
+                [get_report_field("user_organization"), get_report_field("power_station")],
+                [get_report_field("detection_scene"), scene_desc],
+                [get_report_field("detection_type"), f"{model_type} - {image_type}"],
+                [get_report_field("flight_batch"), f"UAV-{now.strftime('%Y%m%d')}"],
+                [get_report_field("task_name"), f"{get_report_field('pv_inspection_task')}-{now.strftime('%Y%m%d')}"],
+                [get_report_field("report_date"), report_time],
+                [get_report_field("image_count"), str(len(self.saved_images))],
+                [get_report_field("detection_params"), get_report_field("confidence_iou_format").format(confidence=conf_threshold, iou=iou_threshold)]
             ]
             
             for i, (key, value) in enumerate(overview_data):
@@ -411,72 +428,72 @@ class LogTable:
             doc.add_page_break()
             
             # 2、光伏电站故障维修建议
-            doc.add_heading("2、光伏电站故障维修建议", level=1)
+            doc.add_heading(get_report_field("fault_suggestion_section"), level=1)
             
             # 根据检测类型定义不同的故障分类
-            if image_type == "EL隐裂":
+            if image_type == get_system_default("image_type_el"):
                 fault_categories = {
-                    "一级故障": {
-                        "划伤": "组件表面出现划伤，建议检查并及时维护，避免进一步损坏。",
-                        "黑片": "检测到黑片异常，建议追踪观察并考虑维修。"
+                    get_fault_category("level_1_fault"): {
+                        get_fault_category("scratch"): get_fault_category("scratch_suggestion"),
+                        get_fault_category("black_chip"): get_fault_category("black_chip_suggestion")
                     },
-                    "二级故障": {
-                        "隐裂": "组件内部出现隐裂，建议立即检修或更换，避免电性能下降。",
-                        "碎片": "组件表面或内部出现碎片，建议立即更换组件。",
-                        "缺角": "组件出现缺角损坏，建议评估影响程度并考虑更换。"
+                    get_fault_category("level_2_fault"): {
+                        get_fault_category("crack"): get_fault_category("crack_suggestion"),
+                        get_fault_category("fragment"): get_fault_category("fragment_suggestion"),
+                        get_fault_category("corner_damage"): get_fault_category("corner_damage_suggestion")
                     }
                 }
-            elif image_type == "红外":
+            elif image_type == get_system_default("image_type_thermal"):
                 fault_categories = {
-                    "一级故障": {
-                        "阳光反射": "红外图像中的阳光反射，属于正常现象，无需处理。",
-                        "光伏板正常热成像": "组件热成像正常，无异常发热。"
+                    get_fault_category("level_1_fault"): {
+                        get_fault_category("sun_reflection"): get_fault_category("sun_reflection_suggestion"),
+                        get_fault_category("normal_thermal"): get_fault_category("normal_thermal_suggestion")
                     },
-                    "二级故障": {
-                        "单一热斑": "单个组件出现热斑，建议检查组件连接和清洁度。",
-                        "异常低温": "组件温度异常偏低，建议检查电路连接。",
-                        "单一热斑_异常低温": "单个组件出现热斑且伴有异常低温，建议检查组件连接、电路和散热状况。"
+                    get_fault_category("level_2_fault"): {
+                        get_fault_category("single_hotspot"): get_fault_category("single_hotspot_suggestion"),
+                        get_fault_category("abnormal_low_temp"): get_fault_category("abnormal_low_temp_suggestion"),
+                        get_fault_category("single_hotspot_low_temp"): get_fault_category("single_hotspot_low_temp_suggestion")
                     },
-                    "三级故障": {
-                        "大面积热斑": "大面积热斑异常，建议立即检查电路和组件状态。",
-                        "二极管短路": "旁路二极管故障，建议立即维修或更换。",
-                        "大面积热斑_异常低温": "大面积热斑伴有异常低温，建议立即全面检查电路系统和组件状态。",
-                        "单一热斑_二极管短路": "单个热斑伴有二极管短路，建议立即维修或更换相关组件。",
-                        "二极管短路_异常低温": "二极管短路且伴有异常低温，建议立即停机检修，更换故障器件。"
+                    get_fault_category("level_3_fault"): {
+                        get_fault_category("large_hotspot"): get_fault_category("large_hotspot_suggestion"),
+                        get_fault_category("diode_short"): get_fault_category("diode_short_suggestion"),
+                        get_fault_category("large_hotspot_low_temp"): get_fault_category("large_hotspot_low_temp_suggestion"),
+                        get_fault_category("single_hotspot_diode_short"): get_fault_category("single_hotspot_diode_short_suggestion"),
+                        get_fault_category("diode_short_low_temp"): get_fault_category("diode_short_low_temp_suggestion")
                     }
                 }
-            elif image_type == "可见光":
+            elif image_type == get_system_default("image_type_visible"):
                 fault_categories = {
-                    "一级故障": {
-                        "脏污": "组件表面脏污，建议清洁以保证发电效率。",
-                        "鸟粪": "组件表面有鸟粪，建议清理并考虑防鸟措施。",
-                        "积雪": "组件表面积雪，建议及时清理。",
-                        "阳光反射": "可见光图像中的阳光反射，属于正常现象，无需处理。",
-                        "脏污_鸟粪": "组件表面同时存在脏污和鸟粪，建议彻底清洁并考虑防鸟措施。"
+                    get_fault_category("level_1_fault"): {
+                        get_fault_category("dirty"): get_fault_category("dirty_suggestion"),
+                        get_fault_category("bird_dropping"): get_fault_category("bird_dropping_suggestion"),
+                        get_fault_category("snow"): get_fault_category("snow_suggestion"),
+                        get_fault_category("visible_sun_reflection"): get_fault_category("visible_sun_reflection_suggestion"),
+                        get_fault_category("dirty_bird_dropping"): get_fault_category("dirty_bird_dropping_suggestion")
                     },
-                    "二级故障": {
-                        "遮挡": "组件被遮挡，建议清除遮挡物或调整组件角度。",
-                        "隐裂": "可见光下发现隐裂，建议进一步检查。",
-                        "遮挡_脏污": "组件遮挡伴有脏污，建议清除遮挡物并清洁表面。",
-                        "遮挡_鸟粪": "组件遮挡伴有鸟粪，建议清除遮挡物、清理鸟粪并采取防鸟措施。"
+                    get_fault_category("level_2_fault"): {
+                        get_fault_category("occlusion"): get_fault_category("occlusion_suggestion"),
+                        get_fault_category("visible_crack"): get_fault_category("visible_crack_suggestion"),
+                        get_fault_category("occlusion_dirty"): get_fault_category("occlusion_dirty_suggestion"),
+                        get_fault_category("occlusion_bird_dropping"): get_fault_category("occlusion_bird_dropping_suggestion")
                     },
-                    "三级故障": {
-                        "面板碎裂": "组件表面玻璃破损，建议立即更换。",
-                        "光伏板缺失": "组件缺失，建议立即补装。",
-                        "光伏板组件变形": "组件变形，建议检查支架和更换组件。"
+                    get_fault_category("level_3_fault"): {
+                        get_fault_category("panel_crack"): get_fault_category("panel_crack_suggestion"),
+                        get_fault_category("panel_missing"): get_fault_category("panel_missing_suggestion"),
+                        get_fault_category("panel_deformation"): get_fault_category("panel_deformation_suggestion")
                     }
                 }
             else:
                 # 默认故障分类（其他类型或分割任务）
                 fault_categories = {
-                    "检测信息": {
-                        "行人": "检测到人员活动，建议注意安全。",
-                        "车辆": "检测到车辆，建议注意交通管制。"
+                    get_fault_category("detection_info"): {
+                        get_fault_category("person"): get_fault_category("person_suggestion"),
+                        get_fault_category("vehicle"): get_fault_category("vehicle_suggestion")
                     }
-                } if model_type == "分割任务" or image_type == "其他" else {
-                    "一级故障": {
-                        "单组件": "成功分割识别单个光伏组件。",
-                        "组串": "成功分割识别光伏组串。",
+                } if model_type == get_system_default("model_type_segmentation") or image_type == get_system_default('image_type_other') else {
+                    get_fault_category("level_1_fault"): {
+                        get_fault_category("single_component"): get_fault_category("single_component_suggestion"),
+                        get_fault_category("component_string"): get_fault_category("component_string_suggestion"),
                     }
                 }
             
@@ -501,7 +518,7 @@ class LogTable:
             doc.add_page_break()
             
             # 3、结果统计
-            doc.add_heading("3、结果统计", level=1)
+            doc.add_heading(get_report_field("statistics_section"), level=1)
             
             # 统计信息
             total_detections = sum(len(results) for results in self.saved_results)
@@ -513,43 +530,48 @@ class LogTable:
                         fault_counts[fault_type] = fault_counts.get(fault_type, 0) + 1
             
             # 算法引擎描述
-            if model_type == "分割任务":
-                doc.add_paragraph("无人机飞行后对本次航线进行了全方位的智能分割分析后得出此报告。")
-                algorithm_desc = f"采用YOLOv11分割算法对{image_type}图像进行光伏组件轮廓分割"
+            if model_type == get_system_default("model_type_segmentation"):
+                doc.add_paragraph(get_report_statistic("comprehensive_analysis"))
+                algorithm_desc = get_report_statistic("yolo_segmentation_desc").format(type=image_type)
             else:
-                doc.add_paragraph("无人机飞行后对本次航线进行了全方位的算法检测分析后得出此报告。")
-                algorithm_desc = f"采用YOLOv11检测算法对{image_type}图像进行异常检测"
-            
-            engines = list(fault_counts.keys()) if fault_counts else ["未检测到异常"]
-            doc.add_paragraph(f"使用的算法引擎：{algorithm_desc}")
-            doc.add_paragraph(f"检测到的类别：（{', '.join(engines)}）")
+                doc.add_paragraph(get_report_statistic("comprehensive_detection"))
+                algorithm_desc = get_report_statistic("yolo_detection_desc").format(type=image_type)
+
+            engines = list(fault_counts.keys()) if fault_counts else [get_report_statistic("no_anomalies")]
+            doc.add_paragraph(get_report_statistic("algorithm_engine").format(type=algorithm_desc))
+            doc.add_paragraph(get_report_statistic("detected_categories").format(list=', '.join(engines)))
             doc.add_paragraph("")
             
             # 报警次数统计
             if total_detections > 0:
-                doc.add_paragraph(f"报警次数为：{total_detections} 次，其中：")
+                doc.add_paragraph(get_report_statistic("alarm_details").format(count=total_detections))
                 for fault_type, count in fault_counts.items():
-                    doc.add_paragraph(f"{fault_type}：{count}次；")
+                    doc.add_paragraph(get_report_statistic("fault_count_format").format(type=fault_type, count=count))
             else:
-                doc.add_paragraph("报警次数为：0 次")
+                doc.add_paragraph(get_report_statistic("alarm_count_zero"))
             
             doc.add_paragraph("")
             
             # 检测类型总统计表
             if fault_counts:
-                doc.add_paragraph("检测类型总统计：")
+                doc.add_paragraph(get_report_statistic("detection_type_statistics"))
                 stats_table = doc.add_table(rows=1, cols=4)
                 stats_table.style = 'Table Grid'
-                headers = ["检测类型", "目标数量", "占总检测数量", "缺陷等级"]
+                headers = [
+                    get_report_table_header("detection_type"),
+                    get_report_table_header("target_count"),
+                    get_report_table_header("percentage"),
+                    get_report_table_header("defect_level")
+                ]
                 for i, header in enumerate(headers):
                     stats_table.cell(0, i).text = header
                 
                 for fault_type, count in fault_counts.items():
                     row_cells = stats_table.add_row().cells
-                    percentage = f"{(count / total_detections * 100):.1f}%"
+                    percentage = get_report_statistic("percentage_format").format(value=count / total_detections * 100)
                     
                     # 确定缺陷等级
-                    defect_level = "一级故障"  # 默认值
+                    defect_level = get_fault_category("level_1_fault")  # 默认值
                     for level, faults in fault_categories.items():
                         if any(fault_name in fault_type for fault_name in faults.keys()):
                             defect_level = level
@@ -565,20 +587,27 @@ class LogTable:
             # 详细检测结果
             if self.saved_results:
                 # 详细结果表
-                doc.add_paragraph("详细检测结果：")
+                doc.add_paragraph(get_report_statistic("detailed_detection_results"))
                 detail_table = doc.add_table(rows=1, cols=6)
                 detail_table.style = 'Table Grid'
-                detail_headers = ["组串", "缺陷类型", "检测时间", "经度", "纬度", "置信度"]
+                detail_headers = [
+                    get_report_table_header("string_id"),
+                    get_report_table_header("defect_type"),
+                    get_report_table_header("detection_time"),
+                    get_report_table_header("longitude"),
+                    get_report_table_header("latitude"),
+                    get_report_table_header("confidence")
+                ]
                 for i, header in enumerate(detail_headers):
                     detail_table.cell(0, i).text = header
                 
                 for idx, (detection_results, img_name) in enumerate(zip(self.saved_results, self.saved_names)):
                     # 尝试从图片路径获取GPS信息
                     gps_info = None
-                    latitude_str = "未知"
-                    longitude_str = "未知"
+                    latitude_str = get_report_statistic("unknown_location")
+                    longitude_str = get_report_statistic("unknown_location")
                     
-                    if enable_gps_parsing and GPS_PARSING_AVAILABLE:
+                    if enable_gps_parsing:
                         # 尝试从保存的图片路径中获取GPS信息
                         try:
                             img_path = None
@@ -593,31 +622,31 @@ class LogTable:
                                     if 'longitude' in gps_info:
                                         longitude_str = f"{gps_info['longitude']:.8f}"
                         except Exception as e:
-                            print(f"解析GPS信息时出错: {e}")
+                            print(f"{get_system_message('gps_parse_failed').format(error=str(e))}")
                     
                     for detInfo in detection_results:
                         if isinstance(detInfo, list) and len(detInfo) >= 6:
                             row_cells = detail_table.add_row().cells
-                            row_cells[0].text = f"{idx + 1:06d}"  # 组串编号
+                            row_cells[0].text = get_report_statistic("string_id_format").format(value=idx + 1)  # 组串编号
                             row_cells[1].text = str(detInfo[1])  # 缺陷类型
                             row_cells[2].text = report_time  # 检测时间
                             row_cells[3].text = longitude_str  # 经度
                             row_cells[4].text = latitude_str   # 纬度
-                            row_cells[5].text = f"{float(detInfo[3]) if isinstance(detInfo[3], (int, float, str)) else 0.95:.2f}"  # 置信度
+                            row_cells[5].text = get_report_statistic("confidence_format").format(value=float(detInfo[3]) if isinstance(detInfo[3], (int, float, str)) else 0.95)  # 置信度
 
             # 添加图片检测结果
             doc.add_page_break()
-            if model_type == "分割任务":
-                doc.add_heading("分割图片详细结果", level=1)
+            if model_type == get_system_default("model_type_segmentation"):
+                doc.add_heading(get_report_field("segmentation_results_title"), level=1)
             else:
-                doc.add_heading("检测图片详细结果", level=1)
+                doc.add_heading(get_report_field("detection_results_title"), level=1)
             
             # 遍历每张图片的检测结果
             for idx, (image_ini, image_detected, detection_results, img_name) in enumerate(
                 zip(self.saved_images_ini, self.saved_images, self.saved_results, self.saved_names)
             ):
                 # 添加图片标题
-                doc.add_heading(f'图片 {idx + 1}: {img_name}', level=2)
+                doc.add_heading(get_report_field("image_title").format(idx=idx + 1, name=img_name), level=2)
 
                 # 创建一个表格用于左右放置图片
                 table = doc.add_table(rows=2, cols=2)
@@ -625,7 +654,7 @@ class LogTable:
 
                 # 左侧放置原始图像
                 cell_left = table.cell(0, 0)
-                cell_left.text = f'原始{image_type}图片'
+                cell_left.text = get_report_field("original_image_label").format(label=image_type)
                 original_image_stream = BytesIO()
                 Image.fromarray(cv2.cvtColor(image_ini, cv2.COLOR_BGR2RGB)).save(original_image_stream, format='PNG')
                 original_image_stream.seek(0)
@@ -633,10 +662,10 @@ class LogTable:
 
                 # 右侧放置识别后的图像
                 cell_right = table.cell(0, 1)
-                if model_type == "分割任务":
-                    cell_right.text = f'{image_type}分割结果'
+                if model_type == get_system_default("model_type_segmentation"):
+                    cell_right.text = get_report_field("segmentation_result_label").format(label=image_type)
                 else:
-                    cell_right.text = f'{image_type}检测结果'
+                    cell_right.text = get_report_field("detection_result_label").format(label=image_type)
                 detected_image_stream = BytesIO()
                 Image.fromarray(cv2.cvtColor(image_detected, cv2.COLOR_BGR2RGB)).save(detected_image_stream, format='PNG')
                 detected_image_stream.seek(0)
@@ -644,21 +673,21 @@ class LogTable:
 
                 # 添加检测结果信息
                 if detection_results:
-                    if model_type == "分割任务":
-                        doc.add_paragraph(f'分割到 {len(detection_results)} 个目标：')
+                    if model_type == get_system_default("model_type_segmentation"):
+                        doc.add_paragraph(get_report_field("segmented_targets").format(count=len(detection_results)))
                     else:
-                        doc.add_paragraph(f'检测到 {len(detection_results)} 个目标：')
+                        doc.add_paragraph(get_report_field("detected_targets").format(count=len(detection_results)))
                     for i, detInfo in enumerate(detection_results):
                         if isinstance(detInfo, list) and len(detInfo) >= 2:
-                            doc.add_paragraph(f"  {i+1}. {detInfo[1]} - 置信度: {detInfo[3] if len(detInfo) > 3 else 'N/A'}")
+                            doc.add_paragraph(f"  {i + 1}. {detInfo[1]} - {get_report_field('confidence_label')}: {detInfo[3] if len(detInfo) > 3 else 'N/A'}")
                 else:
-                    if model_type == "分割任务":
-                        doc.add_paragraph('未检测到目标')
+                    if model_type == get_system_default("model_type_segmentation"):
+                        doc.add_paragraph(get_report_field("no_targets_detected"))
                     else:
-                        doc.add_paragraph('未检测到异常')
+                        doc.add_paragraph(get_report_field("no_anomalies_detected"))
                 
                 # 添加GPS信息（如果启用了GPS解析）
-                if enable_gps_parsing and GPS_PARSING_AVAILABLE:
+                if enable_gps_parsing:
                     try:
                         img_path = None
                         if hasattr(self, 'saved_image_paths') and idx < len(self.saved_image_paths):
@@ -667,26 +696,28 @@ class LogTable:
                         if img_path and os.path.exists(img_path):
                             gps_info = extract_gps_info(img_path)
                             if gps_info:
-                                doc.add_paragraph("GPS信息:")
+                                doc.add_paragraph(get_report_field("gps_info_label"))
                                 gps_text = format_gps_info(gps_info)
                                 doc.add_paragraph(gps_text)
                             else:
-                                doc.add_paragraph("GPS信息: 未找到GPS信息")
+                                doc.add_paragraph(get_report_field("gps_not_found"))
                         else:
-                            doc.add_paragraph("GPS信息: 图片路径无效或文件不存在")
+                            doc.add_paragraph(get_report_field("gps_invalid_path"))
                     except Exception as e:
-                        doc.add_paragraph(f"GPS信息: 解析失败 - {str(e)}")
+                        doc.add_paragraph(get_report_field("gps_parse_failed").format(error=str(e)))
                 elif enable_gps_parsing:
-                    doc.add_paragraph("GPS信息: GPS解析功能不可用")
+                    doc.add_paragraph(get_report_field("gps_feature_unavailable"))
                 
                 doc.add_paragraph("")  # 添加间距
 
             # 保存 Word 文件
             doc.save(word_file_path)
-            print(f"光伏巡检报告已保存到: {word_file_path}")
+            # FIXME:
+            print(f"{get_system_message('save_to_word_success').format(path=word_file_path)}")
 
         except Exception as e:
-            print(f"保存到 Word 文件失败: {str(e)}")
+            # FIXME:
+            print(f"{get_system_message('save_to_word_failed').format(error=str(e))}")
             import traceback
             traceback.print_exc()
 

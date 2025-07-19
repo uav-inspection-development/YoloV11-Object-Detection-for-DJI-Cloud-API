@@ -2,7 +2,6 @@ import json
 import os
 from typing import Any, Dict
 import streamlit as st
-from chinese_name_list import update_class_names
 
 try:
     from streamlit_change_language import ChangeLanguage
@@ -50,7 +49,6 @@ def set_language(lang: str) -> None:
     st.session_state["language"] = lang
     _translations = _load_translations(lang)
     _update_globals()
-    update_class_names()
 
     # 更新类别名称 - 使用动态导入避免循环导入
     try:
@@ -233,6 +231,51 @@ def get_status_message(message_type: str, **kwargs) -> str:
         return template
 
 
+def get_system_message(message_type: str, **kwargs) -> str:
+    """Get system message for a given type."""
+    template = globals().get("SYSTEM_MESSAGES", {}).get(message_type, "")
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
+def get_gps_message(message_type: str, **kwargs) -> str:
+    """Get GPS message for a given type."""
+    template = globals().get("GPS_MESSAGES", {}).get(message_type, "")
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
+def get_ui_message(message_type: str, **kwargs) -> str:
+    """Get UI message for a given type."""
+    template = globals().get("UI_MESSAGES", {}).get(message_type, "")
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
+def get_legacy_column(column_type: str, **kwargs) -> str:
+    """Get legacy column name for a given type."""
+    template = globals().get("LEGACY_COLUMNS", {}).get(column_type, column_type)
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
+def get_table_column(key: str, **kwargs) -> str:
+    """Get table column header for a given key."""
+    template = _get("TABLE_COLUMNS", key)
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
 def get_class_names(category_type: str = None):
     """Get class names from translations.
 
@@ -247,3 +290,40 @@ def get_class_names(category_type: str = None):
     if category_type:
         return class_names.get(category_type.upper(), {})
     return class_names
+
+
+def get_report_field(key: str, **kwargs) -> str:
+    """Get report field translation for a given key."""
+    template = _get("REPORT_FIELDS", key)
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
+def get_fault_category(key: str, **kwargs) -> str:
+    """Get fault category translation for a given key."""
+    template = _get("FAULT_CATEGORIES", key)
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
+def get_report_statistic(key: str, **kwargs) -> str:
+    """Get report statistics translation for a given key."""
+    template = _get("REPORT_STATISTICS", key)
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
+
+
+def get_report_table_header(key: str, **kwargs) -> str:
+    """Get report table header translation for a given key."""
+    table_headers = globals().get("REPORT_STATISTICS", {}).get("table_headers", {})
+    template = table_headers.get(key, key)
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template

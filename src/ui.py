@@ -9,6 +9,7 @@ from check_license import check_license
 from license_features import DEFAULT_FEATURES
 from web import Detection_UI
 from QtFusion.path import abs_path
+from naming_config import get_system_info, get_ui_message, get_current_language
 
 
 # 设置环境变量以避免 OpenMP 错误
@@ -20,7 +21,7 @@ def streamlit_login_page():
     """
     用户登录页：输入参数并保存到 session_state
     """
-    st.title("用户登录")
+    st.title(get_ui_message("user_login"))
     secret_key = st.text_input("Secret Key", type="password")
     license_file = st.text_input("License File", value="license.dat")
     bind_info_file = st.text_input("Bind Info File", value="bind_info.json")
@@ -30,7 +31,7 @@ def streamlit_login_page():
     client_id = st.text_input("Client ID", value="your-client-id")
     client_secret = st.text_input("Client Secret", type="password", value="your-client-secret")
 
-    login_btn = st.button("登录并启动")
+    login_btn = st.button(get_ui_message("login_and_start"))
 
     if login_btn:
         if not secret_key:
@@ -63,15 +64,16 @@ def streamlit_login_page():
         with open("login_cache.json", "w", encoding="utf-8") as f:
             json.dump(login_data, f)
 
-        st.success("参数已保存，正在启动主程序...")
+        st.success(get_ui_message("params_saved_starting"))
         time.sleep(1)
         st.rerun()
+
 
 if __name__ == "__main__":
     # 设置页面布局为宽布局
     # 🚀 必须在第一行设置页面配置，在其他 Streamlit 命令之前
     st.set_page_config(
-        page_title="光伏云组件检测系统",
+        page_title=get_system_info("title"),
         page_icon=abs_path("../icon/icon.jpg", path_type="current"),
         initial_sidebar_state="expanded",
         layout="wide",
@@ -97,7 +99,7 @@ if __name__ == "__main__":
                     st.session_state['login_params'] = cached
                     st.session_state['logged_in'] = True
                 except Exception as e:
-                    st.error(f"读取缓存失败：{e}")
+                    st.error(f"{get_ui_message('read_cache_failed')}：{e}")
                     streamlit_login_page()
                     st.stop()
             else:

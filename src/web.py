@@ -78,6 +78,12 @@ from naming_config import (
     get_export_message,
     get_statistic_message,
     get_metric_label,
+    get_table_column,
+    get_system_message,
+    get_gps_message,
+    get_report_field,
+    get_ui_message,
+    get_legacy_column,
     generate_filename,
     # UI 获取函数
     get_sidebar_header,
@@ -631,12 +637,18 @@ class Detection_UI:
         在侧边栏中配置模型设置、摄像头选择以及识别项目设置等选项。
         """
         # Language selection
+        current_lang = get_current_language()
         lang = st.sidebar.selectbox(
             get_sidebar_label("language"),
             options=available_languages,
-            index=available_languages.index(get_current_language()),
+            index=available_languages.index(current_lang),
         )
-        set_language(lang)
+        
+        # 检查语言是否改变，如果改变则设置新语言并刷新页面
+        if lang != current_lang:
+            set_language(lang)
+            st.rerun()
+        
         st.sidebar.title(get_sidebar_header("settings_menu"))
 
         # Add the About section to the sidebar
@@ -2049,11 +2061,11 @@ class Detection_UI:
                     self.table_placeholder.table(
                         pd.DataFrame(
                             columns=[
-                                "识别结果",
-                                "类型",
-                                "位置(pixel)",
-                                "面积(pixel)",
-                                "时间(s)",
+                                get_table_column("detection_result"),
+                                get_table_column("type"),
+                                get_table_column("location_pixel"),
+                                get_table_column("area_pixel"),
+                                get_table_column("time_seconds"),
                             ]
                         )
                     )
@@ -2173,7 +2185,7 @@ class Detection_UI:
                 ):
                     inclusion_df = compute_inclusion_relations(filtered_results)
                     if inclusion_df.empty:
-                        inclusion_df = pd.DataFrame(columns=["组串编号", "包含组件数"])
+                        inclusion_df = pd.DataFrame(columns=[get_table_column("string_id"), get_table_column("component_count")])
                     if hasattr(self, "inclusion_table_placeholder"):
                         self.inclusion_table_placeholder.table(inclusion_df)
                 elif hasattr(self, "inclusion_table_placeholder"):
@@ -2183,11 +2195,11 @@ class Detection_UI:
                     self.table_placeholder.table(
                         pd.DataFrame(
                             columns=[
-                                "识别结果",
-                                "类型",
-                                "位置(pixel)",
-                                "面积(pixel)",
-                                "时间(s)",
+                                get_table_column("detection_result"),
+                                get_table_column("type"),
+                                get_table_column("location_pixel"),
+                                get_table_column("area_pixel"),
+                                get_table_column("time_seconds"),
                             ]
                         )
                     )
@@ -2199,11 +2211,11 @@ class Detection_UI:
                 self.table_placeholder.table(
                     pd.DataFrame(
                         columns=[
-                            "识别结果",
-                            "类型",
-                            "位置(pixel)",
-                            "面积(pixel)",
-                            "时间(s)",
+                            get_table_column("detection_result"),
+                            get_table_column("type"),
+                            get_table_column("location_pixel"),
+                            get_table_column("area_pixel"),
+                            get_table_column("time_seconds"),
                         ]
                     )
                 )
@@ -2518,7 +2530,7 @@ class Detection_UI:
             
             if frame_id >= len(saved_results) or not saved_results[frame_id]:
                 # 如果没有检测结果，显示空表格
-                empty_df = pd.DataFrame(columns=["类别", "数量"])
+                empty_df = pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")])
                 self.current_image_category_placeholder.table(empty_df)
                 return
             
@@ -2539,10 +2551,10 @@ class Detection_UI:
             
             # 转换为DataFrame
             if category_counts:
-                current_counts = pd.DataFrame(list(category_counts.items()), columns=["类别", "数量"])
-                current_counts = current_counts.sort_values("数量", ascending=False)
+                current_counts = pd.DataFrame(list(category_counts.items()), columns=[get_table_column("category"), get_table_column("count")])
+                current_counts = current_counts.sort_values(get_table_column("count"), ascending=False)
             else:
-                current_counts = pd.DataFrame(columns=["类别", "数量"])
+                current_counts = pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")])
             
             # 添加表格标题信息
             if not current_counts.empty:
@@ -2550,11 +2562,11 @@ class Detection_UI:
                 self.current_image_category_placeholder.table(current_counts)
             else:
                 self.current_image_category_placeholder.write(f"📊 **{img_name}** 中未检测到目标")
-                self.current_image_category_placeholder.table(pd.DataFrame(columns=["类别", "数量"]))
+                self.current_image_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")]))
                 
         except Exception as e:
             st.error(f"更新当前图片类别统计时出错: {str(e)}")
-            self.current_image_category_placeholder.table(pd.DataFrame(columns=["类别", "数量"]))
+            self.current_image_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")]))
 
     def update_total_category_counts(self):
         """更新总体类别统计，包含图片来源信息"""
@@ -2564,7 +2576,7 @@ class Detection_UI:
             
             if not saved_results:
                 # 如果没有检测结果，显示空表格
-                empty_df = pd.DataFrame(columns=["类别", "总数量", "分布图片"])
+                empty_df = pd.DataFrame(columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")])
                 self.total_category_placeholder.table(empty_df)
                 return
             
@@ -2598,18 +2610,18 @@ class Detection_UI:
                     distribution_str = ", ".join(distribution)
                     total_data.append([category, total_count, distribution_str])
                 
-                total_counts = pd.DataFrame(total_data, columns=["类别", "总数量", "分布图片"])
-                total_counts = total_counts.sort_values("总数量", ascending=False)
+                total_counts = pd.DataFrame(total_data, columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")])
+                total_counts = total_counts.sort_values(get_table_column("total_count"), ascending=False)
                 
                 self.total_category_placeholder.write(f"📈 **总体统计** (共{len(saved_results)}张图片):")
                 self.total_category_placeholder.table(total_counts)
             else:
                 self.total_category_placeholder.write("📈 **总体统计**: 暂无检测结果")
-                self.total_category_placeholder.table(pd.DataFrame(columns=["类别", "总数量", "分布图片"]))
+                self.total_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")]))
                 
         except Exception as e:
             st.error(f"更新总体类别统计时出错: {str(e)}")
-            self.total_category_placeholder.table(pd.DataFrame(columns=["类别", "总数量", "分布图片"]))
+            self.total_category_placeholder.table(pd.DataFrame(columns=[get_table_column("category"), get_table_column("total_count"), get_table_column("distribution_images")]))
 
     def setupMainWindow(self):
         """
@@ -2992,6 +3004,7 @@ class Detection_UI:
             st.rerun()
 
     def process_camera_or_file(self):
+        # FIXME:
         """
         根据输入源类型处理不同的输入（摄像头、文件、RTSP流等）
         """
@@ -2999,19 +3012,20 @@ class Detection_UI:
             # 确保所有必需的属性都已初始化
             self._ensure_initialization()
 
-            if self.input_source == "图片文件" or self.input_source == "图片文件夹":
+            input_source_mode = get_sidebar_option("input_sources")
+            if self.input_source == input_source_mode[0] or self.input_source == input_source_mode[1]:
                 if self.uploaded_file:
                     self._process_image_input()
                 else:
                     st.warning(get_file_message("upload_files_first"))
 
-            elif self.input_source == "视频文件" or self.input_source == "视频文件夹":
+            elif self.input_source == input_source_mode[2] or self.input_source == input_source_mode[3]:
                 if hasattr(self, "uploaded_video") and self.uploaded_video:
                     self._process_video_input()
                 else:
                     st.warning(get_file_message("upload_video_first"))
 
-            elif self.input_source == "摄像头":
+            elif self.input_source == input_source_mode[4]:
                 if self.selected_camera is not None:
                     camera_id = (
                         int(self.selected_camera.split(":")[0])
@@ -3022,7 +3036,7 @@ class Detection_UI:
                 else:
                     st.warning(get_camera_message("select_camera_first"))
 
-            elif self.input_source == "RTSP/RTMP流":
+            elif self.input_source == input_source_mode[5]:
                 if self.rtsp_input_url:
                     self._process_rtsp_input(self.rtsp_input_url)
                 else:
@@ -3112,7 +3126,7 @@ class Detection_UI:
                     current_file_name = (
                         uploaded_file.name
                         if hasattr(uploaded_file, "name")
-                        else f"图片_{idx+1}"
+                        else f"{get_detection_message("image_default_name", idx=idx + 1)}"
                     )
                     current_image_info.info(
                         get_detection_message(
@@ -3246,16 +3260,21 @@ class Detection_UI:
             print(f"   - 成功处理: {successful_count}张")
             print(f"   - 失败处理: {failed_count}张")
             print(f"   - 总耗时: {total_time:.2f}秒")
-            print(f"   - 平均耗时: {total_time/total_files:.2f}秒/张")
+            print(f"   - 平均耗时: {total_time / total_files:.2f}秒/张")
             
             if failed_count > 0:
                 print(f"⚠️  有{failed_count}张图片处理失败，请检查上述错误信息")
             
             # 生成汇总信息用于界面显示
-            summary_msg = f"📊 处理完成: 成功 {successful_count} 张，失败 {failed_count} 张，总用时 {total_time:.2f} 秒"
-            
+            summary_msg = get_detection_message(
+                "batch_processing_summary",
+                successful_count=successful_count,
+                failed_count=failed_count,
+                total_time=total_time,
+            )
+
             # 仅在处理过程中显示完成消息，不保存到session_state
-            current_image_info.success("批量处理完成！")
+            current_image_info.success(get_detection_message("batch_processing_complete"))
             status_text.success(summary_msg)
 
             # 保存总结信息到 session_state，便于在"图片浏览控制"上方显示
@@ -3470,7 +3489,7 @@ class Detection_UI:
                 # 进行检测
                 framecopy = processed_frame.copy()
                 current_time = current_frame / fps if fps > 0 else 0
-                time_str = f"{int(current_time//3600):02d}:{int((current_time%3600)//60):02d}:{int(current_time%60):02d}"
+                time_str = f"{int(current_time // 3600):02d}:{int((current_time % 3600) // 60):02d}:{int(current_time % 60):02d}"
 
                 image, detInfo, _ = self.frame_process(
                     framecopy, f"{video_file.name}_{current_frame}", video_time=time_str
