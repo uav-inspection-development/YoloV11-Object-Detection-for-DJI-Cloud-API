@@ -593,11 +593,11 @@ class Detection_UI:
             # 主标题和描述
             st.subheader(get_about_content('title'))
             st.markdown(get_about_content('description'))
-            
+
             # 功能特点
             st.subheader(get_about_content('features_title'))
             st.markdown(get_about_content('features'))
-            
+
             # 使用技术
             st.subheader(get_about_content('tech_title'))
             st.markdown(get_about_content('technologies'))
@@ -628,12 +628,12 @@ class Detection_UI:
             options=available_languages,
             index=available_languages.index(current_lang),
         )
-        
+
         # 检查语言是否改变，如果改变则设置新语言并刷新页面
         if lang != current_lang:
             set_language(lang)
             st.rerun()
-        
+
         st.sidebar.title(get_sidebar_header("settings_menu"))
 
         # Add the About section to the sidebar
@@ -714,13 +714,11 @@ class Detection_UI:
             get_sidebar_label("export_format_selection"),
             options=get_sidebar_option("export_formats"),
             index=0,
-        )
-        st.sidebar.caption(
-            get_sidebar_hint("export_format_hint").format(
-                format=self.export_format, path=self.csv_output_path
+            help=get_sidebar_hint("export_format_hint").format(
+                format="所选格式", path=self.csv_output_path
             )
         )
-        
+
         # 添加导出后清空检测结果选项
         self.clear_after_export = st.sidebar.checkbox(
             get_sidebar_label("clear_after_export"),
@@ -732,9 +730,8 @@ class Detection_UI:
         self.enable_gps_parsing = st.sidebar.checkbox(
             get_sidebar_label("enable_gps_parsing"),
             value=True,
-            help=get_sidebar_hint("gps_parsing_help")
+            help=get_sidebar_hint("gps_parsing_help") + "\n\n" + get_sidebar_hint("gps_parsing_hint")
         )
-        st.sidebar.caption(get_sidebar_hint("gps_parsing_hint"))
 
         export_options = get_sidebar_option("export_formats")
         # 根据用户选择的导出格式设置文件后缀
@@ -786,9 +783,9 @@ class Detection_UI:
                 min_value=0.0,
                 max_value=1.0,
                 value=0.15,
+                help=get_sidebar_hint("conf_threshold_hint")
             )
         )
-        st.sidebar.caption(get_sidebar_hint("conf_threshold_hint"))
         # IOU阈值的滑动条
         self.iou_threshold = float(
             st.sidebar.slider(
@@ -796,9 +793,9 @@ class Detection_UI:
                 min_value=0.0,
                 max_value=1.0,
                 value=0.25,
+                help=get_sidebar_hint("iou_threshold_hint")
             )
         )
-        st.sidebar.caption(get_sidebar_hint("iou_threshold_hint"))
         # 设置侧边栏的模型设置部分
         st.sidebar.header(get_sidebar_header("model_settings"))
         # 选择模型类型的下拉菜单
@@ -817,10 +814,11 @@ class Detection_UI:
         available_options = []
         # 添加提示信息
         if self.model_type == get_system_default("model_type_detection"):
-            st.sidebar.caption(get_sidebar_hint("detection_task_hint"))
             # 检测任务也应该有矩形框选项
             self.rectangle_bounding_output = st.sidebar.checkbox(
-                get_sidebar_label("rectangle_output_checkbox"), value=True
+                get_sidebar_label("rectangle_output_checkbox"),
+                value=True,
+                help=get_sidebar_hint("detection_task_hint")
             )
             available_options = [
                 get_system_default("image_type_el"),
@@ -830,27 +828,28 @@ class Detection_UI:
             ]
         elif self.model_type == get_system_default("model_type_segmentation"):
             self.rectangle_bounding_output = st.sidebar.checkbox(
-                get_sidebar_label("rectangle_output_checkbox"), value=True
+                get_sidebar_label("rectangle_output_checkbox"),
+                value=True,
+                help=get_sidebar_hint("segmentation_task_hint")
             )
-            st.sidebar.caption(get_sidebar_hint("segmentation_task_hint"))
 
             self.show_inclusion = st.sidebar.checkbox(
                 get_sidebar_label("show_inclusion_relationship"),
                 value=False,
+                help=get_sidebar_hint("inclusion_relationship_hint")
             )
-            st.sidebar.caption(get_sidebar_hint("inclusion_relationship_hint"))
 
             self.show_missing_panel = st.sidebar.checkbox(
                 get_sidebar_label("show_missing_panel"),
                 value=False,
+                help=get_sidebar_hint("missing_panel_hint")
             )
-            st.sidebar.caption(get_sidebar_hint("missing_panel_hint"))
 
             self.show_misaligned_panel = st.sidebar.checkbox(
                 get_sidebar_label("show_misaligned_panel"),
                 value=False,
+                help=get_sidebar_hint("misaligned_panel_hint")
             )
-            st.sidebar.caption(get_sidebar_hint("misaligned_panel_hint"))
 
             available_options = [
                 get_system_default("image_type_thermal"),
@@ -868,6 +867,7 @@ class Detection_UI:
             get_sidebar_label("select_image_type"),
             options=available_options,
             index=0,  # 默认选择第一个选项
+            help=get_sidebar_hint("image_type_hint").format(type="选择的图像类型")
         )
 
         if self.model_type == get_system_default("model_type_detection"):
@@ -887,11 +887,6 @@ class Detection_UI:
             self.cls_name = get_class_name("Segmentation")
             self.detect_class_color = Segmentation_class_colors
 
-        # 提示用户选择的图像类型
-        st.sidebar.caption(get_sidebar_hint("image_type_hint").format(
-            type=self.image_type
-        ))
-
         # 设置侧边栏的选择需要检测的目标类别部分，默认选择所有类别
         st.sidebar.header(get_sidebar_header("target_class_selection"))
         self.available_classes = list(self.cls_name.values())
@@ -900,6 +895,7 @@ class Detection_UI:
             get_sidebar_label("select_detection_or_segmentation_type"),
             options=self.available_classes,
             default=self.available_classes,  # 默认选择所有类别
+            help=get_sidebar_hint("selected_classes_hint").format(classes="所选类别")
         )
 
         # 将选定的类别转换为索引
@@ -908,16 +904,6 @@ class Detection_UI:
             for idx, name in enumerate(self.model.names)
             if name in selected_chinese_classes
         ]
-
-        # 添加提示信息
-        if len(selected_chinese_classes) == 0:
-            st.sidebar.caption(get_sidebar_hint("no_class_selected_hint"))
-        else:
-            st.sidebar.caption(
-                get_sidebar_hint("selected_classes_hint").format(
-                    classes=", ".join(selected_chinese_classes)
-                )
-            )
 
         # 正确映射中文名称到英文名称
         self.selected_classes = [
@@ -1077,22 +1063,24 @@ class Detection_UI:
         if self.input_source == input_options[4]:
             # 选择摄像头的下拉菜单
             self.selected_camera = st.sidebar.selectbox(
-                get_sidebar_label("camera_selection"), self.available_cameras
+                get_sidebar_label("camera_selection"),
+                self.available_cameras,
+                help=get_sidebar_hint("camera_hint")
             )
-            st.sidebar.caption(get_sidebar_hint("camera_hint"))
         elif self.input_source == input_options[5]:
             # 输入 RTSP/RTMP 地址
             self.rtsp_input_url = st.sidebar.text_input(
                 get_sidebar_label("rtsp_input"),
-                placeholder=get_sidebar_label("rtsp_input_example")
+                placeholder=get_sidebar_label("rtsp_input_example"),
+                help=get_sidebar_hint("rtsp_hint")
             )
-            st.sidebar.caption(get_sidebar_hint("rtsp_hint"))
         elif self.input_source == input_options[0]:
             self.uploaded_file = st.sidebar.file_uploader(
                 get_sidebar_label("upload_images"),
                 type=["jpg", "png", "jpeg"],
                 accept_multiple_files=True,
                 key=st.session_state["file_key"],
+                help=get_sidebar_hint("image_detection_hint")
             )
 
             # 显示上传状态和进度
@@ -1108,7 +1096,7 @@ class Detection_UI:
                 ):
                     for i, file in enumerate(self.uploaded_file[:10]):  # 最多显示前10个
                         file_size = len(file.getvalue()) / 1024  # KB
-                        st.write(f"{i+1}. {file.name} ({file_size:.1f} KB)")
+                        st.write(f"{i + 1}. {file.name} ({file_size:.1f} KB)")
                     if num_files > 10:
                         st.write(
                             get_sidebar_hint("more_files_remaining").format(
@@ -1117,8 +1105,6 @@ class Detection_UI:
                         )
             else:
                 st.sidebar.info(get_sidebar_hint("image_upload_hint"))
-
-            st.sidebar.caption(get_sidebar_hint("image_detection_hint"))
         elif self.input_source == input_options[1]:
             default_types = ["jpg", "jpeg", "png"]
             image_types = st.sidebar.multiselect(
@@ -1140,7 +1126,8 @@ class Detection_UI:
             folder_path = st.sidebar.text_input(
                 get_sidebar_label("input_folder_path"),
                 value=st.session_state.get("image_folder_path", ""),
-                placeholder=get_sidebar_label("folder_path_example")
+                placeholder=get_sidebar_label("folder_path_example"),
+                help=get_sidebar_hint("folder_selection_hint")
             )
             image_files = []
             if folder_path and os.path.isdir(folder_path):
@@ -1197,7 +1184,6 @@ class Detection_UI:
             else:
                 if folder_path:
                     st.sidebar.error(get_sidebar_hint("invalid_folder_path"))
-                st.sidebar.caption(get_sidebar_hint("folder_selection_hint"))
                 self.uploaded_file = []
         elif self.input_source == input_options[2]:
             self.uploaded_video = st.sidebar.file_uploader(
@@ -1205,6 +1191,7 @@ class Detection_UI:
                 type=["mp4", "avi", "mov"],
                 accept_multiple_files=True,
                 key=st.session_state["file_key"],
+                help=get_sidebar_hint("video_detection_hint")
             )
 
             # 显示上传状态和进度
@@ -1232,8 +1219,6 @@ class Detection_UI:
                     st.write(get_statistic_message("total_size", size=total_size))
             else:
                 st.sidebar.info(get_sidebar_hint("video_upload_hint"))
-
-            st.sidebar.caption(get_sidebar_hint("video_detection_hint"))
         elif self.input_source == input_options[3]:
             default_video_types = ["mp4", "avi", "mov"]
             video_types = st.sidebar.multiselect(
@@ -1254,7 +1239,8 @@ class Detection_UI:
             folder_path = st.sidebar.text_input(
                 get_sidebar_label("input_video_folder_path"),
                 value=st.session_state.get("video_folder_path", ""),
-                placeholder=get_sidebar_label("video_folder_path_example")
+                placeholder=get_sidebar_label("video_folder_path_example"),
+                help=get_sidebar_hint("video_folder_selection_hint")
             )
             video_files = []
             if folder_path and os.path.isdir(folder_path):
@@ -1267,9 +1253,6 @@ class Detection_UI:
                 # 转为文件对象
                 self.uploaded_video = [LocalFileObj(f) for f in video_files]
             else:
-                st.sidebar.caption(
-                    get_sidebar_hint("video_folder_selection_hint")
-                )
                 self.uploaded_video = []
 
         # 清空按钮
@@ -1311,9 +1294,10 @@ class Detection_UI:
         st.sidebar.header(get_sidebar_header("image_processing_settings"))
         # 添加伪彩色转换选项
         self.enable_pseudo_color = st.sidebar.checkbox(
-            get_sidebar_label("enable_pseudo_color"), value=False
+            get_sidebar_label("enable_pseudo_color"),
+            value=False,
+            help=get_sidebar_hint("false_color_hint")
         )
-        st.sidebar.caption(get_sidebar_hint("false_color_hint"))
         # 如果启用伪彩色转换，显示对比度和亮度调整选项
         if self.enable_pseudo_color:
             self.image_contrast = st.sidebar.slider(
@@ -1333,7 +1317,9 @@ class Detection_UI:
 
         # 添加图像旋转校正选项
         self.enable_rotate_correction = st.sidebar.checkbox(
-            get_sidebar_label("enable_rotate_correction"), value=False
+            get_sidebar_label("enable_rotate_correction"),
+            value=False,
+            help=get_sidebar_hint("rotation_correction_hint")
         )
         if self.enable_rotate_correction:
             # 滑动条调整水平和垂直旋转角度，以及缩放比例
@@ -1358,11 +1344,12 @@ class Detection_UI:
                 value=1.0,
                 step=0.01,
             )
-        st.sidebar.caption(get_sidebar_hint("rotation_correction_hint"))
 
         # 添加梯形校正选项
         self.enable_auto_keystone_correction = st.sidebar.checkbox(
-            get_sidebar_label("enable_auto_keystone_correction"), value=False
+            get_sidebar_label("enable_auto_keystone_correction"),
+            value=False,
+            help=get_sidebar_hint("perspective_correction_hint")
         )
         if self.enable_auto_keystone_correction:
             # 滑动条调整最小面积比例
@@ -1373,11 +1360,12 @@ class Detection_UI:
                 value=0.1,
                 step=0.05,
             )
-        st.sidebar.caption(get_sidebar_hint("perspective_correction_hint"))
 
         # 添加背景填充选项
         self.enable_background_fill = st.sidebar.checkbox(
-            get_sidebar_label("enable_background_fill"), value=False
+            get_sidebar_label("enable_background_fill"),
+            value=False,
+            help=get_sidebar_hint("background_fill_hint")
         )
         if self.enable_background_fill:
             # 滑动条调整最小面积比例
@@ -1388,7 +1376,6 @@ class Detection_UI:
                 value=0.1,
                 step=0.05,
             )
-        st.sidebar.caption(get_sidebar_hint("background_fill_hint"))
 
         # 添加图像增强选项
         enhancement_options = get_sidebar_option("image_enhancement_methods")
@@ -1396,8 +1383,8 @@ class Detection_UI:
             get_sidebar_label("image_enhancement_method"),
             options=enhancement_options,
             index=0,
+            help=get_sidebar_hint("image_enhancement_hint")
         )
-        st.sidebar.caption(get_sidebar_hint("image_enhancement_hint"))
 
         # 添加图像畸变校正选项
         undistort_options = get_sidebar_option("undistortion_methods")
@@ -1405,8 +1392,8 @@ class Detection_UI:
             get_sidebar_label("undistortion_method"),
             options=undistort_options,
             index=0,
+            help=get_sidebar_hint("camera_calibration_hint")
         )
-        st.sidebar.caption(get_sidebar_hint("camera_calibration_hint"))
 
         if self.undistortion_method == get_system_default("undistortion_camera_calc"):
             calibration_file = st.sidebar.file_uploader(
@@ -1457,8 +1444,8 @@ class Detection_UI:
                 max_value=0.5,
                 value=0.0,
                 step=0.01,
+                help=get_sidebar_hint("distortion_coefficient_hint")
             )
-            st.sidebar.caption(get_sidebar_hint("distortion_coefficient_hint"))
 
         # Apply distortion adjustment using the slider value
         if self.uploaded_file:
@@ -1716,8 +1703,8 @@ class Detection_UI:
             self.rtsp_output_url = st.sidebar.text_input(
                 get_sidebar_label("rtsp_output_url"),
                 placeholder=get_sidebar_label("rtsp_output_url_example"),
+                help=get_sidebar_hint("rtsp_output_hint")
             )
-            st.sidebar.write(get_sidebar_hint("rtsp_output_hint"))
 
         # 调用调试函数
         self.debug_detection_settings()
@@ -2317,7 +2304,7 @@ class Detection_UI:
         # 如果有有效的检测结果
         if det is not None and len(det):
             det_info = self.model.postprocess(pred)  # 后处理预测结果
-            
+
             # 只对包含string类型的检测结果进行缺失面板和错位面板检测
             if (
                 self.show_missing_panel
@@ -2327,7 +2314,7 @@ class Detection_UI:
                 has_string = any(info.get("class_name") == "string" for info in det_info)
                 if has_string:
                     det_info.extend(compute_missing_panels(det_info, image.shape))
-                    
+
             if (
                 self.show_misaligned_panel
                 and self.model_type == get_system_default("model_type_segmentation")
@@ -2388,7 +2375,7 @@ class Detection_UI:
                         chinese_name = self.cls_name.get(name, "未知类别")
                         draw_flag = name in self.selected_classes
 
-                    # 🔧 确保类别匹配逻辑正确
+                    # 确保类别匹配逻辑正确
                     if draw_flag:
                         # 绘制检测框、标签和面积信息
                         if not is_api:
@@ -2493,7 +2480,7 @@ class Detection_UI:
 
     def update_category_counts(self, current_frame_id=None):
         """更新并显示类别计数表格"""
-        # 🔧 修复：添加安全检查，确保占位符存在
+        # 添加安全检查，确保占位符存在
         if not hasattr(self, "current_image_category_placeholder") or self.current_image_category_placeholder is None:
             return
         if not hasattr(self, "total_category_placeholder") or self.total_category_placeholder is None:
@@ -2502,7 +2489,7 @@ class Detection_UI:
         # 获取当前图片的类别统计
         if current_frame_id is not None:
             self.update_current_image_category_counts(current_frame_id)
-        
+
         # 获取总体类别统计
         self.update_total_category_counts()
 
@@ -2512,20 +2499,20 @@ class Detection_UI:
             # 获取当前图片的检测结果
             saved_results = getattr(self.logTable, "saved_results", [])
             saved_names = st.session_state.get("saved_names", [])
-            
+
             if frame_id >= len(saved_results) or not saved_results[frame_id]:
                 # 如果没有检测结果，显示空表格
                 empty_df = pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")])
                 self.current_image_category_placeholder.table(empty_df)
                 return
-            
+
             # 获取当前图片名称
-            img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"图片_{frame_id+1}"
-            
+            img_name = saved_names[frame_id] if frame_id < len(saved_names) else f"图片_{frame_id + 1}"
+
             # 统计当前图片的类别
             current_results = saved_results[frame_id]
             category_counts = {}
-            
+
             for detInfo in current_results:
                 if isinstance(detInfo, list) and len(detInfo) >= 2:
                     category = detInfo[1]  # 类别名称在索引1
@@ -2533,14 +2520,14 @@ class Detection_UI:
                         category_counts[category] += 1
                     else:
                         category_counts[category] = 1
-            
+
             # 转换为DataFrame
             if category_counts:
                 current_counts = pd.DataFrame(list(category_counts.items()), columns=[get_table_column("category"), get_table_column("count")])
                 current_counts = current_counts.sort_values(get_table_column("count"), ascending=False)
             else:
                 current_counts = pd.DataFrame(columns=[get_table_column("category"), get_table_column("count")])
-            
+
             # 添加表格标题信息
             if not current_counts.empty:
                 self.current_image_category_placeholder.write(f"📊 **{img_name}** 中检测到的目标:")
@@ -2687,7 +2674,7 @@ class Detection_UI:
             st.subheader(get_main_header("current_image_results"))
             self.table_placeholder = st.empty()  # 调整到最右侧显示
             self.table_placeholder.table(res)
-            
+
             # 在当前图片检测结果下方添加当前图片类别统计
             st.subheader(get_main_header("current_category_statistics"))
             self.current_image_category_placeholder = st.empty()
@@ -2724,12 +2711,12 @@ class Detection_UI:
             current_selected = st.session_state.get("multiselect_target", available_targets.copy())
             # 过滤掉不在当前目标列表中的选项
             current_selected = [target for target in current_selected if target in available_targets]
-            
-            # 🔧 关键修复：自动添加新出现的检测类别（如"光伏板缺失"、"光伏板移位"）
+
+            # 自动添加新出现的检测类别（如"光伏板缺失"、"光伏板移位"）
             for target in available_targets:
                 if target not in current_selected and target in [get_class_name("missing_panel"), get_class_name("misaligned_panel")]:
                     current_selected.append(target)
-            
+
             # 如果没有选中任何目标，默认选择所有目标
             if not current_selected:
                 current_selected = available_targets.copy()
@@ -2762,14 +2749,14 @@ class Detection_UI:
                 st.session_state["multiselect_target"] = selected_targets
                 st.session_state["last_selected_targets"] = selected_targets
                 self.toggle_comboBox(idx)
-            
+
         # 图片浏览控制（移动到总体类别统计上方）
         st.markdown("---")
-        
+
         # 显示批量处理汇总信息（如果存在）
         if st.session_state.get("batch_processing_summary"):
             st.success(st.session_state["batch_processing_summary"])
-        
+
         st.subheader(get_main_header("image_browser_control"))
 
         # 检查是否有检测结果（优先检查session state，然后检查logTable）
@@ -2845,12 +2832,12 @@ class Detection_UI:
                 ):
                     self.image_placeholder_res.image(load_default_image(), caption=get_image_display_label("detection_view"))
 
-        # 🔧 修复：在创建占位符后再调用update_category_counts
+        # 在创建占位符后再调用update_category_counts
         st.subheader(get_main_header("total_category_statistics"))
-        
+
         # 总体类别统计
         self.total_category_placeholder = st.empty()
-        
+
         # 初始化类别统计（使用当前图片索引）
         current_idx = st.session_state.get("image_play_index", 0)
         self.update_category_counts(current_idx)
@@ -2981,7 +2968,7 @@ class Detection_UI:
         # 初始化完成后显示检测结果
         self.toggle_comboBox(st.session_state.get("image_play_index", 0))
 
-        # 🔧 添加调试信息
+        # 添加调试信息
         self.debug_display_state()
 
         if run_button:
@@ -3128,7 +3115,7 @@ class Detection_UI:
                         uploaded_file.seek(0)
                         source_img = uploaded_file.read()
                         file_name = uploaded_file.name
-                        
+
                         # 为上传的文件创建临时文件以获取完整路径
                         if getattr(self, "enable_gps_parsing", False):
                             # 创建临时文件保存图片，以便GPS解析
@@ -3236,19 +3223,18 @@ class Detection_UI:
 
             # 完成后的总结
             total_time = time.time() - start_time
-            
-            # 🔧 在终端输出完成信息
-            print(f"🎉 批量检测完成！")
-            print(f"🏁 批量处理完成")
+
+            # 在终端输出完成信息
+            print("🎉 批量检测完成！")
             print(f"   - 总文件数: {total_files}")
             print(f"   - 成功处理: {successful_count}张")
             print(f"   - 失败处理: {failed_count}张")
             print(f"   - 总耗时: {total_time:.2f}秒")
             print(f"   - 平均耗时: {total_time / total_files:.2f}秒/张")
-            
+
             if failed_count > 0:
                 print(f"⚠️  有{failed_count}张图片处理失败，请检查上述错误信息")
-            
+
             # 生成汇总信息用于界面显示
             summary_msg = get_detection_message(
                 "batch_processing_summary",

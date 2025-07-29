@@ -243,7 +243,7 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
                 mask_points = np.concatenate(mask) if len(mask) > 1 else mask[0]
             else:
                 mask_points = np.array(mask)
-            
+
             # 验证掩码点格式
             if mask_points.size == 0:
                 # 掩码为空，只绘制边界框
@@ -251,7 +251,7 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
                 image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
                 y_offset = int(50 * adjust_param)
                 return image, aim_frame_area
-            
+
             # 重塑掩码点为正确格式
             if len(mask_points.shape) == 1:
                 if mask_points.shape[0] % 2 != 0:
@@ -269,10 +269,10 @@ def draw_detections(image, info, color=(0, 0, 255), alpha=0.2, line_number=None,
                 image = draw_with_chinese(image, name, (x1, y1 - int(30 * adjust_param)), font_size=int(35 * adjust_param), color=color)
                 y_offset = int(50 * adjust_param)
                 return image, aim_frame_area
-            
+
             mask_color = generate_color_based_on_name(name)
             mask_points_int = mask_points.astype(np.int32)
-            
+
             # 验证点数组格式是否符合OpenCV要求
             if mask_points_int.shape[0] >= 3 and mask_points_int.shape[1] == 2:
                 # 绘制掩码用于可视化
@@ -503,7 +503,7 @@ def rotate_image(img, angle_x, angle_y, zoom_factor=1.0):
     Rx = np.array([[1, 0, 0],
                    [0, np.cos(pitch), -np.sin(pitch)],
                    [0, np.sin(pitch),  np.cos(pitch)]])
-    
+
     Rz = np.array([[np.cos(roll), -np.sin(roll), 0],
                    [np.sin(roll),  np.cos(roll), 0],
                    [0, 0, 1]])
@@ -587,6 +587,7 @@ def find_largest_valid_contour(image, scale_factor=0.1):
         return None
     largest_cnt = max(valid_cnts, key=cv2.contourArea)
     return largest_cnt
+
 
 def auto_keystone_correction(image, scale_factor=0.1, output_path=None):
     """
@@ -695,13 +696,14 @@ def enhance_texture(image, method="clahe"):
 
     return enhanced_rgb
 
+
 def extract_gps_info(image_path):
     """
     从图片EXIF信息中提取GPS经纬度信息
-    
+
     Args:
         image_path (str): 图片文件路径
-        
+
     Returns:
         dict: 包含GPS信息的字典，包括经度、纬度、高度等
     """
@@ -770,35 +772,36 @@ def extract_gps_info(image_path):
         print(f"{get_gps_message('extract_gps_error')}: {e}")
         return None
 
+
 def format_gps_info(gps_info):
     """
     格式化GPS信息为可读的字符串
-    
+
     Args:
         gps_info (dict): GPS信息字典
-        
+
     Returns:
         str: 格式化后的GPS信息字符串
     """
     if not gps_info:
         return "未找到GPS信息"
-    
+
     parts = []
-    
+
     # 格式化纬度
     if 'latitude' in gps_info:
         lat_str = f"{gps_info['latitude']:.6f}°"
         if 'latitude_ref' in gps_info:
             lat_str += f" {gps_info['latitude_ref']}"
         parts.append(f"纬度: {lat_str}")
-    
+
     # 格式化经度
     if 'longitude' in gps_info:
         lon_str = f"{gps_info['longitude']:.6f}°"
         if 'longitude_ref' in gps_info:
             lon_str += f" {gps_info['longitude_ref']}"
         parts.append(f"经度: {lon_str}")
-    
+
     # 格式化高度
     if 'altitude' in gps_info:
         alt_str = f"{gps_info['altitude']:.1f}m"
@@ -808,7 +811,7 @@ def format_gps_info(gps_info):
             else:
                 alt_str += " (海平面以上)"
         parts.append(f"高度: {alt_str}")
-    
+
     # 格式化时间戳
     if 'gps_timestamp' in gps_info and 'gps_datestamp' in gps_info:
         timestamp = gps_info['gps_timestamp']
@@ -816,7 +819,7 @@ def format_gps_info(gps_info):
         if isinstance(timestamp, tuple) and len(timestamp) == 3:
             time_str = f"{int(timestamp[0]):02d}:{int(timestamp[1]):02d}:{int(timestamp[2]):02d}"
             parts.append(f"GPS时间: {datestamp} {time_str}")
-    
+
     return "\n".join(parts) if parts else "GPS信息不完整"
 
 
@@ -880,7 +883,7 @@ def compute_missing_panels(detections, image_shape, min_area=1000):
                 mask_points = cnt.reshape(-1, 2)
                 # 确保mask格式与draw_detections期望的格式一致（列表格式）
                 mask_data = [mask_points] if mask_points.size > 0 else None
-                
+
                 missing.append(
                     {
                         "class_name": "missing_panel",
@@ -905,7 +908,7 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
 
     Returns:
         list: misaligned component detections.
-        
+
     Detection Logic:
         - Calculates mean angle of all components in each string
         - Components with angle deviation > threshold from mean are marked as misaligned
@@ -931,7 +934,7 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
             if x1_c >= x1_s and y1_c >= y1_s and x2_c <= x2_s and y2_c <= y2_s:
                 # 获取并处理mask数据
                 original_mask = c.get("mask", [])
-                
+
                 # 尝试构建用于计算的mask点集
                 if original_mask and len(original_mask) > 0:
                     try:
@@ -946,14 +949,14 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
                         mask_for_calc = np.array([], dtype=np.int32)
                 else:
                     mask_for_calc = np.array([], dtype=np.int32)
-                
+
                 # 如果没有有效的mask数据，使用边界框创建矩形
                 if mask_for_calc.size == 0:
                     mask_for_calc = np.array(
                         [[x1_c, y1_c], [x2_c, y1_c], [x2_c, y2_c], [x1_c, y2_c]],
                         dtype=np.int32,
                     )
-                
+
                 try:
                     rect = cv2.minAreaRect(mask_for_calc)
                     (cx, cy), (_, _), angle = rect
@@ -979,7 +982,7 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
         angles = [c["angle"] for c in comps_in_string]
         mean_angle = np.mean(angles)  # 使用平均角度
         angle_std = np.std(angles)    # 计算角度标准差
-        
+
         # 如果标准差太小（所有角度都很接近），使用固定阈值
         # 如果标准差较大，使用动态阈值
         dynamic_angle_threshold = max(angle_threshold, angle_std * 2.0) if angle_std > 1.0 else angle_threshold
@@ -1012,7 +1015,7 @@ def compute_misaligned_panels(detections, angle_threshold=5.0, center_ratio=0.2)
                 else:
                     # 如果没有有效的mask，设置为None，让draw_detections使用边界框绘制
                     mask_data = None
-                
+
                 misaligned.append(
                     {
                         "class_name": "misaligned_panel",

@@ -17,7 +17,8 @@
     "undistortion_none": "None",
     "undistortion_camera_calc": "Camera Params",
     "undistortion_manual": "Manual Adjust",
-    "target_all": "All Targets"
+    "target_all": "All Targets",
+    "all_classes": "All Classes"
   },
   "SIDEBAR_HEADERS": {
     "settings_menu": "🔧 Settings Menu",
@@ -338,6 +339,7 @@
     "power_station": "PV Power Station",
     "detection_scene": "Detection Scene",
     "detection_type": "Detection Type",
+    "detection_classes": "Detection Classes",
     "flight_batch": "Flight Batch",
     "task_name": "Task Name",
     "report_date": "Report Date", 
@@ -439,6 +441,7 @@
     "comprehensive_detection": "This report was generated after comprehensive algorithmic detection analysis of this flight route by the drone.",
     "algorithm_engine": "Algorithm engine used: {type}",
     "detected_categories": "Detected categories: ({list})",
+    "configured_detection_classes": "Configured detection classes: {classes}",
     "yolo_segmentation_desc": "Using YOLOv11 segmentation algorithm for PV component contour segmentation on {type} images",
     "yolo_detection_desc": "Using YOLOv11 detection algorithm for anomaly detection on {type} images",
     "no_anomalies": "No anomalies detected",

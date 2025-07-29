@@ -130,9 +130,9 @@ class LogTable:
         self.saved_results.append(detInfo)
         self.saved_names.append(img_name)
         self.saved_image_paths.append(img_path)  # 保存原始图片路径
-        
+
         # 提取并保存当前图片的目标类别信息
-        current_targets = [get_table_column("all_targets")]  # 默认包含"全部目标"选项
+        current_targets = []  # 默认为空列表
         if detInfo:
             self.saved_target_images.append(image)
             # 从detInfo中提取中文类别名称
@@ -141,7 +141,7 @@ class LogTable:
                     chinese_name = det[1]  # 中文名称
                     if chinese_name not in current_targets:
                         current_targets.append(chinese_name)
-        
+
         self.saved_targets_info.append(current_targets)
         # print('____')
         # print(detInfo)
@@ -311,7 +311,7 @@ class LogTable:
             # 解析检测参数
             if detection_params is None:
                 detection_params = {}
-            
+
             model_type = detection_params.get('model_type', get_system_default('model_type_detection'))
             image_type = detection_params.get('image_type', get_system_default('image_type_other'))
             conf_threshold = detection_params.get('conf_threshold', 0.15)
@@ -319,10 +319,10 @@ class LogTable:
             selected_classes = detection_params.get('selected_classes', [])
             cls_name = detection_params.get('cls_name', {})
             enable_gps_parsing = detection_params.get('enable_gps_parsing', False)
-            
+
             # 创建一个 Word 文档
             doc = Document()
-            
+
             # 设置页面格式
             sections = doc.sections
             for section in sections:
@@ -334,30 +334,30 @@ class LogTable:
             # 第一页：报告标题和日期
             now = datetime.now()
             report_time = now.strftime("%Y/%m/%d %H:%M:%S")
-            
+
             # 添加多个空行使标题居中
             for _ in range(8):
                 doc.add_paragraph("")
-            
+
             title_para = doc.add_paragraph()
             title_run = title_para.add_run(get_report_field("report_title"))
             title_run.font.size = Inches(0.25)  # 大标题
             title_run.bold = True
             title_para.alignment = 1  # 居中
-            
+
             # 添加空行
             for _ in range(3):
                 doc.add_paragraph("")
-            
+
             date_para = doc.add_paragraph()
             date_run = date_para.add_run(report_time)
             date_run.font.size = Inches(0.15)
             date_para.alignment = 1  # 居中
-            
+
             # 添加空行
             for _ in range(2):
                 doc.add_paragraph("")
-            
+
             # 报告编号
             report_num = f"PV-{now.strftime('%Y%m%d%H%M%S')}"
             report_num_para = doc.add_paragraph(f"{get_report_field('report_number').format(number=report_num)}")
@@ -369,14 +369,14 @@ class LogTable:
             # 第二页：目录页
             toc_title = doc.add_heading(get_report_field("table_of_contents"), level=1)
             toc_title.alignment = 1  # 居中
-            
+
             # 添加空行
             doc.add_paragraph("")
-            
+
             # 目录内容，使用表格格式实现点线对齐
             toc_table = doc.add_table(rows=5, cols=2)
             toc_table.style = 'Light List'
-            
+
             # 目录项
             toc_items = [
                 (get_report_field("overview_section"), "3"),
@@ -385,21 +385,21 @@ class LogTable:
                 (get_report_field("detailed_results_section"), "6"),
                 ("", "")  # 空行
             ]
-            
+
             for i, (item, page) in enumerate(toc_items):
                 if item:  # 非空行
                     toc_table.cell(i, 0).text = item
                     toc_table.cell(i, 1).text = page
                     toc_table.cell(i, 1).paragraphs[0].alignment = 2  # 右对齐页码
-            
+
             # 目录页结束，插入分页符进入正文
             doc.add_page_break()
 
             # 1、概述部分
             doc.add_heading(get_report_field("overview_section"), level=1)
-            overview_table = doc.add_table(rows=8, cols=2)
+            overview_table = doc.add_table(rows=9, cols=2)  # 增加一行用于显示检测类别
             overview_table.style = 'Table Grid'
-            
+
             # 根据检测类型和图像类型生成检测场景描述
             scene_desc = f"{image_type}{model_type}"
             if model_type == get_system_default("model_type_segmentation"):
@@ -407,30 +407,45 @@ class LogTable:
             else:
                 scene_desc += f" - {get_report_field('detection_description').format(image_type=image_type)}"
 
+            # 生成检测类别信息
+            detection_classes = get_system_default('all_classes')  # 默认值
+            if selected_classes and cls_name:
+                # 将英文类别名称转换为中文
+                chinese_classes = []
+                for class_name in selected_classes:
+                    if class_name in cls_name:
+                        chinese_classes.append(cls_name[class_name])
+                    else:
+                        chinese_classes.append(class_name)  # 如果没有对应的中文名称，使用原名称
+                detection_classes = ', '.join(chinese_classes) if chinese_classes else get_system_default('all_classes')
+            elif selected_classes:
+                detection_classes = ', '.join(selected_classes)
+
             # 概述表格数据
             overview_data = [
                 [get_report_field("user_organization"), get_report_field("power_station")],
                 [get_report_field("detection_scene"), scene_desc],
                 [get_report_field("detection_type"), f"{model_type} - {image_type}"],
+                [get_report_field("detection_classes"), detection_classes],
                 [get_report_field("flight_batch"), f"UAV-{now.strftime('%Y%m%d')}"],
                 [get_report_field("task_name"), f"{get_report_field('pv_inspection_task')}-{now.strftime('%Y%m%d')}"],
                 [get_report_field("report_date"), report_time],
                 [get_report_field("image_count"), str(len(self.saved_images))],
                 [get_report_field("detection_params"), get_report_field("confidence_iou_format").format(confidence=conf_threshold, iou=iou_threshold)]
             ]
-            
+
             for i, (key, value) in enumerate(overview_data):
                 overview_table.cell(i, 0).text = key
                 overview_table.cell(i, 1).text = value
 
             doc.add_paragraph("")
-            
+
             # 概述部分结束，插入分页符进入故障建议部分
             doc.add_page_break()
-            
+
             # 2、光伏电站故障维修建议
             doc.add_heading(get_report_field("fault_suggestion_section"), level=1)
-            
+
             # 根据检测类型定义不同的故障分类
             if image_type == get_system_default("image_type_el"):
                 fault_categories = {
@@ -497,7 +512,7 @@ class LogTable:
                         get_fault_category("component_string"): get_fault_category("component_string_suggestion"),
                     }
                 }
-            
+
             # 收集实际检测到的故障类型
             detected_faults = set()
             for detection_results in self.saved_results:
@@ -505,7 +520,7 @@ class LogTable:
                     if isinstance(detInfo, list) and len(detInfo) >= 2:
                         fault_type = detInfo[1]  # 中文名称
                         detected_faults.add(fault_type)
-            
+
             # 输出故障建议
             for level, faults in fault_categories.items():
                 doc.add_heading(level, level=2)
@@ -514,13 +529,13 @@ class LogTable:
                         doc.add_paragraph(f"{fault_name}: {suggestion}")
 
             doc.add_paragraph("")
-            
+
             # 故障建议部分结束，插入分页符进入统计部分
             doc.add_page_break()
-            
+
             # 3、结果统计
             doc.add_heading(get_report_field("statistics_section"), level=1)
-            
+
             # 统计信息
             total_detections = sum(len(results) for results in self.saved_results)
             fault_counts = {}
@@ -529,7 +544,7 @@ class LogTable:
                     if isinstance(detInfo, list) and len(detInfo) >= 2:
                         fault_type = detInfo[1]
                         fault_counts[fault_type] = fault_counts.get(fault_type, 0) + 1
-            
+
             # 算法引擎描述
             if model_type == get_system_default("model_type_segmentation"):
                 doc.add_paragraph(get_report_statistic("comprehensive_analysis"))
@@ -541,8 +556,11 @@ class LogTable:
             engines = list(fault_counts.keys()) if fault_counts else [get_report_statistic("no_anomalies")]
             doc.add_paragraph(get_report_statistic("algorithm_engine").format(type=algorithm_desc))
             doc.add_paragraph(get_report_statistic("detected_categories").format(list=', '.join(engines)))
+
+            # 添加检测类别信息
+            doc.add_paragraph(get_report_statistic("configured_detection_classes").format(classes=detection_classes))
             doc.add_paragraph("")
-            
+
             # 报警次数统计
             if total_detections > 0:
                 doc.add_paragraph(get_report_statistic("alarm_details").format(count=total_detections))
@@ -550,9 +568,9 @@ class LogTable:
                     doc.add_paragraph(get_report_statistic("fault_count_format").format(type=fault_type, count=count))
             else:
                 doc.add_paragraph(get_report_statistic("alarm_count_zero"))
-            
+
             doc.add_paragraph("")
-            
+
             # 检测类型总统计表
             if fault_counts:
                 doc.add_paragraph(get_report_statistic("detection_type_statistics"))
@@ -566,25 +584,25 @@ class LogTable:
                 ]
                 for i, header in enumerate(headers):
                     stats_table.cell(0, i).text = header
-                
+
                 for fault_type, count in fault_counts.items():
                     row_cells = stats_table.add_row().cells
                     percentage = get_report_statistic("percentage_format").format(value=count / total_detections * 100)
-                    
+
                     # 确定缺陷等级
                     defect_level = get_fault_category("level_1_fault")  # 默认值
                     for level, faults in fault_categories.items():
                         if any(fault_name in fault_type for fault_name in faults.keys()):
                             defect_level = level
                             break
-                    
+
                     row_cells[0].text = fault_type
                     row_cells[1].text = str(count)
                     row_cells[2].text = percentage
                     row_cells[3].text = defect_level
 
             doc.add_paragraph("")
-            
+
             # 详细检测结果
             if self.saved_results:
                 # 详细结果表
@@ -601,20 +619,20 @@ class LogTable:
                 ]
                 for i, header in enumerate(detail_headers):
                     detail_table.cell(0, i).text = header
-                
+
                 for idx, (detection_results, img_name) in enumerate(zip(self.saved_results, self.saved_names)):
                     # 尝试从图片路径获取GPS信息
                     gps_info = None
                     latitude_str = get_report_statistic("unknown_location")
                     longitude_str = get_report_statistic("unknown_location")
-                    
+
                     if enable_gps_parsing:
                         # 尝试从保存的图片路径中获取GPS信息
                         try:
                             img_path = None
                             if hasattr(self, 'saved_image_paths') and idx < len(self.saved_image_paths):
                                 img_path = self.saved_image_paths[idx]
-                            
+
                             if img_path and os.path.exists(img_path):
                                 gps_info = extract_gps_info(img_path)
                                 if gps_info:
@@ -624,7 +642,7 @@ class LogTable:
                                         longitude_str = f"{gps_info['longitude']:.8f}"
                         except Exception as e:
                             print(f"{get_system_message('gps_parse_failed').format(error=str(e))}")
-                    
+
                     for detInfo in detection_results:
                         if isinstance(detInfo, list) and len(detInfo) >= 6:
                             row_cells = detail_table.add_row().cells
@@ -641,7 +659,7 @@ class LogTable:
                 doc.add_heading(get_report_field("segmentation_results_title"), level=1)
             else:
                 doc.add_heading(get_report_field("detection_results_title"), level=1)
-            
+
             # 遍历每张图片的检测结果
             for idx, (image_ini, image_detected, detection_results, img_name) in enumerate(
                 zip(self.saved_images_ini, self.saved_images, self.saved_results, self.saved_names)
@@ -686,14 +704,14 @@ class LogTable:
                         doc.add_paragraph(get_report_field("no_targets_detected"))
                     else:
                         doc.add_paragraph(get_report_field("no_anomalies_detected"))
-                
+
                 # 添加GPS信息（如果启用了GPS解析）
                 if enable_gps_parsing:
                     try:
                         img_path = None
                         if hasattr(self, 'saved_image_paths') and idx < len(self.saved_image_paths):
                             img_path = self.saved_image_paths[idx]
-                        
+
                         if img_path and os.path.exists(img_path):
                             gps_info = extract_gps_info(img_path)
                             if gps_info:
@@ -708,7 +726,7 @@ class LogTable:
                         doc.add_paragraph(get_report_field("gps_parse_failed").format(error=str(e)))
                 elif enable_gps_parsing:
                     doc.add_paragraph(get_report_field("gps_feature_unavailable"))
-                
+
                 doc.add_paragraph("")  # 添加间距
 
             # 保存 Word 文件

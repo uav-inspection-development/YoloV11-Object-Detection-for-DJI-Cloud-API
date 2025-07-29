@@ -17,7 +17,8 @@
     "undistortion_none": "不去除",
     "undistortion_camera_calc": "相机参数计算",
     "undistortion_manual": "手动调整参数",
-    "target_all": "全部目标"
+    "target_all": "全部目标",
+    "all_classes": "全部类别"
   },
   "SIDEBAR_HEADERS": {
     "settings_menu": "🔧 设置菜单",
@@ -364,6 +365,7 @@
     "power_station": "光伏电站",
     "detection_scene": "检测场景",
     "detection_type": "检测类型",
+    "detection_classes": "检测类别",
     "flight_batch": "飞行批号",
     "task_name": "任务名称",
     "report_date": "报告日期",
@@ -465,6 +467,7 @@
     "comprehensive_detection": "无人机飞行后对本次航线进行了全方位的算法检测分析后得出此报告。",
     "algorithm_engine": "使用的算法引擎：{type}",
     "detected_categories": "检测到的类别：（{list}）",
+    "configured_detection_classes": "配置的检测类别：{classes}",
     "yolo_segmentation_desc": "采用YOLOv11分割算法对{type}图像进行光伏组件轮廓分割",
     "yolo_detection_desc": "采用YOLOv11检测算法对{type}图像进行异常检测",
     "no_anomalies": "未检测到异常",

@@ -59,7 +59,7 @@ class Web_Detector(Detector):  # 定义YOLOv8Detector类，继承自Detector类
 
         self.model(torch.zeros(1, 3, *[self.imgsz] * 2).to(self.device).
                    type_as(next(self.model.model.parameters())))  # 预热
-        
+
     def preprocess(self, img):  # 定义预处理方法
         self.img = img  # 保存原始图像
         return img  # 返回处理后的图像
