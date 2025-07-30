@@ -27,7 +27,7 @@ def run_command(command, description=""):
     print(f"{'=' * 50}")
 
     try:
-        result = subprocess.run(command, shell=True, check=True)
+        subprocess.run(command, shell=True, check=True)
         print(f"✅ {description or '命令'} 执行成功")
         return True
     except subprocess.CalledProcessError as e:
@@ -72,7 +72,7 @@ def create_default_git_info():
 GIT_INFO = {{
     "available": False,
     "commit_hash": "未知",
-    "commit_hash_short": "未知", 
+    "commit_hash_short": "未知",
     "commit_message": "未知",
     "commit_author": "未知",
     "commit_email": "未知",
@@ -103,7 +103,34 @@ def get_version_string():
     print("✅ 已创建默认Git信息文件")
 
 
-def build_with_pyinstaller(target_script, output_name=None, additional_args=""):
+def build_streamlit_with_spec():
+    """使用自定义spec文件构建Streamlit应用"""
+    print("🔧 使用自定义spec文件构建Streamlit应用...")
+
+    spec_file = "streamlit_app.spec"
+    if not os.path.exists(spec_file):
+        print(f"❌ 找不到spec文件: {spec_file}")
+        return False
+
+    # 构建命令
+    cmd_parts = [
+        "pyinstaller",
+        "--clean",
+        "--noconfirm",
+        spec_file
+    ]
+
+    command = " ".join(cmd_parts)
+    success = run_command(command, f"使用spec文件构建: {spec_file}")
+
+    if success:
+        print("✅ 使用spec文件构建成功")
+        print("📁 输出位置: dist/YoloV11-Detection-System.exe")
+
+    return success
+
+
+def build_with_pyinstaller(target_script, output_name=None, windowed=False, additional_args=None):
     """
     使用PyInstaller构建应用
 
@@ -127,18 +154,47 @@ def build_with_pyinstaller(target_script, output_name=None, additional_args=""):
     cmd_parts.extend([
         # "--onefile",  # ❌ 移除此参数，改用目录模式
         "--clean",  # 清理临时文件
+        "--noconfirm",  # 跳过用户交互过程
         "--paths", "src",  # 添加 src 目录到模块搜索路径
+        "--collect-all", "streamlit",  # 收集所有Streamlit相关文件
+        "--collect-all", "PySide6",  # 收集所有PySide6相关文件
+        "--collect-all", "QtFusion",  # 收集所有QtFusion相关文件
+        "--collect-all", "IMcore",  # 收集所有IMcore相关文件（包括PyArmor模块）
+        "--collect-all", "pandas",  # 收集所有pandas相关文件（包括DLL）
+        "--collect-all", "numpy",   # 收集所有numpy相关文件（包括DLL）
+        "--collect-all", "pyarrow",  # 收集所有pyarrow相关文件（包括DLL）
+        "--collect-all", "openpyxl",  # 收集Excel处理相关文件
+        "--collect-submodules", "pandas",  # 收集pandas子模块
+        "--collect-submodules", "numpy",   # 收集numpy子模块
+        "--collect-submodules", "pyarrow",  # 收集pyarrow子模块
+        "--copy-metadata", "streamlit",  # 复制Streamlit元数据
+        "--copy-metadata", "altair",  # Streamlit依赖
+        "--copy-metadata", "pillow",  # PIL依赖
+        "--copy-metadata", "requests",  # 常见依赖
+        "--copy-metadata", "numpy",  # numpy元数据
+        "--copy-metadata", "pandas",  # pandas元数据
+        "--copy-metadata", "pyarrow",  # pyarrow元数据
+        "--copy-metadata", "openpyxl",  # Excel处理元数据
+        "--copy-metadata", "torch",  # torch元数据
+        "--copy-metadata", "torchvision",  # torchvision元数据
+        "--copy-metadata", "ultralytics",  # ultralytics元数据
+        "--copy-metadata", "opencv-python",  # opencv元数据
+        "--copy-metadata", "setuptools",  # setuptools元数据
+        "--copy-metadata", "packaging",  # packaging元数据
+        "--copy-metadata", "PySide6",  # PySide6元数据
+        "--copy-metadata", "QtFusion",  # QtFusion元数据
+        "--copy-metadata", "PyYAML",  # PyYAML元数据
+        "--copy-metadata", "importlib-metadata",  # importlib元数据
+        "--copy-metadata", "typing-extensions",  # typing扩展元数据
+        "--copy-metadata", "tzdata",  # 时区数据
     ])
 
-    # 排除不需要的Qt包 - 新增这部分
+    # 排除不需要的Qt包 - 根据项目实际需求调整
     qt_excludes = [
-        "PySide6",  # 如果主要使用PyQt5，排除PySide6
+        # "PySide6",  # ❌ 不要排除PySide6，QtFusion依赖它
         "PyQt6",    # 排除PyQt6
+        "PyQt5",    # 排除PyQt5
         "PySide2",  # 排除PySide2
-        # 如果主要使用PySide6，则改为排除PyQt5：
-        # "PyQt5",
-        # "PyQt6",
-        # "PySide2",
     ]
 
     for exclude_pkg in qt_excludes:
@@ -178,8 +234,7 @@ def build_with_pyinstaller(target_script, output_name=None, additional_args=""):
         ("weights", "weights"),
         ("icon", "icon"),
         ("fonts", "fonts"),
-        ("ultralytics", "ultralytics"),
-        ("src", "src"),
+        ("src/locales", "locales"),  # ✅ 仅包含国际化文件
     ]
 
     for src_dir, dst_dir in data_dirs:
@@ -187,18 +242,137 @@ def build_with_pyinstaller(target_script, output_name=None, additional_args=""):
             cmd_parts.extend(["--add-data", f"{src_dir};{dst_dir}"])
             print(f"📁 添加数据目录: {src_dir} -> {dst_dir}")
 
+    # 添加Streamlit运行必需的ui.py文件
+    if os.path.exists("src/ui.py"):
+        cmd_parts.extend(["--add-data", "src/ui.py;src"])
+        print("📄 添加Streamlit UI文件: src/ui.py -> src/")
+    else:
+        print("⚠️  ui.py文件不存在，Streamlit可能无法正常运行")
+
+    # 添加Streamlit静态文件
+    try:
+        import streamlit
+        streamlit_path = os.path.dirname(streamlit.__file__)
+        cmd_parts.extend(["--add-data", f"{streamlit_path}/static;streamlit/static"])
+        print(f"📁 添加Streamlit静态文件: {streamlit_path}/static")
+    except ImportError:
+        print("⚠️  无法导入Streamlit，跳过静态文件添加")
+
     # 添加隐藏导入
     hidden_imports = [
+        # Streamlit核心模块
         "streamlit",
+        "streamlit.runtime",
+        "streamlit.runtime.caching",
+        "streamlit.runtime.legacy_caching",
+        "streamlit.runtime.state",
+        "streamlit.web",
+        "streamlit.web.server",
+        "streamlit.web.cli",
+        "streamlit.components",
+        "streamlit.components.v1",
+        "streamlit.elements",
+        "streamlit.elements.lib",
+        "streamlit.elements.utils",
+        "streamlit.runtime.scriptrunner",
+        "streamlit.runtime.media_file_manager",
+        "streamlit.source_util",
+        "streamlit.logger",
+        "streamlit.config",
+        "streamlit.errors",
+        "streamlit.hello",
+        "streamlit.proto",
+        "streamlit.type_util",
+        "streamlit.util",
+        "streamlit.delta_generator",
+        "streamlit.file_util",
+        "streamlit.folder_black_list",
+        "streamlit.git_util",
+        "streamlit.hashing",
+        "streamlit.in_memory_file_manager",
+        "streamlit.legacy_caching",
+        "streamlit.markdown_util",
+        "streamlit.net_util",
+        "streamlit.report_thread",
+        "streamlit.runtime.uploaded_file_manager",
+        "streamlit.string_util",
+        "streamlit.version",
+        "streamlit.watcher",
+
+        # YOLO和深度学习
         "ultralytics",
-        "cv2",
-        "numpy",
-        "pandas",
+        "ultralytics.models",
+        "ultralytics.utils",
+        "ultralytics.engine",
+        "ultralytics.nn",
+        "ultralytics.data",
         "torch",
         "torchvision",
+        "torchvision.transforms",
+        "torchvision.models",
+
+        # 图像处理
+        "cv2",
         "PIL",
+        "PIL.Image",
+        "PIL.ImageDraw",
+        "PIL.ImageFont",
+        "PIL.ImageTk",
+
+        # 数据处理
+        "numpy",
+        "pandas",
+        "pandas.plotting",
+        "pandas._libs",
+        "pandas._libs.tslib",
+        "pandas._libs.tslibs",
+        "pandas._libs.tslibs.base",
+        "pandas._libs.tslibs.ccalendar",
+        "pandas._libs.tslibs.dtypes",
+        "pandas._libs.tslibs.field_array",
+        "pandas._libs.tslibs.nattype",
+        "pandas._libs.tslibs.np_datetime",
+        "pandas._libs.tslibs.offsets",
+        "pandas._libs.tslibs.parsing",
+        "pandas._libs.tslibs.period",
+        "pandas._libs.tslibs.strptime",
+        "pandas._libs.tslibs.timedeltas",
+        "pandas._libs.tslibs.timestamps",
+        "pandas._libs.tslibs.timezones",
+        "pandas._libs.tslibs.tzconversion",
+        "pandas._libs.tslibs.vectorized",
+        "pandas.io.formats.style",
+        "pyarrow",
+        "pyarrow.lib",
+        "pyarrow._compute",
+        "pyarrow._csv",
+        "pyarrow._dataset",
+        "pyarrow._fs",
+        "pyarrow._json",
+        "pyarrow._parquet",
+        "pyarrow.parquet",
+        "openpyxl",
+
+        # 可视化
+        "altair",
+        "altair.vegalite",
+        "altair.utils",
+        "matplotlib",
+        "matplotlib.pyplot",
+        "seaborn",
+        "plotly",
+        "plotly.graph_objects",
+        "plotly.express",
+
+        # 网络和HTTP
+        "requests",
+        "urllib3",
+        "charset_normalizer",
+        "idna",
+        "certifi",
+
+        # 项目自定义模块
         "git_info",
-        # 添加 src 目录中的所有自定义模块
         "log",
         "model",
         "chinese_name_list",
@@ -212,21 +386,46 @@ def build_with_pyinstaller(target_script, output_name=None, additional_args=""):
         "train_interface",
         "train_seg",
         "generate_license",
-        # 添加其他可能需要的模块
+
+        # 其他依赖
         "QtFusion",
         "QtFusion.path",
         "QtFusion.utils",
+        "QtFusion.utils.DetVisual",
+        "PySide6",
+        "PySide6.QtCore",
+        "PySide6.QtGui",
+        "PySide6.QtWidgets",
+
+        # IMcore 相关模块（PyArmor 加密）
         "IMcore",
+        "IMcore.IMlibs",
+        "IMcore.IMlibs.py312",  # Python 3.12 特定模块
+        "IMcore.IMvisual",
+        "IMcore.__init__",
+
         "efficientnet_pytorch",
         "cryptography",
         "_cffi_backend",
-        "streamlit.web.cli",
-        # 添加常见的隐藏依赖
         "pkg_resources.py2_warn",
         "sklearn.utils._cython_blas",
         "sklearn.neighbors.typedefs",
         "sklearn.neighbors.quad_tree",
         "sklearn.tree._utils",
+        "scipy",
+        "sklearn",
+        "pytz",
+        "tzdata",
+        "click",
+        "packaging",
+        "typing_extensions",
+        "importlib_metadata",
+        "zipp",
+        "pyarrow",
+        "streamlit_webrtc",
+        "av",
+        "yaml",
+        "PyYAML",
     ]
 
     for module in hidden_imports:
@@ -256,8 +455,8 @@ def build_with_pyinstaller(target_script, output_name=None, additional_args=""):
     success = run_command(command, f"构建 {target_script} -> {output_name or '默认名称'}")
 
     if success:
-        print(f"✅ 构建成功")
-        print(f"📂 输出模式: 目录模式 (包含 _internal 文件夹)")
+        print("✅ 构建成功")
+        print("📂 输出模式: 目录模式 (包含 _internal 文件夹)")
         if output_name:
             print(f"📁 输出位置: dist/{output_name}/")
         else:
@@ -292,7 +491,7 @@ def clean_build_artifacts():
                 print(f"⚠️  删除文件失败 {file_path}: {e}")
 
 
-def main():
+def main(output_name):
     """主函数"""
     print("🚀 开始PyInstaller构建流程")
     print(f"📁 工作目录: {os.getcwd()}")
@@ -300,19 +499,46 @@ def main():
     # 步骤1: 收集Git信息
     collect_git_info()
 
-    # 步骤2: 构建主程序 (默认目标)
-    print("\n📦 开始构建主程序...")
-    if os.path.exists("main.py"):
-        success = build_with_pyinstaller(
-            "main.py",
-            "YoloV11-Detection-System",
-            "--console"  # 主程序保留控制台
-        )
-        if not success:
-            print("❌ 主程序构建失败")
-            return False
+    # 步骤2: 尝试使用spec文件构建(推荐)
+    print("\n📦 尝试使用spec文件构建...")
+    if os.path.exists("streamlit_app.spec"):
+        success = build_streamlit_with_spec()
+        if success:
+            print("✅ 使用spec文件构建成功")
+        else:
+            print("⚠️ spec文件构建失败，回退到传统方法")
+
+            # 步骤3: 传统方法构建主程序
+            print("\n📦 使用传统方法构建主程序...")
+            if os.path.exists("main.py"):
+                success = build_with_pyinstaller(
+                    "main.py",
+                    output_name,
+                    False,
+                    "--console"  # 主程序保留控制台
+                )
+                if not success:
+                    print("❌ 主程序构建失败")
+                    return False
+            else:
+                print("⚠️  main.py 文件不存在，跳过主程序构建")
     else:
-        print("⚠️  main.py 文件不存在，跳过主程序构建")
+        print("⚠️ 找不到streamlit_app.spec文件，使用传统方法")
+
+        # 步骤3: 传统方法构建主程序
+        print("\n📦 使用传统方法构建主程序...")
+        if os.path.exists("main.py"):
+            success = build_with_pyinstaller(
+                "main.py",
+                output_name,
+                False,
+                "--console"  # 主程序保留控制台
+            )
+            if not success:
+                print("❌ 主程序构建失败")
+                return False
+        else:
+            print("⚠️  main.py 文件不存在，跳过主程序构建")
 
     # 步骤5: 清理临时文件
     clean_build_artifacts()
@@ -334,20 +560,26 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="YOLOv11检测系统构建工具")
-    parser.add_argument("--target", help="指定要构建的目标文件")
-    parser.add_argument("--name", help="指定输出文件名")
+    parser.add_argument("--target", default="main.py", help="指定要构建的目标文件 (默认: main.py)")
+    parser.add_argument("--name", default="YoloV11-Detection-System", help="指定输出文件名 (默认: YoloV11-Detection-System)")
     parser.add_argument("--args", help="额外的PyInstaller参数")
     parser.add_argument("--clean-only", action="store_true", help="仅清理临时文件")
+    parser.add_argument("--use-spec", action="store_true", help="仅使用spec文件构建")
 
     args = parser.parse_args()
 
     if args.clean_only:
         clean_build_artifacts()
-    elif args.target:
-        # 构建指定目标
+    elif args.use_spec:
+        # 仅使用spec文件构建
         collect_git_info()
-        build_with_pyinstaller(args.target, args.name, args.args or "")
+        build_streamlit_with_spec()
+        clean_build_artifacts()
+    elif args.target != "main.py":
+        # 构建指定目标（非默认main.py）
+        collect_git_info()
+        build_with_pyinstaller(args.target, args.name, False, args.args or "")
         clean_build_artifacts()
     else:
-        # 默认构建流程
-        main()
+        # 默认构建流程（构建main.py）
+        main(args.name)

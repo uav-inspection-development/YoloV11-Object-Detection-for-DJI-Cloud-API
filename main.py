@@ -4,35 +4,15 @@ import argparse
 from QtFusion.path import abs_path
 import subprocess
 import os
-import argparse
-import random
-import tempfile
 import time
-import cv2
-import json
-import numpy as np
 import streamlit as st
-from QtFusion.utils import drawRectBox
-from datetime import datetime
-import IMcore
-import efficientnet_pytorch
-import cryptography
-import _cffi_backend
+
 
 # 添加 src 目录到模块搜索路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(current_dir, "src")
 if src_dir not in sys.path:
     sys.path.append(src_dir)
-
-from log import ResultLogger, LogTable
-from model import Web_Detector
-from chinese_name_list import EL_type, EL_class_colors, Thermo_type, Other_type, Thermo_class_colors, Visible_type, Visible_class_colors, Segmentation_type, Segmentation_class_colors, Other_class_colors
-from ui_style import def_css_html
-from utils import is_black_and_white, save_uploaded_file, concat_results, load_default_image, get_camera_names, draw_detections, save_chinese_image, format_time, convert_to_pseudo_colorizer, camera_undistortion, auto_undistort_image, rotate_image
-from auth import verify_token, get_access_token
-from check_license import check_license
-from web import Detection_UI
 
 
 def run_streamlit(script_path, extra_args=None):

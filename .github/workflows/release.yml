@@ -67,22 +67,38 @@ jobs:
         # Install system dependencies with error handling
         chmod +x install_system_deps.sh
         ./install_system_deps.sh
+
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        # Install Homebrew dependencies if needed
+        # brew install <any-required-packages>
+        echo "macOS system dependencies installation completed"
+
+    - name: Install system dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        # Install Windows-specific dependencies if needed
+        echo "Windows system dependencies installation completed"
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
-    
+
     - name: Build executable
+      shell: bash
       run: |
-        pyinstaller --onefile --name yolov11-detector-${{ matrix.os }} main.py
-    
+        python build_exe.py --name YoloV11-Detection-System-${{ matrix.os }}
+
     - name: Upload executable artifact
       uses: actions/upload-artifact@v3
       with:
         name: yolov11-detector-${{ matrix.os }}
-        path: dist/yolov11-detector-${{ matrix.os }}*
+        path: |
+          dist/YoloV11-Detection-System-${{ matrix.os }}/
+          dist/YoloV11-Detection-System-${{ matrix.os }}.*
 
   create-release:
     needs: [test-before-release, build-executable]
@@ -99,14 +115,27 @@ jobs:
       run: |
         # Create a source distribution
         zip -r yolov11-source-code.zip . -x "*.git*" "*/.*" "*/__pycache__/*" "*/build/*" "*/dist/*"
-    
+        
+        # Create compressed packages for each platform's executables
+        if [ -d "yolov11-detector-ubuntu-latest" ]; then
+          cd yolov11-detector-ubuntu-latest && tar -czf ../yolov11-detector-linux.tar.gz * && cd ..
+        fi
+        
+        if [ -d "yolov11-detector-windows-latest" ]; then
+          cd yolov11-detector-windows-latest && zip -r ../yolov11-detector-windows.zip * && cd ..
+        fi
+        
+        if [ -d "yolov11-detector-macos-latest" ]; then
+          cd yolov11-detector-macos-latest && tar -czf ../yolov11-detector-macos.tar.gz * && cd ..
+        fi
+
     - name: Upload release assets
       uses: softprops/action-gh-release@v1
       with:
         files: |
           yolov11-source-code.zip
-          yolov11-detector-ubuntu-latest/*
-          yolov11-detector-windows-latest/*
-          yolov11-detector-macos-latest/*
+          yolov11-detector-linux.tar.gz
+          yolov11-detector-windows.zip
+          yolov11-detector-macos.tar.gz
         draft: false
         prerelease: false

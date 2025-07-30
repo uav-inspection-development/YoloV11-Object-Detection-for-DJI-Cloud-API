@@ -119,8 +119,6 @@ python tests/validate_config.py
 
 1. Create and activate a Python environment:
 
-1. Create and activate a Python environment:
-
     ```shell
     conda create -n pytorch python=3.12
     conda activate pytorch
