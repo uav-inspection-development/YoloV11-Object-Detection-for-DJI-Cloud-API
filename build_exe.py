@@ -11,6 +11,9 @@ import shutil
 from pathlib import Path
 import argparse
 
+# 添加 utils_data 目录到模块搜索路径
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils_data'))
+
 
 def run_command(command, description=""):
     """
@@ -103,6 +106,61 @@ def get_version_string():
     print("✅ 已创建默认Git信息文件")
 
 
+def encrypt_ui_file():
+    """加密 ui.py 文件"""
+    print("\n🔐 正在加密 ui.py 文件...")
+
+    ui_file_path = "src/ui.py"
+    if not os.path.exists(ui_file_path):
+        print("⚠️  ui.py 文件不存在，跳过加密")
+        return None
+
+    try:
+        # 检查加密依赖是否可用
+        try:
+            import cryptography
+            from cryptography.fernet import Fernet
+            print("✅ cryptography 模块可用")
+        except ImportError as crypto_error:
+            print(f"❌ cryptography 模块不可用: {crypto_error}")
+            print(f"⚠️  将使用原始 ui.py 文件: {ui_file_path}")
+            return ui_file_path
+
+        # 导入加密工具
+        from util_encryption import create_encrypted_script
+
+        # 读取原始 ui.py 文件
+        with open(ui_file_path, 'r', encoding='utf-8') as f:
+            source_code = f.read()
+
+        print("📖 已读取 ui.py 源代码")
+
+        # 创建加密后的脚本
+        # 自动生成密码，不添加额外混淆以避免影响Streamlit运行
+        encrypted_script = create_encrypted_script(
+            source_code,
+            password=None,  # 自动生成密码
+            add_obfuscation=False  # 不添加混淆，保证Streamlit兼容性
+        )
+
+        # 创建临时目录存放加密文件
+        temp_dir = "temp_encrypted"
+        os.makedirs(temp_dir, exist_ok=True)
+
+        # 保存加密后的ui.py
+        encrypted_ui_path = os.path.join(temp_dir, "ui.py")
+        with open(encrypted_ui_path, 'w', encoding='utf-8') as f:
+            f.write(encrypted_script)
+
+        print(f"✅ ui.py 加密完成，保存到: {encrypted_ui_path}")
+        return encrypted_ui_path
+
+    except Exception as e:
+        print(f"❌ ui.py 加密失败: {e}")
+        print(f"⚠️  将使用原始 ui.py 文件: {ui_file_path}")
+        return ui_file_path
+
+
 def build_streamlit_with_spec():
     """使用自定义spec文件构建Streamlit应用"""
     print("🔧 使用自定义spec文件构建Streamlit应用...")
@@ -147,6 +205,9 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
     if output_name:
         print(f"📋 输出名称: {output_name}")
 
+    # 🔐 首先加密 ui.py 文件
+    encrypted_ui_path = encrypt_ui_file()
+
     # 构建PyInstaller命令
     cmd_parts = ["pyinstaller"]
 
@@ -164,9 +225,11 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         "--collect-all", "numpy",   # 收集所有numpy相关文件（包括DLL）
         "--collect-all", "pyarrow",  # 收集所有pyarrow相关文件（包括DLL）
         "--collect-all", "openpyxl",  # 收集Excel处理相关文件
+        "--collect-all", "cryptography",  # 收集所有cryptography相关文件（用于加密）
         "--collect-submodules", "pandas",  # 收集pandas子模块
         "--collect-submodules", "numpy",   # 收集numpy子模块
         "--collect-submodules", "pyarrow",  # 收集pyarrow子模块
+        "--collect-submodules", "cryptography",  # 收集cryptography子模块
         "--copy-metadata", "streamlit",  # 复制Streamlit元数据
         "--copy-metadata", "altair",  # Streamlit依赖
         "--copy-metadata", "pillow",  # PIL依赖
@@ -175,6 +238,7 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         "--copy-metadata", "pandas",  # pandas元数据
         "--copy-metadata", "pyarrow",  # pyarrow元数据
         "--copy-metadata", "openpyxl",  # Excel处理元数据
+        "--copy-metadata", "cryptography",  # cryptography元数据
         "--copy-metadata", "torch",  # torch元数据
         "--copy-metadata", "torchvision",  # torchvision元数据
         "--copy-metadata", "ultralytics",  # ultralytics元数据
@@ -242,10 +306,13 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
             cmd_parts.extend(["--add-data", f"{src_dir};{dst_dir}"])
             print(f"📁 添加数据目录: {src_dir} -> {dst_dir}")
 
-    # 添加Streamlit运行必需的ui.py文件
-    if os.path.exists("src/ui.py"):
+    # 添加Streamlit运行必需的ui.py文件（使用加密版本）
+    if encrypted_ui_path and os.path.exists(encrypted_ui_path):
+        cmd_parts.extend(["--add-data", f"{encrypted_ui_path};src"])
+        print(f"📄 添加加密的Streamlit UI文件: {encrypted_ui_path} -> src/ui.py")
+    elif os.path.exists("src/ui.py"):
         cmd_parts.extend(["--add-data", "src/ui.py;src"])
-        print("📄 添加Streamlit UI文件: src/ui.py -> src/")
+        print("📄 添加原始Streamlit UI文件: src/ui.py -> src/")
     else:
         print("⚠️  ui.py文件不存在，Streamlit可能无法正常运行")
 
@@ -406,6 +473,12 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
 
         "efficientnet_pytorch",
         "cryptography",
+        "cryptography.fernet",
+        "cryptography.hazmat",
+        "cryptography.hazmat.primitives",
+        "cryptography.hazmat.primitives.hashes",
+        "cryptography.hazmat.primitives.kdf",
+        "cryptography.hazmat.primitives.kdf.pbkdf2",
         "_cffi_backend",
         "pkg_resources.py2_warn",
         "sklearn.utils._cython_blas",
@@ -463,6 +536,16 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
             script_name = os.path.splitext(os.path.basename(target_script))[0]
             print(f"📁 输出位置: dist/{script_name}/")
 
+    # 🧹 清理加密临时文件
+    if encrypted_ui_path and "temp_encrypted" in encrypted_ui_path:
+        temp_dir = os.path.dirname(encrypted_ui_path)
+        if os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                print(f"🧹 已清理加密临时目录: {temp_dir}")
+            except Exception as e:
+                print(f"⚠️  清理加密临时目录失败: {e}")
+
     return success
 
 
@@ -470,7 +553,7 @@ def clean_build_artifacts():
     """清理构建产生的临时文件"""
     print("\n🧹 清理构建临时文件...")
 
-    dirs_to_clean = ["build", "__pycache__"]
+    dirs_to_clean = ["build", "__pycache__", "temp_encrypted"]
     files_to_clean = ["*.spec"]
 
     for dir_name in dirs_to_clean:
