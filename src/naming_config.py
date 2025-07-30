@@ -119,8 +119,12 @@ def get_button_text(key: str) -> str:
     return _get("BUTTON_TEXTS", key)
 
 
-def get_image_display_label(key: str) -> str:
-    return _get("IMAGE_DISPLAY_LABELS", key)
+def get_image_display_label(message_type: str, **kwargs) -> str:
+    template = globals().get("IMAGE_DISPLAY_LABELS", {}).get(message_type, "")
+    try:
+        return template.format(**kwargs)
+    except KeyError:
+        return template
 
 
 def get_about_content(key: str) -> str:
