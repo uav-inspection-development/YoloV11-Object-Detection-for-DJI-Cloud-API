@@ -623,6 +623,144 @@ User_Manual.md                # User manual for the application
 
 ## API Usage
 
+The API server now supports Chinese and English internationalization, automatically switching languages based on requests or manual language configuration through API endpoints.
+
+### Supported Languages
+
+- `zh`: Chinese
+- `en`: English
+
+### Language Configuration
+
+#### 1. Automatic Detection (Priority Order)
+
+1. **Custom Header**: `X-Language: zh` or `X-Language: en`
+2. **Query Parameter**: `?lang=zh` or `?lang=en`
+3. **Accept-Language Header**: `Accept-Language: zh-CN,zh;q=0.9`
+
+#### 2. Manual Configuration
+
+```bash
+# Set to English
+curl -X POST http://localhost:5000/api/language \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_token" \
+  -d '{"language": "en"}'
+
+# Set to Chinese  
+curl -X POST http://localhost:5000/api/language \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_token" \
+  -d '{"language": "zh"}'
+```
+
+#### 3. Query Current Language
+
+```bash
+curl -X GET http://localhost:5000/api/language \
+  -H "Authorization: Bearer your_token"
+```
+
+### Language-Specific API Responses
+
+#### Chinese Mode `/api/types` Response
+
+```json
+{
+  "检测任务": {
+    "红外": [
+      {"name": "Hot_Spot", "chinese_name": "热斑"},
+      {"name": "Diode", "chinese_name": "二极管"}
+    ],
+    "可见光": [
+      {"name": "Dust", "chinese_name": "灰尘"},
+      {"name": "Crack", "chinese_name": "裂纹"}
+    ],
+    "EL隐裂": [
+      {"name": "Break", "chinese_name": "断栅"}
+    ],
+    "其他": [
+      {"name": "Bird", "chinese_name": "鸟类"}
+    ]
+  },
+  "分割任务": {
+    "红外": [...],
+    "可见光": [...],
+    "EL隐裂": [...]
+  }
+}
+```
+
+#### English Mode `/api/types` Response
+
+```json
+{
+  "Detection Task": {
+    "Thermal": [
+      {"name": "Hot_Spot", "chinese_name": "热斑"},
+      {"name": "Diode", "chinese_name": "二极管"}
+    ],
+    "Visible": [
+      {"name": "Dust", "chinese_name": "灰尘"},
+      {"name": "Crack", "chinese_name": "裂纹"}
+    ],
+    "EL": [
+      {"name": "Break", "chinese_name": "断栅"}
+    ],
+    "Other": [
+      {"name": "Bird", "chinese_name": "鸟类"}
+    ]
+  },
+  "Segmentation Task": {
+    "Thermal": [...],
+    "Visible": [...],
+    "EL": [...]
+  }
+}
+```
+
+### Internationalized Parameter Validation
+
+Parameter validation error messages are returned in the current language setting:
+
+#### Chinese Mode Error Example
+
+```json
+{
+  "error": "Invalid parameters",
+  "details": [
+    "model_type must be '检测任务' or '分割任务'",
+    "image_type must be one of ['可见光', '红外', 'EL隐裂', '其他']"
+  ]
+}
+```
+
+#### English Mode Error Example
+
+```json
+{
+  "error": "Invalid parameters", 
+  "details": [
+    "model_type must be 'Detection Task' or 'Segmentation Task'",
+    "image_type must be one of ['Visible', 'Thermal', 'EL', 'Other']"
+  ]
+}
+```
+
+### Best Practices
+
+1. **Frontend Applications**: Use `X-Language` header to explicitly specify language
+2. **Web Browsers**: Automatically use `Accept-Language` header
+3. **Mobile Applications**: Use query parameters `?lang=zh` or `?lang=en`
+4. **Persistent Settings**: Use `/api/language` API for long-term language configuration
+
+### Important Notes
+
+- Language settings affect all text content in API responses
+- Type names (`name` field) remain in English for programmatic logic
+- Chinese names (`chinese_name` field) are used for UI display
+- Environment variable `API_LANGUAGE` can set the default language
+
 ### POST /api/detect/image
 
 Detect objects in a single image.
