@@ -218,6 +218,7 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         "--noconfirm",  # 跳过用户交互过程
         "--paths", "src",  # 添加 src 目录到模块搜索路径
         "--collect-all", "streamlit",  # 收集所有Streamlit相关文件
+        "--collect-all", "streamlit_change_language",  # Streamlit多语言组件资源
         "--collect-all", "PySide6",  # 收集所有PySide6相关文件
         "--collect-all", "QtFusion",  # 收集所有QtFusion相关文件
         "--collect-all", "IMcore",  # 收集所有IMcore相关文件（包括PyArmor模块）
@@ -231,6 +232,7 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         "--collect-submodules", "pyarrow",  # 收集pyarrow子模块
         "--collect-submodules", "cryptography",  # 收集cryptography子模块
         "--copy-metadata", "streamlit",  # 复制Streamlit元数据
+        "--copy-metadata", "streamlit_change_language",  # Streamlit多语言组件元数据
         "--copy-metadata", "altair",  # Streamlit依赖
         "--copy-metadata", "pillow",  # PIL依赖
         "--copy-metadata", "requests",  # 常见依赖
@@ -298,6 +300,7 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         ("weights", "weights"),
         ("icon", "icon"),
         ("fonts", "fonts"),
+        (".streamlit", ".streamlit"),
         ("src/locales", "locales"),  # ✅ 仅包含国际化文件
     ]
 
@@ -329,6 +332,7 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
     hidden_imports = [
         # Streamlit核心模块
         "streamlit",
+        "streamlit_change_language",
         "streamlit.runtime",
         "streamlit.runtime.caching",
         "streamlit.runtime.legacy_caching",
