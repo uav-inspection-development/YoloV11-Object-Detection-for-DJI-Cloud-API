@@ -259,7 +259,7 @@ class Detection_UI:
         self.model_type = get_system_default("model_type_detection")
         self.conf_threshold = 0.15  # 默认置信度阈值
         self.iou_threshold = 0.5  # 默认IOU阈值
-        self.image_type = get_system_default("image_type_visible")  # 图像类型
+        self.image_type = get_system_default("image_type_thermal")  # 图像类型
 
         # 初始化检测类别相关的配置参数
         self.available_classes = None  # 可用的检测类别
@@ -608,12 +608,10 @@ class Detection_UI:
                 git_info_md = format_git_info_for_about()
                 st.markdown(git_info_md)
 
-            # 作者和联系方式
+            # 作者信息
             st.markdown("---")
             st.subheader(get_about_content('author_title'))
             st.markdown(get_about_content('author'))
-            st.subheader(get_about_content('contact_title'))
-            st.markdown(get_about_content('contact'))
 
     def setup_sidebar(self):
         """
@@ -820,12 +818,7 @@ class Detection_UI:
                 value=True,
                 help=get_sidebar_hint("detection_task_hint")
             )
-            available_options = [
-                get_system_default("image_type_el"),
-                get_system_default("image_type_thermal"),
-                get_system_default("image_type_visible"),
-                get_system_default("image_type_other"),
-            ]
+            available_options = [get_system_default("image_type_thermal")]
         elif self.model_type == get_system_default("model_type_segmentation"):
             self.rectangle_bounding_output = st.sidebar.checkbox(
                 get_sidebar_label("rectangle_output_checkbox"),
@@ -851,10 +844,7 @@ class Detection_UI:
                 help=get_sidebar_hint("misaligned_panel_hint")
             )
 
-            available_options = [
-                get_system_default("image_type_thermal"),
-                get_system_default("image_type_visible"),
-            ]
+            available_options = [get_system_default("image_type_thermal")]
 
         available_options = [opt for opt in available_options if is_feature_enabled(opt, self.enabled_features) or opt == "其他"]
         if not available_options:
@@ -1007,22 +997,10 @@ class Detection_UI:
 
             # 检查类别是否完全一致
             if set(self.model.names) != set(self.available_class_keys):
-                # 如果 chinese_name_list 的类别比模型的类别少，则以 chinese_name_list 为准
-                if len(self.available_class_keys) < len(self.model.names):
-                    self.model.names = [
-                        name
-                        for name in self.model.names
-                        if name in self.available_class_keys
-                    ]
-                # 如果 chinese_name_list 的类别比模型的类别多，则以模型为准
-                else:
-                    self.available_class_keys = [
-                        key
-                        for key in self.available_class_keys
-                        if key in self.model.names
-                    ]
-
-                # 重新检查类别是否一致
+                # UI 可以只开放模型类别的一个子集，但模型原始类别索引必须保持不变。
+                self.available_class_keys = [
+                    key for key in self.available_class_keys if key in self.model.names
+                ]
                 missing_in_model = set(self.available_class_keys) - set(
                     self.model.names
                 )

@@ -1,7 +1,7 @@
 {
   "SYSTEM_INFO": {
     "title": "光伏云组件检测系统",
-    "description": "本系统可以检测光伏面板可见光故障、红外热故障、EL隐裂故障以及其他异物入侵等问题。",
+    "description": "本系统可通过对红外图片的 AI 分析标注出设备故障点，分析故障类型并判断故障严重等级。",
     "version_info_not_found": "📊 版本信息\n未找到Git仓库信息",
     "unknown_version": "未知版本",
     "separator": "--------"
@@ -395,9 +395,9 @@
     "gps_feature_unavailable": "GPS信息: GPS解析功能不可用"
   },
   "FAULT_CATEGORIES": {
-    "level_1_fault": "一级故障",
-    "level_2_fault": "二级故障", 
-    "level_3_fault": "三级故障",
+    "level_1_fault": "一般缺陷",
+    "level_2_fault": "严重缺陷",
+    "level_3_fault": "紧急缺陷",
     "detection_info": "检测信息",
     "scratch": "划伤",
     "scratch_suggestion": "组件表面出现划伤，建议检查并及时维护，避免进一步损坏。",
@@ -547,16 +547,15 @@
       "black_cell": "黑片"
     },
     "Thermal": {
-      "dyrb": "单一热斑",
-      "dmjrb": "大面积热斑",
-      "dyrb_ycdw": "单一热斑_异常低温",
-      "dmjrb_ycdw": "大面积热斑_异常低温",
-      "ycdw": "异常低温",
-      "dyrb_ejgdl": "单一热斑_二极管短路",
-      "ejgdl": "二极管短路",
-      "ygfs": "阳光反射",
-      "gfb_zc_rcx": "光伏板正常热成像",
-      "ejgdl_ycdw": "二极管短路_异常低温"
+      "dyrb": "同类设备温差对比",
+      "dmjrb": "最高温度点故障类型分析",
+      "dyrb_ycdw": "异常温升",
+      "dmjrb_ycdw": "局部过热",
+      "ycdw": "点状温度异常",
+      "dyrb_ejgdl": "线状温度异常",
+      "ejgdl": "带状温度异常",
+      "ygfs": "片状温度异常",
+      "gfb_zc_rcx": "环状温度异常"
     },
     "Visible": {
       "yyzd": "遮挡",
@@ -600,14 +599,12 @@
   },
   "ABOUT_SECTION": {
     "title": "关于本应用",
-    "description": "本应用旨在检测光伏组件的故障，包括：\n- 可见光故障\n- 红外热故障\n- EL隐裂\n- 其他异常（如异物入侵）",
+    "description": "本应用旨在通过红外图像检测电气系统故障，包括：\n- 同类设备温差对比\n- 最高温度点故障类型分析\n- 异常温升\n- 局部过热\n- 点状温度异常\n- 线状温度异常\n- 带状温度异常\n- 片状温度异常\n- 环状温度异常\n\n故障严重等级依据 DL/T 664-2025 分为一般缺陷、严重缺陷和紧急缺陷。",
     "features_title": "功能特点",
     "features": "- 使用摄像头或 RTSP/RTMP 流进行实时检测\n- 批量处理图片和视频\n- 高级图像校正技术（例如：畸变校正、梯形校正）\n- 支持多种格式导出检测结果（CSV、Excel、JSON、Word）",
     "tech_title": "使用技术",
     "technologies": "- **Streamlit** 用于用户界面\n- **OpenCV** 用于图像处理\n- **YOLOv11** 用于目标检测\n- **NumPy** 用于数值计算",
     "author_title": "作者",
-    "author": "由 Phillweston 开发。",
-    "contact_title": "联系方式",
-    "contact": "如有疑问或需要支持，请联系：lrt2443655975@gmail.com"
+    "author": "四川富尔曼科技有限公司"
   }
 }

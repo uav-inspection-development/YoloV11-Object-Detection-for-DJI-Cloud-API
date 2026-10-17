@@ -22,6 +22,8 @@ GitPython
 google-auth
 google-auth-oauthlib
 gradio
+Flask
+Flask-SocketIO
 grpcio
 humanfriendly
 idna

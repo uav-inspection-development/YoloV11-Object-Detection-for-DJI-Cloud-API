@@ -227,10 +227,22 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         "--collect-all", "pyarrow",  # 收集所有pyarrow相关文件（包括DLL）
         "--collect-all", "openpyxl",  # 收集Excel处理相关文件
         "--collect-all", "cryptography",  # 收集所有cryptography相关文件（用于加密）
+        "--collect-all", "Crypto",  # 收集PyCryptodome模块及原生加密库
+        "--collect-all", "docx",  # 收集python-docx模块及模板资源
+        "--collect-all", "exifread",  # 收集EXIF解析模块
+        "--collect-all", "flask",  # 收集Flask及模板资源
+        "--collect-all", "flask_socketio",  # 收集Socket.IO动态模块
+        "--collect-all", "gradio",  # 收集Gradio前端资源及动态模块
         "--collect-submodules", "pandas",  # 收集pandas子模块
         "--collect-submodules", "numpy",   # 收集numpy子模块
         "--collect-submodules", "pyarrow",  # 收集pyarrow子模块
         "--collect-submodules", "cryptography",  # 收集cryptography子模块
+        "--collect-submodules", "Crypto",  # 收集PyCryptodome子模块
+        "--collect-submodules", "docx",  # 收集python-docx子模块
+        "--collect-submodules", "exifread",  # 收集ExifRead子模块
+        "--collect-submodules", "flask",  # 收集Flask子模块
+        "--collect-submodules", "flask_socketio",  # 收集Flask-SocketIO子模块
+        "--collect-submodules", "gradio",  # 收集Gradio子模块
         "--copy-metadata", "streamlit",  # 复制Streamlit元数据
         "--copy-metadata", "streamlit_change_language",  # Streamlit多语言组件元数据
         "--copy-metadata", "altair",  # Streamlit依赖
@@ -241,6 +253,12 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         "--copy-metadata", "pyarrow",  # pyarrow元数据
         "--copy-metadata", "openpyxl",  # Excel处理元数据
         "--copy-metadata", "cryptography",  # cryptography元数据
+        "--copy-metadata", "pycryptodome",  # PyCryptodome元数据
+        "--copy-metadata", "python-docx",  # python-docx元数据
+        "--copy-metadata", "ExifRead",  # ExifRead元数据
+        "--copy-metadata", "Flask",  # Flask元数据
+        "--copy-metadata", "Flask-SocketIO",  # Flask-SocketIO元数据
+        "--copy-metadata", "gradio",  # Gradio元数据
         "--copy-metadata", "torch",  # torch元数据
         "--copy-metadata", "torchvision",  # torchvision元数据
         "--copy-metadata", "ultralytics",  # ultralytics元数据
@@ -483,6 +501,17 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
         "cryptography.hazmat.primitives.hashes",
         "cryptography.hazmat.primitives.kdf",
         "cryptography.hazmat.primitives.kdf.pbkdf2",
+        "Crypto",
+        "Crypto.Cipher",
+        "Crypto.Cipher.AES",
+        "Crypto.Util",
+        "Crypto.Util.Padding",
+        "docx",
+        "docx.shared",
+        "exifread",
+        "flask",
+        "flask_socketio",
+        "gradio",
         "_cffi_backend",
         "pkg_resources.py2_warn",
         "sklearn.utils._cython_blas",

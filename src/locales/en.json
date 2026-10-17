@@ -1,7 +1,7 @@
 {
   "SYSTEM_INFO": {
     "title": "PV Module Detection System",
-    "description": "Detect visible, infrared and EL faults on solar panels.",
+    "description": "The system analyzes infrared images with AI to mark equipment fault locations, identify fault types, and determine fault severity.",
     "version_info_not_found": "📊 Version info\nGit repo not found",
     "unknown_version": "Unknown Version",
     "separator": "--------"
@@ -369,9 +369,9 @@
     "gps_feature_unavailable": "GPS Information: GPS parsing feature unavailable"
   },
   "FAULT_CATEGORIES": {
-    "level_1_fault": "Level 1 Fault",
-    "level_2_fault": "Level 2 Fault",
-    "level_3_fault": "Level 3 Fault", 
+    "level_1_fault": "General Defect",
+    "level_2_fault": "Serious Defect",
+    "level_3_fault": "Critical Defect",
     "detection_info": "Detection Information",
     "scratch": "Scratch",
     "scratch_suggestion": "Component surface scratches detected. Check and maintain promptly to avoid further damage.",
@@ -521,16 +521,15 @@
       "black_cell": "Black Cell"
     },
     "Thermal": {
-      "dyrb": "Single Hot Spot",
-      "dmjrb": "Large Area Hot Spot",
-      "dyrb_ycdw": "Single Hot Spot - Low Temp",
-      "dmjrb_ycdw": "Large Hot Spot - Low Temp",
-      "ycdw": "Abnormal Low Temp",
-      "dyrb_ejgdl": "Single Hot Spot - Diode Short",
-      "ejgdl": "Diode Short",
-      "ygfs": "Sun Reflection",
-      "gfb_zc_rcx": "Normal Thermal Imaging",
-      "ejgdl_ycdw": "Diode Short - Low Temp"
+      "dyrb": "Temperature Difference Comparison for Similar Equipment",
+      "dmjrb": "Maximum-temperature Fault Type Analysis",
+      "dyrb_ycdw": "Abnormal Temperature Rise",
+      "dmjrb_ycdw": "Localized Overheating",
+      "ycdw": "Point Temperature Anomaly",
+      "dyrb_ejgdl": "Linear Temperature Anomaly",
+      "ejgdl": "Band Temperature Anomaly",
+      "ygfs": "Area Temperature Anomaly",
+      "gfb_zc_rcx": "Ring Temperature Anomaly"
     },
     "Visible": {
       "yyzd": "Obstruction",
@@ -574,14 +573,12 @@
   },
   "ABOUT_SECTION": {
     "title": "About This Application",
-    "description": "This application is designed to detect faults in photovoltaic components, including:\n- Visible light faults\n- Infrared thermal faults\n- EL cracks\n- Other anomalies (such as foreign object intrusion)",
+    "description": "This application uses infrared images to detect electrical-system faults, including:\n- Temperature difference comparison for similar equipment\n- Maximum-temperature fault type analysis\n- Abnormal temperature rise\n- Localized overheating\n- Point temperature anomaly\n- Linear temperature anomaly\n- Band temperature anomaly\n- Area temperature anomaly\n- Ring temperature anomaly\n\nFault severity follows DL/T 664-2025 and is classified as general, serious, or critical.",
     "features_title": "Features",
     "features": "- Real-time detection using camera or RTSP/RTMP streams\n- Batch processing of images and videos\n- Advanced image correction techniques (e.g., distortion correction, trapezoid correction)\n- Support for multiple export formats of detection results (CSV, Excel, JSON, Word)",
     "tech_title": "Technologies Used:",
     "technologies": "- **Streamlit** for user interface\n- **OpenCV** for image processing\n- **YOLOv11** for object detection\n- **NumPy** for numerical computation",
     "author_title": "Author",
-    "author": "Developed by Phillweston.",
-    "contact_title": "Contact",
-    "contact": "For questions or support, please contact: lrt2443655975@gmail.com"
+    "author": "Sichuan Fullman Technology Co., Ltd."
   }
 }
