@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 import yaml
 from ultralytics import YOLO  # 导入YOLO模型
-from QtFusion.path import abs_path
+from runtime_paths import abs_path
 
 
 def train_det(workers, batch, device, dataset_dir, epochs, img_size, pretrained_model=None, model_config='../ultralytics/cfg/models/v11/yolo11.yaml', validate=False):

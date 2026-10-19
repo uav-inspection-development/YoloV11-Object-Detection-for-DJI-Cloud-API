@@ -462,6 +462,7 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
 
         # 项目自定义模块
         "git_info",
+        "runtime_paths",
         "log",
         "model",
         "chinese_name_list",

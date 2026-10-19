@@ -7,7 +7,7 @@ import json
 import numpy as np
 import pandas as pd
 import streamlit as st
-from QtFusion.path import abs_path
+from runtime_paths import abs_path
 from license_features import DEFAULT_FEATURES, get_enabled_task_types, is_feature_enabled
 from log import ResultLogger, LogTable
 from model import Web_Detector

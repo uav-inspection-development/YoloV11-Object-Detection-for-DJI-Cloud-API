@@ -7,7 +7,7 @@ import yaml
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 from ultralytics import YOLO  # 导入YOLO模型
-from QtFusion.path import abs_path
+from runtime_paths import abs_path
 import matplotlib
 matplotlib.use('TkAgg')
 

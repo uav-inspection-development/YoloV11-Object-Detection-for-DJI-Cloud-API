@@ -8,7 +8,6 @@ import tempfile
 import os
 import sys
 import base64
-from web import Detection_UI
 from license_features import DEFAULT_FEATURES
 import threading
 import json
@@ -440,6 +439,10 @@ def detect_image(validated_params, files):
     }
     """
     try:
+        # Delay the UI/model import until an API request needs it. Importing it
+        # at module load time can create a circular import in frozen builds.
+        from web import Detection_UI
+
         det_info = []
         img_file = files.get("image")
         if not img_file:
@@ -520,6 +523,8 @@ def detect_video(validated_params, files):
     }
     """
     try:
+        from web import Detection_UI
+
         video_file = files.get("video")
         if not video_file:
             return jsonify({"error": "No video uploaded"}), 400
@@ -604,6 +609,8 @@ def handle_stream(data):
     }
     """
     try:
+        from web import Detection_UI
+
         params = data.get("params", {})
         stream_source = data.get("stream_source", "0")
 

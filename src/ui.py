@@ -8,7 +8,7 @@ import streamlit as st
 from check_license import check_license
 from license_features import DEFAULT_FEATURES
 from web import Detection_UI
-from QtFusion.path import abs_path
+from runtime_paths import abs_path
 from naming_config import get_system_info, get_ui_message, get_current_language
 
 

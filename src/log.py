@@ -4,7 +4,7 @@ import cv2
 import traceback
 import pandas as pd
 from pathlib import Path
-from QtFusion.path import abs_path
+from runtime_paths import abs_path
 from PIL import Image
 import numpy as np
 from datetime import datetime

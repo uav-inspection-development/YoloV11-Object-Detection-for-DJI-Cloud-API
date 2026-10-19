@@ -7,7 +7,7 @@ from PIL import ImageFont, ImageDraw, Image
 from PIL.ExifTags import TAGS, GPSTAGS
 import exifread
 from hashlib import md5
-from QtFusion.path import abs_path
+from runtime_paths import abs_path
 from naming_config import get_table_column, get_system_message, get_gps_message
 from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
