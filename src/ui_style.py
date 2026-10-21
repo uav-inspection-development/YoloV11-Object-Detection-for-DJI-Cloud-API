@@ -112,5 +112,47 @@ def def_css_html():
         tbody tr:hover {
             background-color: #AED6F1;
         }
+
+        /* Streamlit 1.x uses stable data-testid attributes; the old generated
+           .css-* selectors above change between releases and cannot control
+           sidebar sizing reliably. */
+        [data-testid="stSidebar"] {
+            width: 380px;
+            min-width: 360px;
+            max-width: 420px;
+        }
+        [data-testid="stSidebar"] > div:first-child {
+            width: 100%;
+        }
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: normal;
+            line-height: 1.35;
+        }
+        [data-testid="stSidebar"] [data-testid="stAlert"] {
+            width: 100%;
+            box-sizing: border-box;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+        [data-testid="stSidebar"] [data-baseweb="select"] {
+            min-height: 42px;
+        }
+        [data-testid="stSidebar"] [data-baseweb="tag"] {
+            max-width: 100%;
+        }
+        [data-testid="stSidebar"] [data-baseweb="tag"] span {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+        @media (max-width: 900px) {
+            [data-testid="stSidebar"] {
+                min-width: 300px;
+                max-width: 86vw;
+            }
+        }
         </style>
         """, unsafe_allow_html=True)

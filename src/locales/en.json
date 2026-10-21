@@ -529,7 +529,8 @@
       "dyrb_ejgdl": "Linear Temperature Anomaly",
       "ejgdl": "Band Temperature Anomaly",
       "ygfs": "Area Temperature Anomaly",
-      "gfb_zc_rcx": "Ring Temperature Anomaly"
+      "gfb_zc_rcx": "Ring Temperature Anomaly",
+      "ejgdl_ycdw": "Diode Short - Low Temperature"
     },
     "Visible": {
       "yyzd": "Obstruction",

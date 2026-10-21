@@ -8,11 +8,69 @@ import os
 import sys
 import subprocess
 import shutil
+import secrets
+import uuid
 from pathlib import Path
 import argparse
 
+# Prefer the repository's virtual environment even when this script is started
+# with a system-wide `python` command. This keeps PyInstaller and all imports
+# in the same environment as the project dependencies.
+PROJECT_ROOT = Path(__file__).resolve().parent
+VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
+if VENV_PYTHON.exists() and Path(sys.executable).resolve() != VENV_PYTHON.resolve():
+    os.execv(
+        str(VENV_PYTHON),
+        [str(VENV_PYTHON), str(Path(__file__).resolve()), *sys.argv[1:]],
+    )
+
 # 添加 utils_data 目录到模块搜索路径
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils_data'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
+
+from generate_license import generate_license
+from license_features import DEFAULT_FEATURES
+
+# Always use the interpreter that launched this script. This keeps builds in
+# the active virtual environment instead of relying on a global PATH entry.
+PYTHON_COMMAND = f'"{sys.executable}"'
+PYINSTALLER_COMMAND = f'{PYTHON_COMMAND} -m PyInstaller'
+
+
+def generate_license_bundle(output_dir):
+    """Generate a license.dat and the matching Web UI secret key."""
+    try:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        secret_key = secrets.token_hex(16)
+        license_path = output_dir / "license.dat"
+        secret_key_path = output_dir / "secret_key.txt"
+        generate_license(
+            secret_key=secret_key.encode("ascii"),
+            user_email="build@local",
+            license_id=f"BUILD-{uuid.uuid4()}",
+            valid_until="None",
+            output_path=str(license_path),
+            features=list(DEFAULT_FEATURES),
+        )
+        secret_key_path.write_text(secret_key + "\n", encoding="ascii")
+
+        print("\n🔑 许可证和Secret Key生成成功")
+        print(f"📄 许可证: {license_path}")
+        print(f"🔐 Secret Key: {secret_key}")
+        print(f"📝 Secret Key文件: {secret_key_path}")
+        print("⚠️  启动Web页面时请输入上面的Secret Key")
+        return True
+    except Exception as error:
+        print(f"❌ 许可证和Secret Key生成失败: {error}")
+        return False
+
+
+def get_license_output_dir(output_name):
+    """Return the executable directory for directory builds, else dist/."""
+    packaged_dir = PROJECT_ROOT / "dist" / output_name
+    return packaged_dir if packaged_dir.is_dir() else PROJECT_ROOT / "dist"
 
 
 def run_command(command, description=""):
@@ -48,7 +106,7 @@ def collect_git_info():
 
     # 运行Git信息收集脚本
     success = run_command(
-        "python collect_git_info.py --python src/git_info.py",
+        f"{PYTHON_COMMAND} collect_git_info.py --python src/git_info.py",
         "收集Git信息并生成Python文件"
     )
 
@@ -172,7 +230,7 @@ def build_streamlit_with_spec():
 
     # 构建命令
     cmd_parts = [
-        "pyinstaller",
+        PYINSTALLER_COMMAND,
         "--clean",
         "--noconfirm",
         spec_file
@@ -209,7 +267,7 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
     encrypted_ui_path = encrypt_ui_file()
 
     # 构建PyInstaller命令
-    cmd_parts = ["pyinstaller"]
+    cmd_parts = [PYINSTALLER_COMMAND]
 
     # 添加基本参数 - 移除 --onefile，使用目录模式
     cmd_parts.extend([
@@ -612,6 +670,7 @@ def main(output_name):
     """主函数"""
     print("🚀 开始PyInstaller构建流程")
     print(f"📁 工作目录: {os.getcwd()}")
+    success = False
 
     # 步骤1: 收集Git信息
     collect_git_info()
@@ -638,7 +697,7 @@ def main(output_name):
                     print("❌ 主程序构建失败")
                     return False
             else:
-                print("⚠️  main.py 文件不存在，跳过主程序构建")
+                print("❌ main.py 文件不存在，无法构建主程序")
     else:
         print("⚠️ 找不到streamlit_app.spec文件，使用传统方法")
 
@@ -655,7 +714,14 @@ def main(output_name):
                 print("❌ 主程序构建失败")
                 return False
         else:
-            print("⚠️  main.py 文件不存在，跳过主程序构建")
+            print("❌ main.py 文件不存在，无法构建主程序")
+
+    if not success:
+        return False
+
+    # 步骤4: 生成license.dat和Web页面需要输入的Secret Key
+    if not generate_license_bundle(get_license_output_dir(output_name)):
+        return False
 
     # 步骤5: 清理临时文件
     clean_build_artifacts()
@@ -690,13 +756,22 @@ if __name__ == "__main__":
     elif args.use_spec:
         # 仅使用spec文件构建
         collect_git_info()
-        build_streamlit_with_spec()
+        success = build_streamlit_with_spec()
+        if success:
+            success = generate_license_bundle(PROJECT_ROOT / "dist")
         clean_build_artifacts()
+        if not success:
+            sys.exit(1)
     elif args.target != "main.py":
         # 构建指定目标（非默认main.py）
         collect_git_info()
-        build_with_pyinstaller(args.target, args.name, False, args.args or "")
+        success = build_with_pyinstaller(args.target, args.name, False, args.args or "")
+        if success:
+            success = generate_license_bundle(get_license_output_dir(args.name))
         clean_build_artifacts()
+        if not success:
+            sys.exit(1)
     else:
         # 默认构建流程（构建main.py）
-        main(args.name)
+        if not main(args.name):
+            sys.exit(1)

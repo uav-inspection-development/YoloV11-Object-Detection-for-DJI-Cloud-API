@@ -555,7 +555,8 @@
       "dyrb_ejgdl": "线状温度异常",
       "ejgdl": "带状温度异常",
       "ygfs": "片状温度异常",
-      "gfb_zc_rcx": "环状温度异常"
+      "gfb_zc_rcx": "环状温度异常",
+      "ejgdl_ycdw": "二极管短路_异常低温"
     },
     "Visible": {
       "yyzd": "遮挡",
