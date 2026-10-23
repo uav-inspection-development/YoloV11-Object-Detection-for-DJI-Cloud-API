@@ -1,6 +1,7 @@
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 import json
+import os
 
 import build_exe
 
@@ -24,3 +25,14 @@ def test_generate_license_bundle_creates_matching_license_and_secret_key(tmp_pat
     assert license_data["valid_until"] == "9999-12-31"
     assert license_data["bound_fingerprint"] is None
     assert license_data["features"]
+
+
+def test_no_key_runtime_hook_enables_no_key_mode(tmp_path, monkeypatch):
+    hook_path = tmp_path / "no_key_runtime_hook.py"
+    monkeypatch.setattr(build_exe, "NO_KEY_RUNTIME_HOOK", hook_path)
+    monkeypatch.delenv("YOLO_NO_KEY_MODE", raising=False)
+
+    created_hook = build_exe.create_no_key_runtime_hook()
+    exec(created_hook.read_text(encoding="ascii"), {})
+
+    assert os.environ["YOLO_NO_KEY_MODE"] == "1"

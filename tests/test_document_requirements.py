@@ -35,6 +35,11 @@ def test_chinese_thermal_requirements_are_configured():
         locale["FAULT_CATEGORIES"]["level_2_fault"],
         locale["FAULT_CATEGORIES"]["level_3_fault"],
     ] == ["一般缺陷", "严重缺陷", "紧急缺陷"]
+    assert locale["SYSTEM_INFO"]["title"] == "光伏云组件检测系统"
+    assert locale["SYSTEM_INFO"]["description"] == (
+        "本系统可以检测光伏面板可见光故障、红外热故障、"
+        "EL隐裂故障以及其他异物入侵等问题。"
+    )
 
 
 def test_streamlit_ui_only_offers_thermal_images():
@@ -53,3 +58,12 @@ def test_default_image_is_the_requested_infrared_equipment_image():
     default_image = ROOT / "icon" / "ini.jpg"
 
     assert default_image.stat().st_size == 68929
+
+
+def test_radio_labels_do_not_collapse_cjk_text():
+    style_source = (ROOT / "src" / "ui_style.py").read_text(encoding="utf-8")
+
+    assert '.stRadio [role="radiogroup"] > label' in style_source
+    assert "width: max-content;" in style_source
+    assert "word-break: keep-all;" in style_source
+    assert ".stRadio > label {" not in style_source

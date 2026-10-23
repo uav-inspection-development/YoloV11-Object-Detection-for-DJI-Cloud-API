@@ -10,9 +10,8 @@ MOCK_MODULES = [
     'ultralytics', 'ultralytics.utils', 'ultralytics.utils.torch_utils',
     'IMcore', 'efficientnet_pytorch', 'pandas', 'PIL', 'PIL.ExifTags', 'docx', 'docx.shared',
     'matplotlib', 'matplotlib.colors', 'scipy', 'scipy.optimize', 'requests',
-    'Crypto', 'Crypto.Cipher', 'Crypto.Util', 'Crypto.Util.Padding', 'psutil',
-    'cv2', 'torch', 'streamlit', 'streamlit.web', 'streamlit.web.cli', 'numpy',
-    'cryptography', '_cffi_backend', 'exifread'
+    'psutil', 'cv2', 'torch', 'streamlit', 'streamlit.web',
+    'streamlit.web.cli', 'numpy', 'exifread'
 ]
 
 
@@ -46,9 +45,6 @@ sys.modules['QtFusion.models'].Detector = MagicMock()
 sys.modules['QtFusion.models'].HeatmapGenerator = MagicMock()
 sys.modules['ultralytics'].YOLO = MagicMock()
 
-sys.modules['Crypto.Cipher'].AES = MagicMock()
-sys.modules['Crypto.Util.Padding'].pad = MagicMock()
-sys.modules['Crypto.Util.Padding'].unpad = MagicMock()
 sys.modules['ultralytics.utils.torch_utils'].select_device = MagicMock()
 sys.modules['matplotlib.colors'].LinearSegmentedColormap = MagicMock()
 sys.modules['streamlit.web.cli'].main = MagicMock()
@@ -91,6 +87,19 @@ def test_run_api(monkeypatch):
     main.run_api('api.py', ['--x', '1'])
     assert called['cmd'] == ['python', 'api.py', '--x', '1']
     assert called['check'] is True
+
+
+def test_no_key_build_does_not_require_secret_key(monkeypatch):
+    monkeypatch.setenv("YOLO_NO_KEY_MODE", "1")
+    monkeypatch.setattr(sys, "argv", ["main.py", "--run-mode=streamlit"])
+    cli_module = sys.modules['streamlit.web.cli']
+    cli_module.main = MagicMock()
+
+    runpy.run_path("main.py", run_name="__main__")
+
+    forwarded_args = cli_module.main.call_args
+    assert forwarded_args is not None
+    assert "--secret-key" not in sys.argv
 
 
 def test_main_block_streamlit(monkeypatch):

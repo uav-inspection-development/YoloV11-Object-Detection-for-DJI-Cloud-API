@@ -15,6 +15,7 @@ from naming_config import get_system_info, get_ui_message, get_current_language
 # 设置环境变量以避免 OpenMP 错误
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["ENABLE_OAUTH"] = "FALSE"
+NO_KEY_MODE = os.environ.get("YOLO_NO_KEY_MODE") == "1"
 
 
 def streamlit_login_page():
@@ -85,7 +86,20 @@ if __name__ == "__main__":
     )
 
     # 判断是否通过 streamlit run 启动
-    if len(sys.argv) == 1:
+    if NO_KEY_MODE:
+        # This flag is embedded only in builds created with build_exe.py
+        # --no-key. It intentionally bypasses the login and license pages.
+        args = argparse.Namespace(
+            secret_key=None,
+            license_file=None,
+            bind_info_file=None,
+            run_mode="streamlit",
+            oauth2_introspect_url="https://your-auth-server.com/oauth2/introspect",
+            oauth2_token_url="https://your-auth-server.com/oauth2/token",
+            client_id="your-client-id",
+            client_secret="your-client-secret",
+        )
+    elif len(sys.argv) == 1:
         # Web 模式
         if 'logged_in' not in st.session_state:
             st.session_state['logged_in'] = False
@@ -122,12 +136,15 @@ if __name__ == "__main__":
         parser.add_argument("--client-secret", default="your-client-secret", help="OAuth2 client secret.")
         args = parser.parse_args()
 
-    # 将 SECRET_KEY 转换为字节
-    secret_key = args.secret_key.encode()
-    ret, message, license_data = check_license(
-        secret_key, args.license_file, args.bind_info_file
-    )
-    features = license_data.get("features", DEFAULT_FEATURES)
+    if NO_KEY_MODE:
+        ret, message = 0, "No-key build"
+        features = list(DEFAULT_FEATURES)
+    else:
+        secret_key = args.secret_key.encode()
+        ret, message, license_data = check_license(
+            secret_key, args.license_file, args.bind_info_file
+        )
+        features = license_data.get("features", DEFAULT_FEATURES)
     os.environ["LICENSE_FEATURES"] = json.dumps(features, ensure_ascii=False)
 
     # 使用 st.empty() 创建占位符
@@ -138,7 +155,7 @@ if __name__ == "__main__":
         st.session_state['license_message_shown'] = False
 
     if ret == 0:
-        if len(sys.argv) == 1:
+        if len(sys.argv) == 1 and not NO_KEY_MODE:
             # 仅在首次切换到主页面时显示成功消息
             if not st.session_state.get('license_message_shown', False):
                 message_placeholder.success(f"Success: {message}")

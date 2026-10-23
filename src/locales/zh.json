@@ -1,7 +1,7 @@
 {
   "SYSTEM_INFO": {
-    "title": "光伏云组件检测系统",
-    "description": "本系统可通过对红外图片的 AI 分析标注出设备故障点，分析故障类型并判断故障严重等级。",
+    "title": "红外图像AI智能分析软件",
+    "description": "本系统可通过对红外图片的AI分析标注出设备的故障点、分析故障类型和判断故障严重等级。",
     "version_info_not_found": "📊 版本信息\n未找到Git仓库信息",
     "unknown_version": "未知版本",
     "separator": "--------"

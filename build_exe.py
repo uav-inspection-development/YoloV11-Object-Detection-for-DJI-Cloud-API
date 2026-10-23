@@ -35,6 +35,17 @@ from license_features import DEFAULT_FEATURES
 # the active virtual environment instead of relying on a global PATH entry.
 PYTHON_COMMAND = f'"{sys.executable}"'
 PYINSTALLER_COMMAND = f'{PYTHON_COMMAND} -m PyInstaller'
+NO_KEY_RUNTIME_HOOK = PROJECT_ROOT / "temp_build" / "no_key_runtime_hook.py"
+
+
+def create_no_key_runtime_hook():
+    """Create a PyInstaller hook that marks this executable as no-key."""
+    NO_KEY_RUNTIME_HOOK.parent.mkdir(parents=True, exist_ok=True)
+    NO_KEY_RUNTIME_HOOK.write_text(
+        'import os\nos.environ["YOLO_NO_KEY_MODE"] = "1"\n',
+        encoding="ascii",
+    )
+    return NO_KEY_RUNTIME_HOOK
 
 
 def generate_license_bundle(output_dir):
@@ -246,7 +257,13 @@ def build_streamlit_with_spec():
     return success
 
 
-def build_with_pyinstaller(target_script, output_name=None, windowed=False, additional_args=None):
+def build_with_pyinstaller(
+    target_script,
+    output_name=None,
+    windowed=False,
+    additional_args=None,
+    no_key=False,
+):
     """
     使用PyInstaller构建应用
 
@@ -268,6 +285,11 @@ def build_with_pyinstaller(target_script, output_name=None, windowed=False, addi
 
     # 构建PyInstaller命令
     cmd_parts = [PYINSTALLER_COMMAND]
+
+    if no_key:
+        runtime_hook = create_no_key_runtime_hook()
+        cmd_parts.extend(["--runtime-hook", f'"{runtime_hook}"'])
+        print("🔓 无密钥模式：构建产物将跳过登录和许可证认证")
 
     # 添加基本参数 - 移除 --onefile，使用目录模式
     cmd_parts.extend([
@@ -645,7 +667,7 @@ def clean_build_artifacts():
     """清理构建产生的临时文件"""
     print("\n🧹 清理构建临时文件...")
 
-    dirs_to_clean = ["build", "__pycache__", "temp_encrypted"]
+    dirs_to_clean = ["build", "__pycache__", "temp_encrypted", "temp_build"]
     files_to_clean = ["*.spec"]
 
     for dir_name in dirs_to_clean:
@@ -666,7 +688,7 @@ def clean_build_artifacts():
                 print(f"⚠️  删除文件失败 {file_path}: {e}")
 
 
-def main(output_name):
+def main(output_name, no_key=False):
     """主函数"""
     print("🚀 开始PyInstaller构建流程")
     print(f"📁 工作目录: {os.getcwd()}")
@@ -677,7 +699,7 @@ def main(output_name):
 
     # 步骤2: 尝试使用spec文件构建(推荐)
     print("\n📦 尝试使用spec文件构建...")
-    if os.path.exists("streamlit_app.spec"):
+    if os.path.exists("streamlit_app.spec") and not no_key:
         success = build_streamlit_with_spec()
         if success:
             print("✅ 使用spec文件构建成功")
@@ -691,7 +713,8 @@ def main(output_name):
                     "main.py",
                     output_name,
                     False,
-                    "--console"  # 主程序保留控制台
+                    "--console",  # 主程序保留控制台
+                    no_key=no_key,
                 )
                 if not success:
                     print("❌ 主程序构建失败")
@@ -708,7 +731,8 @@ def main(output_name):
                 "main.py",
                 output_name,
                 False,
-                "--console"  # 主程序保留控制台
+                "--console",  # 主程序保留控制台
+                no_key=no_key,
             )
             if not success:
                 print("❌ 主程序构建失败")
@@ -719,8 +743,10 @@ def main(output_name):
     if not success:
         return False
 
-    # 步骤4: 生成license.dat和Web页面需要输入的Secret Key
-    if not generate_license_bundle(get_license_output_dir(output_name)):
+    # 步骤4: 普通构建生成许可证；无密钥构建无需认证文件。
+    if no_key:
+        print("🔓 无密钥构建完成，不生成license.dat和secret_key.txt")
+    elif not generate_license_bundle(get_license_output_dir(output_name)):
         return False
 
     # 步骤5: 清理临时文件
@@ -748,12 +774,19 @@ if __name__ == "__main__":
     parser.add_argument("--args", help="额外的PyInstaller参数")
     parser.add_argument("--clean-only", action="store_true", help="仅清理临时文件")
     parser.add_argument("--use-spec", action="store_true", help="仅使用spec文件构建")
+    parser.add_argument(
+        "--no-key",
+        action="store_true",
+        help="构建无需密钥的版本，启动后直接进入主页面",
+    )
 
     args = parser.parse_args()
 
     if args.clean_only:
         clean_build_artifacts()
     elif args.use_spec:
+        if args.no_key:
+            parser.error("--no-key不能与--use-spec同时使用")
         # 仅使用spec文件构建
         collect_git_info()
         success = build_streamlit_with_spec()
@@ -765,13 +798,19 @@ if __name__ == "__main__":
     elif args.target != "main.py":
         # 构建指定目标（非默认main.py）
         collect_git_info()
-        success = build_with_pyinstaller(args.target, args.name, False, args.args or "")
-        if success:
+        success = build_with_pyinstaller(
+            args.target,
+            args.name,
+            False,
+            args.args or "",
+            no_key=args.no_key,
+        )
+        if success and not args.no_key:
             success = generate_license_bundle(get_license_output_dir(args.name))
         clean_build_artifacts()
         if not success:
             sys.exit(1)
     else:
         # 默认构建流程（构建main.py）
-        if not main(args.name):
+        if not main(args.name, no_key=args.no_key):
             sys.exit(1)

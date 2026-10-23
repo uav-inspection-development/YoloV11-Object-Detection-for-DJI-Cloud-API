@@ -7,6 +7,8 @@ import os
 import time
 import streamlit as st
 
+NO_KEY_MODE = os.environ.get("YOLO_NO_KEY_MODE") == "1"
+
 
 # 添加 src 目录到模块搜索路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -65,7 +67,11 @@ def run_api(script_path, extra_args=None):
 if __name__ == "__main__":
     # 使用 argparse 解析命令行参数
     parser = argparse.ArgumentParser(description="Run the application in different modes.")
-    parser.add_argument("--secret-key", required=True, help="Secret key for license encryption/decryption.")
+    parser.add_argument(
+        "--secret-key",
+        required=not NO_KEY_MODE,
+        help="Secret key for license encryption/decryption.",
+    )
     parser.add_argument("--license-file", default="license.dat", help="Path to the license file.")
     parser.add_argument("--bind-info-file", default="bind_info.json", help="Path to the bind info file.")
     parser.add_argument("--run-mode", default="streamlit", choices=["streamlit", "api"], help="Mode to run the application (streamlit or api).")

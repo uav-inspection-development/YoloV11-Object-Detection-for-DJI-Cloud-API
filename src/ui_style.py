@@ -54,20 +54,22 @@ def def_css_html():
             border-right: 2px solid #DDD;
         }
 
-        /* Radio 按钮样式 */
-        .stRadio > label {
-            display: inline-flex;
-            align-items: center;
-            cursor: pointer;
+        /* Keep radio option labels wide enough for CJK text. Styling direct
+           .stRadio children breaks newer Streamlit DOM layouts by shrinking
+           the entire widget label to one character. */
+        .stRadio [role="radiogroup"] {
+            width: 100%;
         }
-        .stRadio > label > span:first-child {
-            background-color: #FFF;
-            border: 1px solid #CCC;
-            width: 1em;
-            height: 1em;
-            border-radius: 50%;
-            margin-right: 10px;
-            display: inline-block;
+        .stRadio [role="radiogroup"] > label {
+            display: flex;
+            width: max-content;
+            max-width: 100%;
+            align-items: center;
+        }
+        .stRadio [role="radiogroup"] > label p {
+            white-space: nowrap;
+            overflow-wrap: normal;
+            word-break: keep-all;
         }
 
         /* 滑块样式 */
