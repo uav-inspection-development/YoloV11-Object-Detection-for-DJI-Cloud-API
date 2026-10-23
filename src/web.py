@@ -1474,18 +1474,20 @@ class Detection_UI:
                 st.sidebar.progress(progress_value)
 
                 # 图片选择滑块
-                new_preview_index = st.sidebar.slider(
-                    get_sidebar_label("select_preview_image"),
-                    min_value=0,
-                    max_value=total_files - 1,
-                    value=current_preview_index,
-                    key="sidebar_image_slider",
-                )
+                # Streamlit requires min_value < max_value. A single image has
+                # no alternate index to select, so it does not need a slider.
+                if total_files > 1:
+                    new_preview_index = st.sidebar.slider(
+                        get_sidebar_label("select_preview_image"),
+                        min_value=0,
+                        max_value=total_files - 1,
+                        value=current_preview_index,
+                        key="sidebar_image_slider",
+                    )
 
-                # 如果滑块值改变，更新索引
-                if new_preview_index != current_preview_index:
-                    st.session_state["sidebar_preview_index"] = new_preview_index
-                    st.rerun()
+                    if new_preview_index != current_preview_index:
+                        st.session_state["sidebar_preview_index"] = new_preview_index
+                        st.rerun()
 
                 # 显示当前选中的图片
                 uploaded_file = self.uploaded_file[current_preview_index]
@@ -2787,18 +2789,20 @@ class Detection_UI:
                     st.rerun()
 
             # 添加滑块控制
-            new_index = st.slider(
-                get_main_label("image_slider_label"),
-                min_value=0,
-                max_value=total_imgs - 1,
-                value=current_index,
-                key="image_slider",
-            )
+            # Only show an index slider when there is another image to select.
+            if total_imgs > 1:
+                new_index = st.slider(
+                    get_main_label("image_slider_label"),
+                    min_value=0,
+                    max_value=total_imgs - 1,
+                    value=current_index,
+                    key="image_slider",
+                )
 
-            # 如果滑块值改变，更新索引
-            if new_index != current_index:
-                st.session_state["image_play_index"] = new_index
-                st.rerun()
+                # 如果滑块值改变，更新索引
+                if new_index != current_index:
+                    st.session_state["image_play_index"] = new_index
+                    st.rerun()
 
         else:
             st.info(get_detection_message("no_detection_results"))

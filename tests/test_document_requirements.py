@@ -35,10 +35,10 @@ def test_chinese_thermal_requirements_are_configured():
         locale["FAULT_CATEGORIES"]["level_2_fault"],
         locale["FAULT_CATEGORIES"]["level_3_fault"],
     ] == ["一般缺陷", "严重缺陷", "紧急缺陷"]
-    assert locale["SYSTEM_INFO"]["title"] == "光伏云组件检测系统"
+    assert locale["SYSTEM_INFO"]["title"] == "红外图像AI智能分析软件"
     assert locale["SYSTEM_INFO"]["description"] == (
-        "本系统可以检测光伏面板可见光故障、红外热故障、"
-        "EL隐裂故障以及其他异物入侵等问题。"
+        "本系统可通过对红外图片的AI分析标注出设备的故障点、"
+        "分析故障类型和判断故障严重等级。"
     )
 
 
@@ -67,3 +67,10 @@ def test_radio_labels_do_not_collapse_cjk_text():
     assert "width: max-content;" in style_source
     assert "word-break: keep-all;" in style_source
     assert ".stRadio > label {" not in style_source
+
+
+def test_image_index_sliders_are_hidden_for_a_single_image():
+    web_source = (ROOT / "src" / "web.py").read_text(encoding="utf-8")
+
+    assert 'if total_files > 1:\n                    new_preview_index = st.sidebar.slider(' in web_source
+    assert 'if total_imgs > 1:\n                new_index = st.slider(' in web_source
