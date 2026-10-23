@@ -1,7 +1,7 @@
 {
   "SYSTEM_INFO": {
-    "title": "PV Module Detection System",
-    "description": "The system analyzes infrared images with AI to mark equipment fault locations, identify fault types, and determine fault severity.",
+    "title": "Infrared Image AI Analysis Software",
+    "description": "The system uses AI to analyze infrared images, identify equipment fault locations and types, and determine fault severity.",
     "version_info_not_found": "📊 Version info\nGit repo not found",
     "unknown_version": "Unknown Version",
     "separator": "--------"
@@ -116,8 +116,8 @@
     "export_format_hint": "💡 Hint: {format} will be saved to {path}.",
     "conf_threshold_hint": "💡 Hint: Confidence range 0.0-1.0.",
     "iou_threshold_hint": "💡 Hint: IOU range 0.0-1.0.",
-    "detection_task_hint": "💡 Hint: Detection task finds defects, choose classes as needed.",
-    "segmentation_task_hint": "💡 Hint: Segmentation outputs panel contours.",
+    "detection_task_hint": "💡 Hint: Detection identifies defects in infrared image components and other anomalies. Choose classes as needed.",
+    "segmentation_task_hint": "💡 Hint: Segmentation outputs infrared image component contours. Select rectangle output to detect and output bounding boxes; otherwise, output the original edges. Choose Single Component or Component String as the target class.",
     "image_type_hint": "💡 Hint: Current type: {type}",
     "no_class_selected_hint": "💡 Hint: No class selected.",
     "selected_classes_hint": "💡 Hint: Selected classes: {classes}",
@@ -325,18 +325,18 @@
     "cache_read_failed": "Failed to read cache: {error}"
   },
   "REPORT_FIELDS": {
-    "report_title": "UAV Photovoltaic Inspection Report",
+    "report_title": "Infrared Image Detection Report",
     "report_number": "Report Number: {number}",
     "table_of_contents": "Table of Contents",
     "section_overview": "1. Overview",
-    "section_maintenance": "2. PV Power Station Maintenance Recommendations",
+    "section_maintenance": "2. Fault Repair Recommendations",
     "section_statistics": "3. Statistical Results",
     "section_detailed_results": "4. Detailed Detection Results",
     "segmentation_task": "Segmentation Task",
-    "segmentation_description": " - Perform PV panel contour segmentation on {image_type} images",
+    "segmentation_description": " - Perform infrared image contour segmentation on {image_type} images",
     "detection_description": " - Perform anomaly detection on {image_type} images",
     "user_organization": "User Organization",
-    "power_station": "PV Power Station",
+    "power_station": "XXXX",
     "detection_scene": "Detection Scene",
     "detection_type": "Detection Type",
     "detection_classes": "Detection Classes",
@@ -346,9 +346,9 @@
     "image_count": "Number of Detection Images",
     "detection_params": "Detection Parameters",
     "confidence_iou_format": "Confidence: {confidence}, IOU: {iou}",
-    "pv_inspection_task": "PV Inspection Task",
+    "pv_inspection_task": "Infrared Inspection Task",
     "overview_section": "1. Overview",
-    "fault_suggestion_section": "2. PV Power Station Fault Repair Suggestions",
+    "fault_suggestion_section": "2. Fault Repair Suggestions",
     "statistics_section": "3. Result Statistics",
     "detailed_results_section": "4. Detailed Detection Results", 
     "segmentation_results_title": "Segmentation Image Detailed Results",
@@ -385,7 +385,7 @@
     "corner_damage_suggestion": "Corner damage detected in component. Assess impact and consider replacement.",
     "sun_reflection": "Sun Reflection",
     "sun_reflection_suggestion": "Sun reflection in thermal image is normal phenomenon, no action needed.",
-    "normal_thermal": "Normal PV Panel Thermal Imaging",
+    "normal_thermal": "Normal Infrared Thermal Imaging",
     "normal_thermal_suggestion": "Component thermal imaging is normal, no abnormal heating.",
     "single_hotspot": "Single Hotspot",
     "single_hotspot_suggestion": "Single component hotspot detected. Check component connections and cleanliness.",
@@ -423,18 +423,18 @@
     "occlusion_bird_dropping_suggestion": "Component occlusion with bird droppings. Remove obstructions, clean droppings and implement bird prevention measures.",
     "panel_crack": "Panel Crack",
     "panel_crack_suggestion": "Component surface glass damage. Immediate replacement recommended.",
-    "panel_missing": "PV Panel Missing",
+    "panel_missing": "Infrared Image Missing",
     "panel_missing_suggestion": "Component missing. Immediate installation recommended.",
-    "panel_deformation": "PV Panel Component Deformation", 
+    "panel_deformation": "Infrared Image Component Deformation", 
     "panel_deformation_suggestion": "Component deformation. Check brackets and replace components.",
     "person": "Person",
     "person_suggestion": "Personnel activity detected. Pay attention to safety.",
     "vehicle": "Vehicle", 
     "vehicle_suggestion": "Vehicle detected. Pay attention to traffic control.",
     "single_component": "Single Component",
-    "single_component_suggestion": "Successfully segmented and identified single PV component.",
+    "single_component_suggestion": "Successfully segmented and identified a single component.",
     "component_string": "Component String",
-    "component_string_suggestion": "Successfully segmented and identified PV component string."
+    "component_string_suggestion": "Successfully segmented and identified a component string."
   },
   "REPORT_STATISTICS": {
     "comprehensive_analysis": "This report was generated after comprehensive intelligent segmentation analysis of this flight route by the drone.",
@@ -442,7 +442,7 @@
     "algorithm_engine": "Algorithm engine used: {type}",
     "detected_categories": "Detected categories: ({list})",
     "configured_detection_classes": "Configured detection classes: {classes}",
-    "yolo_segmentation_desc": "Using YOLOv11 segmentation algorithm for PV component contour segmentation on {type} images",
+    "yolo_segmentation_desc": "Using the YOLOv11 segmentation algorithm for component contour segmentation on {type} images",
     "yolo_detection_desc": "Using YOLOv11 detection algorithm for anomaly detection on {type} images",
     "no_anomalies": "No anomalies detected",
     "alarm_count": "Number of alarms: {count} times",
@@ -507,8 +507,8 @@
     "below_sea_level": "Below Sea Level"
   },
   "FILENAME_TEMPLATES": {
-    "report": "PV-{task_type}-Report-{image_type}-{timestamp}",
-    "data": "PV-Data-{image_type}-{timestamp}",
+    "report": "Report-{image_type}-{timestamp}",
+    "data": "Report-Data-{image_type}-{timestamp}",
     "log": "Log-{timestamp}",
     "image": "Result-{image_type}-{timestamp}"
   },
@@ -540,8 +540,8 @@
       "ns": "Bird Droppings",
       "yyzd_ns": "Obstruction & Bird Droppings",
       "zw_ns": "Dirt & Bird Droppings",
-      "gfbzjbx": "Module Deformation",
-      "gfbqs": "Module Missing",
+      "gfbzjbx": "Infrared Image Component Deformation",
+      "gfbqs": "Infrared Image Missing",
       "mbsl": "Panel Cracking",
       "snow": "Snow",
       "crack": "Crack"
@@ -553,8 +553,8 @@
     "Segmentation": {
       "component": "Component",
       "string": "String",
-      "missing_panel": "Module Missing",
-      "misaligned_panel": "Module Misaligned"
+      "missing_panel": "Infrared Image Missing",
+      "misaligned_panel": "Infrared Image Misaligned"
     }
   },
   "TABLE_COLUMNS": {
